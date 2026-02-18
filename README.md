@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DigQueue
 
-## Getting Started
+DigQueue is a local-first MVP for digging Discogs labels while you work.
 
-First, run the development server:
+It provides:
+- Label queue ingestion from Discogs (URL, ID, or name search)
+- Release + track caching in SQLite via Drizzle
+- Automatic YouTube candidate matching (embeddable/syndicated)
+- Release-level full-upload fallback when per-track matching is weak
+- Error-aware processing with retry/error tracking on labels and releases
+- Persistent mini-player with autoplay next + keyboard shortcuts
+- Playback modes: `track` (default), `release`, `hybrid`
+- Track/release todo flow (`listened`, `saved / wishlist`) for future recommendations
+- Deep recommendation signals: behavior events + Discogs metadata graph (styles/contributors/companies/formats)
+- Queue-wide run control to process labels incrementally in sequence
+- Ranked buy-link finder (Bandcamp-first + confidence tiers + store fallbacks)
+- Legal export options (CSV/JSON) and legal purchase/search links
+
+## Legal
+
+DigQueue **does not download copyrighted audio**.
+
+It only stores metadata and links, with playback through the YouTube IFrame API.
+No Soulseek, ripping, or copyrighted audio download features are implemented.
+
+## Stack
+
+- Next.js (App Router) + TypeScript
+- Tailwind + shadcn-style UI components
+- SQLite (`better-sqlite3`) + Drizzle ORM
+- Next.js server routes for Discogs + YouTube APIs
+- YouTube IFrame Player API for continuous playback
+
+## Environment
+
+Create `.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+DISCOGS_TOKEN=...
+YOUTUBE_API_KEY=...
+BANDCAMP_WISHLIST_URL=...
+NEXT_PUBLIC_APP_NAME=DigQueue
+DATABASE_URL=./db/digqueue.db
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Optional:
+- `BANDCAMP_WISHLIST_URL` can point to a public fan wishlist page (for example `https://bandcamp.com/yourname/wishlist`).
+- Wishlist imports are cached and paged slowly to avoid hitting Bandcamp rate limits.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can also set Discogs/YouTube keys directly from `/settings` (stored locally in SQLite), then validate with the built-in key test button.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Run
 
-## Learn More
+```bash
+yarn install
+yarn db:migrate
+yarn dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Node:
+- Recommended: Node `20.x` (see `.nvmrc`)
+- Native sqlite bindings are auto-checked and rebuilt on `dev/build/start/migrate` if Node version changed.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Implemented Routes
 
-## Deploy on Vercel
+Pages:
+- `/` dashboard (label queue, up-next, recommendations)
+- `/listen` unlistened track inbox with bulk todo actions
+- `/labels/[id]` label progress + releases
+- `/releases/[id]` tracklist, YouTube candidates, overrides, todo/wishlist
+- `/settings` token previews, legal note, shortcut reference
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+API:
+- `/api/discogs/label/[id]/releases`
+- `/api/discogs/release/[id]`
+- `/api/youtube/search`
+- `/api/queue/next`
+- `/api/finder/release/[id]`
+- `/api/worker/process`
+- `/api/export/csv`
+- `/api/export/json`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## UX Details
+
+- Dark, warm contrast palette with shared design tokens in `app/globals.css` and `lib/design-tokens.ts`
+- Keyboard shortcuts:
+  - `space` play/pause
+  - `n` next
+  - `b` previous
+  - `l` focus label input
+- Mobile single-column and desktop multi-panel layout
+
+## Notes on Processing
+
+`Process Label` starts a rate-limited incremental worker loop:
+- fetches label release pages
+- fetches release details + tracklist
+- runs YouTube search/scoring for each track
+- stores candidates and auto-chooses top result
+- appends playable matches to queue
+- captures Discogs release signals for deeper recommendations
+
+Pause/resume is available per label.
+You can also run the whole label queue from the dashboard.
+
+## Seed Data
+
+Seed lists are included in `lib/seed-data.ts` and can be loaded with the **Load Seed Labels** button on the dashboard.
+- Direct Discogs URL/ID seeds load without API token.
+- Search-name seeds require `DISCOGS_TOKEN`; without token they are skipped (best-effort behavior).
+
+## Limitations (MVP)
+
+- YouTube OAuth playlist export is not implemented yet
+- Recommendation graph currently runs in-process (no background materialized graph jobs yet)
+- Discogs and YouTube quota/rate limits are respected with cache + delay, but no distributed worker system yet
+
+## Roadmap
+
+1. Materialized recommendation graph jobs + optional embeddings layer
+2. Release mode fallback for weak per-track matches
+3. OAuth-based YouTube playlist export
+4. Multi-user profiles and sync

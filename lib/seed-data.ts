@@ -1,0 +1,32 @@
+export const seedLabels = [
+  { name: "Superluminal", discogs_url: "https://www.discogs.com/label/1287914-Superluminal" },
+  { name: "Discarded Gems", discogs_url: "https://www.discogs.com/label/1038740-Discarded-Gems" },
+  { name: "People & Places", discogs_url: "https://www.discogs.com/label/2910968-People-Places" },
+  { name: "People, Places, Records", discogs_url: "https://www.discogs.com/label/1682339-People-Places-Records" },
+  { name: "Lirica Archives", discogs_url: "https://www.discogs.com/label/3504445-Lirica-Archives" },
+  { name: "Lirica White Series", discogs_url: "https://www.discogs.com/label/3803408-Lirica-White-Series" },
+  { name: "One Eye Witness", discogs_url: "https://www.discogs.com/label/1913682-One-Eye-Witness" },
+  { name: "Kalahari Oyster Cult", discogs_url: "https://www.discogs.com/label/1120990-Kalahari-Oyster-Cult" },
+  { name: "Animals On Psychedelics", discogs_url: "https://www.discogs.com/label/1015857-Animals-On-Psychedelics" },
+  { name: "Mood Hut", discogs_url: "https://www.discogs.com/label/363756-Mood-Hut" },
+  { name: "Delsin Records", discogs_url: "https://www.discogs.com/label/541304-Delsin-Records" },
+  { name: "NAFF", discogs_url: "https://www.discogs.com/label/1390196-NAFF" },
+  { name: "Atipic", discogs_url: "https://www.discogs.com/label/952963-Atipic" },
+];
+
+export const seedSearchLabels = [
+  "Hidden Folder",
+  "High Priestess Recordings",
+  "Harmony Rec.",
+  "Art Of Dark",
+  "Craigie Knowes",
+  "Planet Euphorique",
+  "Malka Tuti",
+  "EYA Records",
+  "Fixed Rhythms",
+  "Return_backspace",
+  "OYE 12\" Service",
+  "Domain Records",
+  "Denude",
+  "Companion",
+];
