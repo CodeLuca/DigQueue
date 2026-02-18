@@ -263,6 +263,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
       saved: tracks.saved,
       releaseId: releases.id,
       releaseTitle: releases.title,
+      releaseCatno: releases.catno,
       releaseArtist: releases.artist,
       releaseDiscogsUrl: releases.discogsUrl,
       releaseThumbUrl: releases.thumbUrl,
@@ -313,7 +314,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
       isUpNext: pendingSet.has(row.trackId),
       playedCount: playedCountByTrack.get(row.trackId) ?? 0,
       wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
-      needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0 && !(row.saved && row.releaseWishlist),
+      needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       playbackSource,
     };
   });
@@ -343,6 +344,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
       saved: tracks.saved,
       releaseId: releases.id,
       releaseTitle: releases.title,
+      releaseCatno: releases.catno,
       releaseArtist: releases.artist,
       releaseDiscogsUrl: releases.discogsUrl,
       releaseThumbUrl: releases.thumbUrl,
@@ -393,7 +395,103 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
       isUpNext: pendingSet.has(row.trackId),
       playedCount: playedCountByTrack.get(row.trackId) ?? 0,
       wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
-      needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0 && !(row.saved && row.releaseWishlist),
+      needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
+      playbackSource,
+    };
+  });
+
+  const allLabels = await db.query.labels.findMany({
+    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace")),
+    orderBy: [asc(labels.name)],
+  });
+  return { rows: enrichedRows, labels: allLabels };
+}
+
+export async function getPlayedReviewedData(labelId?: number, onlyPlayable = false) {
+  const playedTrackRows = await db
+    .select({ trackId: queueItems.trackId })
+    .from(queueItems)
+    .innerJoin(releases, eq(queueItems.releaseId, releases.id))
+    .innerJoin(labels, eq(releases.labelId, labels.id))
+    .where(and(eq(queueItems.status, "played"), eq(labels.active, true), isNotNull(queueItems.trackId)));
+
+  const playedTrackIds = [
+    ...new Set(
+      playedTrackRows
+        .map((row) => row.trackId)
+        .filter((trackId): trackId is number => typeof trackId === "number"),
+    ),
+  ];
+
+  const whereClause = labelId
+    ? and(or(eq(tracks.listened, true), inArray(tracks.id, playedTrackIds.length ? playedTrackIds : [-1])), eq(releases.labelId, labelId), eq(labels.active, true))
+    : and(or(eq(tracks.listened, true), inArray(tracks.id, playedTrackIds.length ? playedTrackIds : [-1])), eq(labels.active, true));
+  const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
+  const combinedWhere = playableClause ? and(whereClause, playableClause) : whereClause;
+
+  const rows = await db
+    .select({
+      trackId: tracks.id,
+      trackTitle: tracks.title,
+      trackArtists: tracks.artistsText,
+      position: tracks.position,
+      duration: tracks.duration,
+      listened: tracks.listened,
+      saved: tracks.saved,
+      releaseId: releases.id,
+      releaseTitle: releases.title,
+      releaseCatno: releases.catno,
+      releaseArtist: releases.artist,
+      releaseDiscogsUrl: releases.discogsUrl,
+      releaseThumbUrl: releases.thumbUrl,
+      releaseWishlist: releases.wishlist,
+      importSource: releases.importSource,
+      labelId: labels.id,
+      labelName: labels.name,
+      hasChosenVideo: isNotNull(youtubeMatches.id),
+      videoEmbeddable: youtubeMatches.embeddable,
+      matchChannelTitle: youtubeMatches.channelTitle,
+    })
+    .from(tracks)
+    .innerJoin(releases, eq(tracks.releaseId, releases.id))
+    .innerJoin(labels, eq(releases.labelId, labels.id))
+    .leftJoin(youtubeMatches, and(eq(youtubeMatches.trackId, tracks.id), eq(youtubeMatches.chosen, true)))
+    .where(combinedWhere)
+    .orderBy(desc(tracks.listened), desc(tracks.saved), asc(labels.name), asc(releases.releaseOrder), asc(tracks.id))
+    .limit(800);
+
+  const trackIds = rows.map((row) => row.trackId);
+  const [pendingQueueRows, playedQueueRows] = trackIds.length
+    ? await Promise.all([
+        db
+          .select({ trackId: queueItems.trackId })
+          .from(queueItems)
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"))),
+        db
+          .select({ trackId: queueItems.trackId })
+          .from(queueItems)
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"))),
+      ])
+    : [[], []];
+
+  const pendingSet = new Set(pendingQueueRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"));
+  const playedCountByTrack = new Map<number, number>();
+  for (const row of playedQueueRows) {
+    if (typeof row.trackId !== "number") continue;
+    playedCountByTrack.set(row.trackId, (playedCountByTrack.get(row.trackId) ?? 0) + 1);
+  }
+
+  const enrichedRows = rows.map((row) => {
+    const playbackSource: "discogs" | "youtube" | null =
+      row.matchChannelTitle === "Discogs" ? "discogs" : row.hasChosenVideo ? "youtube" : null;
+
+    return {
+      ...row,
+      hasChosenVideo: Boolean(row.hasChosenVideo),
+      isUpNext: pendingSet.has(row.trackId),
+      playedCount: playedCountByTrack.get(row.trackId) ?? 0,
+      wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
+      needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       playbackSource,
     };
   });

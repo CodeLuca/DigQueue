@@ -13,9 +13,11 @@ import {
   ExternalLink,
   Heart,
   HeartOff,
+  ListOrdered,
   Play,
   PlusCircle,
   RefreshCcw,
+  Shuffle,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +34,7 @@ type ListenRow = {
   saved: boolean;
   releaseId: number;
   releaseTitle: string;
+  releaseCatno?: string | null;
   releaseArtist?: string | null;
   releaseDiscogsUrl: string;
   releaseThumbUrl: string | null;
@@ -68,6 +71,9 @@ const YOUTUBE_QUOTA_STORAGE_KEY = "digqueue:youtube-quota-exceeded";
 const TRACK_TODO_UPDATED_EVENT = "digqueue:track-todo-updated";
 const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
 const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
+const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
+const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
+type PlaybackMode = "in_order" | "shuffle";
 
 type ReleaseWishlistApiResponse = {
   ok?: boolean;
@@ -201,12 +207,16 @@ export function ListenInboxClient({
   labelOptions,
   showQueueFilters = true,
   showWishlistSourceFilter = false,
+  defaultHideReviewed = true,
+  defaultHideAlreadyPlayed = true,
 }: {
   initialRows: ListenRow[];
   initialSelectedLabelId?: number;
   labelOptions?: LabelOption[];
   showQueueFilters?: boolean;
   showWishlistSourceFilter?: boolean;
+  defaultHideReviewed?: boolean;
+  defaultHideAlreadyPlayed?: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [cursor, setCursor] = useState(0);
@@ -218,12 +228,18 @@ export function ListenInboxClient({
   const [didAutoSelectPlayerLabel, setDidAutoSelectPlayerLabel] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<number[]>([]);
   const [wishlistSourceFilter, setWishlistSourceFilter] = useState<"all" | "saved_tracks" | "wishlisted_records">("all");
-  const [hideReviewed, setHideReviewed] = useState(true);
-  const [hideAlreadyPlayed, setHideAlreadyPlayed] = useState(true);
+  const [hideReviewed, setHideReviewed] = useState(defaultHideReviewed);
+  const [hideAlreadyPlayed, setHideAlreadyPlayed] = useState(defaultHideAlreadyPlayed);
   const [sourceFilter, setSourceFilter] = useState<"all" | "saved" | "wishlisted" | "saved_or_wishlisted">("all");
   const [videoFilter, setVideoFilter] = useState<"all" | "playable" | "no_video_or_private">("all");
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(() => {
+    if (typeof window === "undefined") return "in_order";
+    const stored = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
+    return stored === "shuffle" ? "shuffle" : "in_order";
+  });
   const [addingLabelReleaseId, setAddingLabelReleaseId] = useState<number | null>(null);
   const [togglingLabelId, setTogglingLabelId] = useState<number | null>(null);
+  const [wishlistReleaseIdLoading, setWishlistReleaseIdLoading] = useState<number | null>(null);
   const [addedLabelReleaseIds, setAddedLabelReleaseIds] = useState<number[]>([]);
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -293,7 +309,7 @@ export function ListenInboxClient({
     [activeLabelId, sourceFilteredRows],
   );
   const queueFilterCounts = useMemo(() => {
-    const reviewed = scopedRows.filter((item) => item.listened).length;
+    const reviewed = scopedRows.filter((item) => item.listened || item.releaseWishlist).length;
     const played = scopedRows.filter((item) => (item.playedCount ?? 0) > 0 || Boolean(item.wasPlayed)).length;
     const saved = scopedRows.filter((item) => item.saved).length;
     const wishlisted = scopedRows.filter((item) => item.releaseWishlist).length;
@@ -323,7 +339,7 @@ export function ListenInboxClient({
           if (videoFilter === "playable" && !hasPlayableVideo) return false;
           if (videoFilter === "no_video_or_private" && !isNoVideoOrPrivate) return false;
         }
-        if (showQueueFilters && hideReviewed && item.listened) return false;
+        if (showQueueFilters && hideReviewed && (item.listened || item.releaseWishlist)) return false;
         const alreadyPlayed = (item.playedCount ?? 0) > 0 || Boolean(item.wasPlayed);
         if (showQueueFilters && hideAlreadyPlayed && alreadyPlayed) return false;
         return true;
@@ -338,6 +354,13 @@ export function ListenInboxClient({
         ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_24%,var(--color-surface2)_76%)] text-[var(--color-text)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]"
         : "border-[var(--color-border)] text-[var(--color-muted)] opacity-70 hover:opacity-100 hover:bg-[var(--color-surface)]"
     }`;
+  const setGlobalPlaybackMode = useCallback((nextMode: PlaybackMode) => {
+    setPlaybackMode(nextMode);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(PLAYBACK_MODE_STORAGE_KEY, nextMode);
+      window.dispatchEvent(new CustomEvent(PLAYBACK_MODE_EVENT, { detail: { mode: nextMode } }));
+    }
+  }, []);
   const selectedSet = useMemo(() => new Set(selectedTrackIds), [selectedTrackIds]);
   const labelIdByTrackId = useMemo(() => {
     const mapped = new Map<number, number>();
@@ -374,7 +397,7 @@ export function ListenInboxClient({
       setRows((prev) =>
         prev.map((row) =>
           row.trackId === trackId
-            ? { ...row, isUpNext: true, wasPlayed: false, needsMark: false }
+            ? { ...row, isUpNext: true }
             : row,
         ),
       );
@@ -441,7 +464,7 @@ export function ListenInboxClient({
     setRows((prev) => {
       const next = prev.map((item) =>
         item.trackId === current.trackId
-          ? { ...item, listened: true, isUpNext: false, needsMark: false }
+          ? { ...item, listened: true, isUpNext: false }
           : item,
       );
       setCursor((cursorPrev) => Math.max(0, Math.min(cursorPrev, Math.max(0, next.length - 1))));
@@ -464,7 +487,7 @@ export function ListenInboxClient({
     setRows((prev) => {
       const next = prev.map((item) =>
         item.trackId === current.trackId
-          ? { ...item, saved: nextSaved, isUpNext: false, needsMark: false }
+          ? { ...item, saved: nextSaved, isUpNext: false }
           : item,
       );
       return showQueueFilters ? next : next.filter((item) => item.saved);
@@ -482,7 +505,7 @@ export function ListenInboxClient({
     setRows((prev) => {
       const next = prev.map((row) =>
         row.trackId === trackId
-          ? { ...row, listened: true, isUpNext: false, needsMark: false }
+          ? { ...row, listened: true, isUpNext: false }
           : row,
       );
       setCursor((cursorPrev) => Math.max(0, Math.min(cursorPrev, Math.max(0, next.length - 1))));
@@ -505,7 +528,7 @@ export function ListenInboxClient({
     setRows((prev) => {
       const next = prev.map((row) =>
         row.trackId === trackId
-          ? { ...row, saved: updatedTrack.saved, isUpNext: false, needsMark: false }
+          ? { ...row, saved: updatedTrack.saved, isUpNext: false }
           : row,
       );
       return showQueueFilters ? next : next.filter((row) => row.saved);
@@ -514,8 +537,13 @@ export function ListenInboxClient({
   }, [router, showQueueFilters]);
 
   const toggleRowRecordWishlist = useCallback(async (releaseId: number) => {
+    if (wishlistReleaseIdLoading === releaseId) return;
+    const currentValue = rows.find((row) => row.releaseId === releaseId)?.releaseWishlist ?? false;
+    const nextWishlist = !currentValue;
+    setWishlistReleaseIdLoading(releaseId);
+    setRows((prev) => prev.map((row) => (row.releaseId === releaseId ? { ...row, releaseWishlist: nextWishlist } : row)));
     try {
-      const result = await updateReleaseWishlist({ releaseId, mode: "toggle" });
+      const result = await updateReleaseWishlist({ releaseId, mode: "set", value: nextWishlist });
       const affectedIds = new Set(result.affectedReleaseIds);
       setRows((prev) =>
         prev.map((row) => (affectedIds.has(row.releaseId) ? { ...row, releaseWishlist: result.wishlist } : row)),
@@ -533,9 +561,12 @@ export function ListenInboxClient({
       );
       router.refresh();
     } catch (error) {
+      setRows((prev) => prev.map((row) => (row.releaseId === releaseId ? { ...row, releaseWishlist: currentValue } : row)));
       setFeedback(error instanceof Error ? error.message : "Unable to update record wishlist.");
+    } finally {
+      setWishlistReleaseIdLoading(null);
     }
-  }, [router]);
+  }, [rows, router, wishlistReleaseIdLoading]);
 
   const addRowLabel = useCallback(async (releaseId: number) => {
     if (addingLabelReleaseId === releaseId) return;
@@ -598,7 +629,7 @@ export function ListenInboxClient({
     const eligible = selectedVisibleRows.filter((row) => row.importSource !== "discogs_want").map((row) => row.trackId);
     if (eligible.length === 0) return;
     await updateTracks({ trackIds: eligible, field: "listened", mode: "set", value: true });
-    setRows((prev) => prev.map((row) => (eligible.includes(row.trackId) ? { ...row, listened: true, isUpNext: false, needsMark: false } : row)));
+    setRows((prev) => prev.map((row) => (eligible.includes(row.trackId) ? { ...row, listened: true, isUpNext: false } : row)));
     setSelectedTrackIds((prev) => prev.filter((id) => !eligible.includes(id)));
     setFeedback(`Marked ${eligible.length} tracks reviewed.`);
     router.refresh();
@@ -611,7 +642,7 @@ export function ListenInboxClient({
     setRows((prev) => {
       const next = prev.map((row) =>
         ids.includes(row.trackId)
-          ? { ...row, saved: value, isUpNext: value ? false : row.isUpNext, needsMark: value ? false : row.needsMark }
+          ? { ...row, saved: value, isUpNext: value ? false : row.isUpNext }
           : row,
       );
       return showQueueFilters ? next : next.filter((row) => row.saved);
@@ -777,6 +808,18 @@ export function ListenInboxClient({
     );
   }, [activeLabelId, showQueueFilters, visibleRows]);
 
+  useEffect(() => {
+    const onPlaybackMode = (event: Event) => {
+      const custom = event as CustomEvent<{ mode?: PlaybackMode }>;
+      const nextMode = custom.detail?.mode;
+      if (nextMode === "shuffle" || nextMode === "in_order") {
+        setPlaybackMode(nextMode);
+      }
+    };
+    window.addEventListener(PLAYBACK_MODE_EVENT, onPlaybackMode as EventListener);
+    return () => window.removeEventListener(PLAYBACK_MODE_EVENT, onPlaybackMode as EventListener);
+  }, []);
+
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
@@ -807,6 +850,31 @@ export function ListenInboxClient({
             <ChevronRight className="h-3.5 w-3.5" />
             Next label
           </Button>
+          <div className="ml-1 inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs">
+            <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
+            <button
+              type="button"
+              onClick={() => setGlobalPlaybackMode("in_order")}
+              className={filterButtonClass(playbackMode === "in_order")}
+              aria-pressed={playbackMode === "in_order"}
+              title="Play one after another in queue order"
+              aria-label="Playback mode in order"
+            >
+              <ListOrdered className="mr-1 inline h-3 w-3" />
+              In Order
+            </button>
+            <button
+              type="button"
+              onClick={() => setGlobalPlaybackMode("shuffle")}
+              className={filterButtonClass(playbackMode === "shuffle")}
+              aria-pressed={playbackMode === "shuffle"}
+              title="Shuffle through pending queue items"
+              aria-label="Playback mode shuffle"
+            >
+              <Shuffle className="mr-1 inline h-3 w-3" />
+              Shuffle
+            </button>
+          </div>
           {activeLabel?.discogsUrl ? (
             <a
               href={toDiscogsWebUrl(activeLabel.discogsUrl, `/label/${activeLabel.id}`)}
@@ -963,7 +1031,7 @@ export function ListenInboxClient({
                 onClick={() => setHideReviewed((prev) => !prev)}
                 className={filterButtonClass(hideReviewed)}
                 aria-pressed={hideReviewed}
-                title="Hide tracks already marked reviewed"
+                title="Hide tracks already reviewed or from wishlisted records"
                 aria-label="Toggle hide reviewed tracks"
               >
                 Hide reviewed ({queueFilterCounts.reviewed})
@@ -1051,8 +1119,9 @@ export function ListenInboxClient({
           const isPlaying = item.trackId === playingTrackId && playerIsPlaying;
           const isUpNext = Boolean(item.isUpNext) && !isPlaying;
           const playedCount = item.playedCount ?? (item.wasPlayed ? 1 : 0);
-          const wasPlayed = playedCount > 0 && !isUpNext;
-          const needsMark = Boolean(item.needsMark) && !isUpNext;
+          const hasPlayedHistory = playedCount > 0 && !isUpNext;
+          const needsMark = hasPlayedHistory && !item.listened;
+          const wasPlayed = hasPlayedHistory && !needsMark;
           const playUnavailableReason = youtubeQuotaExceeded
             ? "YouTube quota reached. Queue/play is temporarily disabled."
             : item.videoEmbeddable === false
@@ -1106,12 +1175,16 @@ export function ListenInboxClient({
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-muted)]">
                       <span>{item.labelName}</span>
                       <span>•</span>
-                      <a className="underline-offset-2 hover:underline" href={`/releases/${item.releaseId}`}>{item.releaseTitle}</a>
+                      <a className="underline-offset-2 hover:underline" href={`/releases/${item.releaseId}`}>
+                        {item.releaseTitle}
+                        {item.releaseCatno ? <span className="ml-1 text-[var(--color-muted)]">({item.releaseCatno})</span> : null}
+                      </a>
                       <span className="group relative ml-1 inline-flex">
                         <Button
                           type="button"
                           size="sm"
                           variant={item.releaseWishlist ? "secondary" : "ghost"}
+                          disabled={wishlistReleaseIdLoading === item.releaseId}
                           className={`h-6 w-6 p-0 ${
                             item.releaseWishlist
                               ? "border border-amber-500/60 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 hover:text-amber-100"
@@ -1127,7 +1200,11 @@ export function ListenInboxClient({
                           role="tooltip"
                           className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-56 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
                         >
-                          {item.releaseWishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
+                          {wishlistReleaseIdLoading === item.releaseId
+                            ? "Updating wishlist..."
+                            : item.releaseWishlist
+                              ? "Remove from Discogs wishlist"
+                              : "Add to Discogs wishlist"}
                         </span>
                       </span>
                       {item.duration ? (
@@ -1148,8 +1225,8 @@ export function ListenInboxClient({
                           Wishlisted
                         </Badge>
                       ) : null}
-                      {wasPlayed ? <Badge className="border-zinc-600/50 text-zinc-300">Played{playedCount > 1 ? ` x${playedCount}` : ""}</Badge> : null}
                       {needsMark ? <Badge className="border-amber-600/50 text-amber-300">Needs Mark</Badge> : null}
+                      {wasPlayed ? <Badge className="border-zinc-600/50 text-zinc-300">Played{playedCount > 1 ? ` x${playedCount}` : ""}</Badge> : null}
                     </div>
                   </div>
                 </div>

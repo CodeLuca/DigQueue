@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import {
+  AlertTriangle,
   Bookmark,
   CheckCircle2,
   Disc3,
@@ -28,7 +29,6 @@ import { LabelDeleteButton } from "@/components/label-delete-button";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
-import { RecentlyPlayedList } from "@/components/recently-played-list";
 import { SyncSavedToDiscogsButton } from "@/components/sync-saved-to-discogs-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
-import { getDashboardData, getToListenData, getWishlistData } from "@/lib/queries";
+import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
 import { getVisibleLabelError } from "@/lib/utils";
 
 export default async function HomePage({
@@ -66,15 +66,17 @@ export default async function HomePage({
     }
   }
 
-  const [data, listenData, wishlistData, bandcampWishlist] = await Promise.all([
+  const [data, listenData, wishlistData, playedReviewedData, bandcampWishlist] = await Promise.all([
     getDashboardData(),
     getToListenData(undefined, false),
     getWishlistData(undefined, false),
+    getPlayedReviewedData(undefined, false),
     getBandcampWishlistData(),
   ]);
 
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
   const hasYoutubeBlockedError = false;
+  const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
 
   const canProcess = hasDiscogs;
   const activeLabels = data.labels.filter((label) => label.active);
@@ -142,30 +144,6 @@ export default async function HomePage({
   };
   const activeMeta = tabMeta[activeTab];
   const ActiveTabIcon = activeMeta.icon;
-  const recentlyPlayedItems = data.recentlyPlayed.map((item) => ({
-    id: item.id,
-    trackId: item.trackId ?? null,
-    track: item.track
-      ? {
-          id: item.track.id,
-          title: item.track.title,
-          artistsText: item.track.artistsText,
-          listened: item.track.listened,
-          saved: item.track.saved,
-        }
-      : null,
-    release: item.release
-      ? {
-          id: item.release.id,
-          title: item.release.title,
-          artist: item.release.artist,
-          discogsUrl: item.release.discogsUrl,
-          thumbUrl: item.release.thumbUrl,
-          wishlist: item.release.wishlist,
-        }
-      : null,
-    label: item.label ? { id: item.label.id, name: item.label.name } : null,
-  }));
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8">
       <KeyboardShortcuts />
@@ -177,18 +155,16 @@ export default async function HomePage({
             {activeMeta.title}
           </h1>
           <p className="text-sm text-[var(--color-muted)]">{activeMeta.subtitle}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Badge className={hasDiscogs ? "border-emerald-600/50 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
-              Discogs {hasDiscogs ? "Configured" : "Missing Key"}
-            </Badge>
-            {hasYoutubeBlockedError ? (
-              <Badge className="border-red-600/50 text-red-300">YouTube Blocked</Badge>
-            ) : (
-              <Badge className={hasYoutubeKey ? "border-emerald-600/50 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
-                YouTube {hasYoutubeKey ? "Configured" : "Missing Key"}
-              </Badge>
-            )}
-          </div>
+          {showIntegrationAlerts ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {!hasDiscogs ? <Badge className="border-amber-600/50 text-amber-300">Discogs Missing Key</Badge> : null}
+              {hasYoutubeBlockedError ? (
+                <Badge className="border-red-600/50 text-red-300">YouTube Blocked</Badge>
+              ) : !hasYoutubeKey ? (
+                <Badge className="border-amber-600/50 text-amber-300">YouTube Missing Key</Badge>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </header>
 
@@ -461,35 +437,68 @@ export default async function HomePage({
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
-                <Badge>Errors {data.metrics.labelsErrored}</Badge>
-                <Badge>Low Conf {data.metrics.releasesLowConfidence}</Badge>
+                <Badge className={data.metrics.labelsErrored > 0 ? "border-rose-500/50 bg-rose-500/15 text-rose-200" : "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"}>
+                  Errors {data.metrics.labelsErrored}
+                </Badge>
+                <Badge className={data.metrics.releasesLowConfidence > 0 ? "border-amber-500/50 bg-amber-500/15 text-amber-200" : ""}>
+                  Low Conf {data.metrics.releasesLowConfidence}
+                </Badge>
                 <Badge>Up Next {data.queueCount}</Badge>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <form action={retryErroredLabelsAction}>
-                  <Button type="submit" variant="secondary" size="sm" disabled={data.metrics.labelsErrored === 0}>Reset Errors</Button>
-                </form>
-              </div>
-
-              <div className="space-y-2">
-                {data.erroredLabels.slice(0, 5).map((label) => {
-                  const visibleLastError = getVisibleLabelError(label.lastError);
-                  return (
-                    <div key={label.id} className="rounded-md border border-[var(--color-border)] p-2">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-medium hover:text-[var(--color-accent)]">{label.name}</Link>
-                        <form action={retryLabelAction}>
-                          <input type="hidden" name="labelId" value={label.id} />
-                          <Button type="submit" size="sm" variant="ghost">Reset</Button>
-                        </form>
-                      </div>
-                      {visibleLastError ? <p className="line-clamp-2 text-xs text-red-300">{visibleLastError}</p> : null}
+              {data.erroredLabels.length > 0 ? (
+                <div className="rounded-lg border border-rose-500/35 bg-[linear-gradient(135deg,rgba(120,10,10,0.22),rgba(120,10,10,0.06))] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose-100">
+                        <AlertTriangle className="h-4 w-4" />
+                        Processing incidents
+                      </p>
+                      <p className="text-xs text-rose-100/80">
+                        {data.erroredLabels.length} active labels need retry or config fixes.
+                      </p>
                     </div>
-                  );
-                })}
-                {data.erroredLabels.length === 0 ? <p className="text-sm text-[var(--color-muted)]">Healthy run state.</p> : null}
-              </div>
+                    <form action={retryErroredLabelsAction}>
+                      <Button type="submit" variant="secondary" size="sm">
+                        <RefreshCcw className="h-3.5 w-3.5" />
+                        Reset All Errors
+                      </Button>
+                    </form>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {data.erroredLabels.slice(0, 5).map((label) => {
+                      const visibleLastError = getVisibleLabelError(label.lastError);
+                      return (
+                        <div key={label.id} className="rounded-md border border-rose-500/30 bg-black/20 p-2.5">
+                          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-semibold text-rose-50 hover:text-[var(--color-accent)]">
+                                {label.name}
+                              </Link>
+                              <p className="text-[11px] text-rose-100/70">
+                                Last update {new Date(label.updatedAt).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Link href={`/labels/${label.id}`}>
+                                <Button type="button" size="sm" variant="ghost">
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  Open
+                                </Button>
+                              </Link>
+                              <form action={retryLabelAction}>
+                                <input type="hidden" name="labelId" value={label.id} />
+                                <Button type="submit" size="sm" variant="secondary">Retry</Button>
+                              </form>
+                            </div>
+                          </div>
+                          {visibleLastError ? <p className="line-clamp-2 text-xs text-rose-100/90">{visibleLastError}</p> : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
               <ListenInboxClient
                 initialRows={listenData.rows}
@@ -622,7 +631,17 @@ export default async function HomePage({
                 </form>
               </div>
 
-              <RecentlyPlayedList items={recentlyPlayedItems} />
+              <ListenInboxClient
+                initialRows={playedReviewedData.rows}
+                initialSelectedLabelId={Number.isFinite(selectedListenLabelId) ? selectedListenLabelId : undefined}
+                labelOptions={activeLabels.map((label) => ({
+                  id: label.id,
+                  name: label.name,
+                  discogsUrl: label.discogsUrl,
+                }))}
+                defaultHideReviewed={false}
+                defaultHideAlreadyPlayed={false}
+              />
             </CardContent>
           </Card>
       </section>

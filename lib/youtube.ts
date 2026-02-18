@@ -13,6 +13,7 @@ const YOUTUBE_MIN_CALL_GAP_MS = 800;
 const YOUTUBE_CACHE_TTL_SECONDS = 60 * 60 * 24 * 3;
 const YOUTUBE_QUOTA_BLOCK_TTL_SECONDS = 60 * 60 * 8;
 const YOUTUBE_FATAL_BLOCK_TTL_SECONDS = 60 * 60 * 24;
+const YOUTUBE_TRANSIENT_BLOCK_TTL_SECONDS = 60 * 15;
 const YOUTUBE_MAX_RETRIES = 3;
 
 let lastYoutubeCall = 0;
@@ -98,7 +99,13 @@ function parseYoutubeError(status: number, rawBody: string) {
     );
   }
 
-  if (status === 403 && reasons.includes("quotaExceeded")) {
+  if (
+    status === 403 &&
+    (reasons.includes("quotaExceeded") ||
+      reasons.includes("dailyLimitExceeded") ||
+      reasons.includes("userRateLimitExceeded") ||
+      reasons.includes("rateLimitExceeded"))
+  ) {
     return new Error("YouTube quota exceeded for this key. Wait for quota reset or use another key.");
   }
 
@@ -141,6 +148,11 @@ function buildFatalBlockKey(youtubeApiKey: string) {
   return `youtube:fatal:block:${suffix}`;
 }
 
+function buildTransientBlockKey(youtubeApiKey: string) {
+  const suffix = youtubeApiKey.slice(-8);
+  return `youtube:transient:block:${suffix}`;
+}
+
 async function scheduleYoutubeCall<T>(task: () => Promise<T>) {
   const run = youtubeQueue.then(async () => {
     const now = Date.now();
@@ -169,6 +181,7 @@ export async function searchYoutube(query: string) {
 
   const quotaBlockKey = buildQuotaBlockKey(youtubeApiKey);
   const fatalBlockKey = buildFatalBlockKey(youtubeApiKey);
+  const transientBlockKey = buildTransientBlockKey(youtubeApiKey);
   const quotaBlocked = await fromCache<{ blockedAt?: string }>(quotaBlockKey);
   if (quotaBlocked) {
     throw new Error("YouTube quota exceeded for this key. Wait for quota reset or use another key.");
@@ -178,6 +191,12 @@ export async function searchYoutube(query: string) {
     throw new Error(
       fatalBlocked.message ||
         "YouTube key blocked (API_KEY_SERVICE_BLOCKED). In Google Cloud: enable YouTube Data API v3 and ensure your key is allowed to call youtube.googleapis.com.",
+    );
+  }
+  const transientBlocked = await fromCache<{ blockedAt?: string; message?: string }>(transientBlockKey);
+  if (transientBlocked) {
+    throw new Error(
+      transientBlocked.message || "YouTube API temporarily unavailable. Requests paused to preserve quota. Please retry shortly.",
     );
   }
 
@@ -210,6 +229,14 @@ export async function searchYoutube(query: string) {
       if (response.status === 429 || response.status >= 500) {
         attempt += 1;
         if (attempt >= YOUTUBE_MAX_RETRIES) {
+          await setCache(
+            transientBlockKey,
+            {
+              blockedAt: new Date().toISOString(),
+              message: "YouTube API is unstable (429/5xx). Requests paused briefly to preserve quota.",
+            },
+            YOUTUBE_TRANSIENT_BLOCK_TTL_SECONDS,
+          );
           throw new Error(`YouTube API transient error ${response.status}. Retries exhausted.`);
         }
         await sleep(600 * 2 ** attempt);
@@ -233,6 +260,29 @@ export async function searchYoutube(query: string) {
       throw parsed;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const messageLower = message.toLowerCase();
+      const looksLikeNetworkFailure =
+        messageLower.includes("fetch failed") ||
+        messageLower.includes("network") ||
+        messageLower.includes("econnreset") ||
+        messageLower.includes("etimedout") ||
+        messageLower.includes("socket hang up");
+      if (looksLikeNetworkFailure) {
+        attempt += 1;
+        if (attempt >= YOUTUBE_MAX_RETRIES) {
+          await setCache(
+            transientBlockKey,
+            {
+              blockedAt: new Date().toISOString(),
+              message: "YouTube network failures detected. Requests paused briefly to preserve quota.",
+            },
+            YOUTUBE_TRANSIENT_BLOCK_TTL_SECONDS,
+          );
+          throw new Error("YouTube network failure. Retries exhausted.");
+        }
+        await sleep(600 * 2 ** attempt);
+        continue;
+      }
       const retriable = message.includes("transient error");
       if (!retriable) throw error;
     }

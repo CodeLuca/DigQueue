@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import {
   BookmarkCheck,
   BookmarkPlus,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Disc3,
@@ -15,6 +14,7 @@ import {
   ListOrdered,
   Pause,
   Play,
+  Shuffle,
   SkipBack,
   SkipForward,
   X,
@@ -56,6 +56,7 @@ type QueueApiItem = {
     id?: number;
     title: string;
     artist?: string | null;
+    catno?: string | null;
     discogsUrl?: string | null;
     thumbUrl?: string | null;
     wishlist?: boolean;
@@ -94,6 +95,9 @@ type ReleaseDetailsApiResponse = {
 const TRACK_TODO_UPDATED_EVENT = "digqueue:track-todo-updated";
 const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
 const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
+const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
+const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
+type PlaybackMode = "in_order" | "shuffle";
 type ReleaseWishlistApiResponse = {
   ok?: boolean;
   wishlist?: boolean;
@@ -148,6 +152,11 @@ export function MiniPlayer() {
   const [releaseDetails, setReleaseDetails] = useState<ReleaseDetailsApiResponse | null>(null);
   const [releaseDetailsLoading, setReleaseDetailsLoading] = useState(false);
   const [releaseDetailsError, setReleaseDetailsError] = useState<string | null>(null);
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(() => {
+    if (typeof window === "undefined") return "in_order";
+    const stored = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
+    return stored === "shuffle" ? "shuffle" : "in_order";
+  });
 
   const syncQueueToListeningScope = useCallback(async () => {
     if (!isListeningStationTab || !listeningScopeEnabledRef.current) return;
@@ -222,6 +231,14 @@ export function MiniPlayer() {
     };
   }, []);
 
+  const setGlobalPlaybackMode = useCallback((nextMode: PlaybackMode) => {
+    setPlaybackMode(nextMode);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(PLAYBACK_MODE_STORAGE_KEY, nextMode);
+      window.dispatchEvent(new CustomEvent(PLAYBACK_MODE_EVENT, { detail: { mode: nextMode } }));
+    }
+  }, []);
+
   useEffect(() => {
     currentRef.current = current;
     if (current?.id && handlingEndedForIdRef.current !== null && handlingEndedForIdRef.current !== current.id) {
@@ -238,19 +255,20 @@ export function MiniPlayer() {
 
   const loadNext = useCallback(async (action: "played" | "listened" | null = null, currentId?: number) => {
     const activeMode = "hybrid";
+    const activeOrder = playbackMode;
     await syncQueueToListeningScope();
     const activeCurrentId = currentId ?? currentRef.current?.id;
     const response = action && activeCurrentId
       ? await fetch("/api/queue/next", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ currentId: activeCurrentId, action, mode: activeMode }),
+          body: JSON.stringify({ currentId: activeCurrentId, action, mode: activeMode, order: activeOrder }),
         })
-      : await fetch(`/api/queue/next?mode=${activeMode}`);
+      : await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
     if (!response.ok) return false;
     let item = (await response.json()) as QueueApiItem | null;
     if (!item && action) {
-      const fallback = await fetch(`/api/queue/next?mode=${activeMode}`);
+      const fallback = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
       if (fallback.ok) {
         item = (await fallback.json()) as QueueApiItem | null;
       }
@@ -279,7 +297,7 @@ export function MiniPlayer() {
       setPlaying(true);
     }
     return true;
-  }, [syncQueueToListeningScope]);
+  }, [playbackMode, syncQueueToListeningScope]);
 
   const markReviewed = useCallback(async () => {
     const trackId = current?.track?.id ?? null;
@@ -334,9 +352,10 @@ export function MiniPlayer() {
   const toggleCurrentReleaseWishlist = useCallback(async () => {
     const releaseId = current?.release?.id;
     if (!releaseId) return;
+    const currentWishlist = Boolean(current?.release?.wishlist);
     setWishlistLoading(true);
     try {
-      const result = await updateReleaseWishlist({ releaseId, mode: "toggle" });
+      const result = await updateReleaseWishlist({ releaseId, mode: "set", value: !currentWishlist });
       setCurrent((prev) => {
         if (!prev?.release || prev.release.id !== releaseId) return prev;
         return { ...prev, release: { ...prev.release, wishlist: result.wishlist } };
@@ -349,7 +368,7 @@ export function MiniPlayer() {
     } finally {
       setWishlistLoading(false);
     }
-  }, [current?.release?.id, updateReleaseWishlist]);
+  }, [current?.release?.id, current?.release?.wishlist, updateReleaseWishlist]);
 
   const loadPrev = useCallback(() => {
     const previous = history[0];
@@ -369,7 +388,7 @@ export function MiniPlayer() {
       void fetch("/api/queue/next", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentId: previousCurrent.id, action: "played", mode: "hybrid" }),
+        body: JSON.stringify({ currentId: previousCurrent.id, action: "played", mode: "hybrid", order: playbackMode }),
       }).catch(() => null);
     }
 
@@ -387,7 +406,7 @@ export function MiniPlayer() {
     setCurrent(item);
     playerRef.current.loadVideoById(item.youtubeVideoId);
     setPlaying(true);
-  }, [ready]);
+  }, [playbackMode, ready]);
 
   useEffect(() => {
     if (!isListeningStationTab) {
@@ -414,6 +433,18 @@ export function MiniPlayer() {
     window.addEventListener(LISTENING_SCOPE_EVENT, onListeningScope as EventListener);
     return () => window.removeEventListener(LISTENING_SCOPE_EVENT, onListeningScope as EventListener);
   }, [fetchQueueItems, isListeningStationTab, queueOpen, syncQueueToListeningScope]);
+
+  useEffect(() => {
+    const onPlaybackMode = (event: Event) => {
+      const custom = event as CustomEvent<{ mode?: PlaybackMode }>;
+      const nextMode = custom.detail?.mode;
+      if (nextMode === "shuffle" || nextMode === "in_order") {
+        setPlaybackMode(nextMode);
+      }
+    };
+    window.addEventListener(PLAYBACK_MODE_EVENT, onPlaybackMode as EventListener);
+    return () => window.removeEventListener(PLAYBACK_MODE_EVENT, onPlaybackMode as EventListener);
+  }, []);
 
   useEffect(() => {
     const initPlayer = () => {
@@ -563,20 +594,9 @@ export function MiniPlayer() {
     };
   }, [current, loadNext, loadPrev, loadSpecific, markReviewed, playing, ready]);
 
-  const subtitle = useMemo(() => {
+  const releaseMeta = useMemo(() => {
     if (!current) return "Queue is empty";
-    const artist = current.track?.artistsText?.trim() || current.release?.artist?.trim() || null;
-    const parts = [artist, current.release?.title, current.track?.title]
-      .map((value) => value?.trim())
-      .filter((value): value is string => Boolean(value));
-    const seen = new Set<string>();
-    const deduped = parts.filter((value) => {
-      const key = value.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    return deduped.join(" • ");
+    return [current.label?.name?.trim(), current.release?.title?.trim()].filter(Boolean).join(" • ");
   }, [current]);
 
   const currentReleaseId = current?.release?.id;
@@ -586,6 +606,16 @@ export function MiniPlayer() {
     const leadArtist = releaseDetails.artists_sort?.trim() || releaseDetails.artists?.[0]?.name?.trim();
     return leadArtist || null;
   }, [releaseDetails]);
+
+  const currentArtistLine = useMemo(
+    () => current?.track?.artistsText?.trim() || current?.release?.artist?.trim() || currentArtist || "Unknown artist",
+    [current?.release?.artist, current?.track?.artistsText, currentArtist],
+  );
+
+  const currentCatalogNumber = useMemo(
+    () => current?.release?.catno?.trim() || releaseDetails?.labels?.[0]?.catno?.trim() || null,
+    [current?.release?.catno, releaseDetails],
+  );
 
   const currentLabel = useMemo(() => {
     if (!releaseDetails) return null;
@@ -789,17 +819,17 @@ export function MiniPlayer() {
     }
   }, []);
 
-  const utilityButtonClass =
-    "h-9 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] px-3 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0";
   const iconButtonClass =
     "h-9 w-9 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] p-0 text-[var(--color-text)] hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0";
+  const tooltipClass =
+    "pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-56 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-surface)_90%,black_10%)]/95 px-4 py-2 backdrop-blur">
       {queueOpen ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-full z-40 mb-2 flex justify-center px-4">
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[100vh] bg-black/40" aria-hidden />
-          <div className="pointer-events-auto w-full max-w-[900px] rounded-xl border border-[color-mix(in_oklab,var(--color-border)_78%,white_22%)] bg-[color-mix(in_oklab,var(--color-surface2)_88%,black_12%)] shadow-[0_32px_96px_rgba(0,0,0,0.72),0_12px_36px_rgba(0,0,0,0.5)]">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[100vh] bg-black/40" aria-hidden />
+          <div className="pointer-events-auto relative z-10 w-full max-w-[900px] rounded-xl border border-[color-mix(in_oklab,var(--color-border)_78%,white_22%)] bg-[color-mix(in_oklab,var(--color-surface2)_88%,black_12%)] shadow-[0_32px_96px_rgba(0,0,0,0.72),0_12px_36px_rgba(0,0,0,0.5)]">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2">
               <p className="text-sm font-semibold">Up Next ({queueItemsState.length})</p>
               <button
@@ -945,8 +975,9 @@ export function MiniPlayer() {
           className="h-16 w-28 overflow-hidden rounded-md border border-[var(--color-border-soft)] md:h-20 md:w-36"
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-[var(--color-text)]">
+          <div className="truncate text-base font-semibold text-[var(--color-text)] md:text-lg">
             {current?.track?.title || "Now Playing"}
+            {currentCatalogNumber ? <span className="ml-1 text-xs font-medium text-[var(--color-muted)]">({currentCatalogNumber})</span> : null}
             {current?.release ? (
               <a
                 className="ml-1 inline-flex align-middle text-[var(--color-muted)] hover:text-[var(--color-text)]"
@@ -960,7 +991,8 @@ export function MiniPlayer() {
               </a>
             ) : null}
           </div>
-          <div className="truncate text-xs text-[var(--color-muted)]">{subtitle}</div>
+          <div className="truncate text-xs text-[var(--color-muted)]">{currentArtistLine}</div>
+          <div className="truncate text-xs text-[var(--color-muted)]">{releaseMeta}</div>
           <div className="mt-1 flex items-center gap-2">
             <span className="w-10 text-right text-[11px] text-[var(--color-muted)]">{formatTime(sliderValue)}</span>
             <input
@@ -989,71 +1021,80 @@ export function MiniPlayer() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={expandedOpen ? "secondary" : "ghost"}
-              className={utilityButtonClass}
-              onClick={() => setExpandedOpen((prev) => !prev)}
-              disabled={!current}
-            >
-              {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-              {expandedOpen ? "Collapse" : "Expand"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={queueOpen ? "secondary" : "ghost"}
-              className={utilityButtonClass}
-              onClick={() => {
-                const next = !queueOpen;
-                setQueueOpen(next);
-                if (next) void fetchQueueItems();
-              }}
-            >
-              <ListOrdered className="h-3.5 w-3.5" />
-              Queue
-            </Button>
-          </div>
-          <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
-            {!isLibraryTab ? (
+            <span className="group relative inline-flex">
               <Button
                 type="button"
                 size="sm"
-                variant="ghost"
-                className={utilityButtonClass}
-                onClick={() => void markReviewed()}
-                disabled={!current?.track?.id || todoLoading !== null}
+                variant={expandedOpen ? "secondary" : "ghost"}
+                className={iconButtonClass}
+                onClick={() => setExpandedOpen((prev) => !prev)}
+                disabled={!current}
+                title={expandedOpen ? "Collapse release details" : "Expand release details"}
+                aria-label={expandedOpen ? "Collapse release details" : "Expand release details"}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {todoLoading === "reviewed" ? "..." : "Mark Reviewed"}
+                {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
               </Button>
+              <span role="tooltip" className={tooltipClass}>
+                {expandedOpen ? "Collapse release details" : "Expand release details"}
+              </span>
+            </span>
+            <span className="group relative inline-flex">
+              <Button
+                type="button"
+                size="sm"
+                variant={queueOpen ? "secondary" : "ghost"}
+                className={iconButtonClass}
+                onClick={() => {
+                  const next = !queueOpen;
+                  setQueueOpen(next);
+                  if (next) void fetchQueueItems();
+                }}
+                title="Open queue"
+                aria-label="Open queue"
+              >
+                <ListOrdered className="h-3.5 w-3.5" />
+              </Button>
+              <span role="tooltip" className={tooltipClass}>Open queue</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
+            {!isLibraryTab ? (
+              <span className="group relative inline-flex">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 rounded-full border border-emerald-400/50 bg-emerald-500/20 px-3 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-0"
+                  onClick={() => void markReviewed()}
+                  disabled={!current?.track?.id || todoLoading !== null}
+                  title="Mark reviewed and move to the next track"
+                  aria-label="Mark reviewed and move to next track"
+                >
+                  {todoLoading === "reviewed" ? "..." : "Mark Reviewed"}
+                </Button>
+                <span role="tooltip" className={tooltipClass}>Mark reviewed and move to next</span>
+              </span>
             ) : null}
             <span className="group relative inline-flex">
               <Button
                 type="button"
                 size="sm"
                 variant={current?.track?.saved ? "secondary" : "ghost"}
-                className={utilityButtonClass}
+                className={iconButtonClass}
                 onClick={() => void toggleSaved()}
                 disabled={!current?.track?.id || todoLoading !== null}
                 aria-label={current?.track?.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}
+                title={current?.track?.saved ? "Saved track (local only)" : "Save track (local only)"}
               >
                 {todoLoading === "saved" ? "..." : current?.track?.saved ? (
-                  <>
-                    <HeartOff className="h-3.5 w-3.5" />
-                    Saved
-                  </>
+                  <HeartOff className="h-3.5 w-3.5" />
                 ) : (
-                  <>
-                    <Heart className="h-3.5 w-3.5" />
-                    Save Track
-                  </>
+                  <Heart className="h-3.5 w-3.5" />
                 )}
               </Button>
               <span
                 role="tooltip"
-                className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-56 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                className={tooltipClass}
               >
                 {todoLoading === "saved"
                   ? "Updating saved track..."
@@ -1081,7 +1122,7 @@ export function MiniPlayer() {
               </Button>
               <span
                 role="tooltip"
-                className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-56 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                className={tooltipClass}
               >
                 {wishlistLoading
                   ? "Updating wishlist..."
@@ -1093,16 +1134,50 @@ export function MiniPlayer() {
           </div>
         </div>
         {current?.youtubeVideoId ? (
-          <a
-            href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] px-3 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
-          >
-            <Youtube className="h-3.5 w-3.5" />
-            Open on YouTube
-          </a>
+          <span className="group relative inline-flex">
+            <a
+              href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
+              title="Open on YouTube"
+              aria-label="Open on YouTube"
+            >
+              <Youtube className="h-3.5 w-3.5" />
+            </a>
+            <span role="tooltip" className={tooltipClass}>Open on YouTube</span>
+          </span>
         ) : null}
+        <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1">
+          <span className="group relative inline-flex">
+            <Button
+              type="button"
+              variant={playbackMode === "in_order" ? "secondary" : "ghost"}
+              size="sm"
+              className={iconButtonClass}
+              onClick={() => setGlobalPlaybackMode("in_order")}
+              aria-label="Play in order"
+              title="Play one after another in queue order"
+            >
+              <ListOrdered className="h-3.5 w-3.5" />
+            </Button>
+            <span role="tooltip" className={tooltipClass}>Play in order</span>
+          </span>
+          <span className="group relative inline-flex">
+            <Button
+              type="button"
+              variant={playbackMode === "shuffle" ? "secondary" : "ghost"}
+              size="sm"
+              className={iconButtonClass}
+              onClick={() => setGlobalPlaybackMode("shuffle")}
+              aria-label="Play shuffled"
+              title="Shuffle through pending queue items"
+            >
+              <Shuffle className="h-3.5 w-3.5" />
+            </Button>
+            <span role="tooltip" className={tooltipClass}>Shuffle playback</span>
+          </span>
+        </div>
         <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.25)]">
           <Button variant="ghost" size="sm" className={iconButtonClass} onClick={() => loadPrev()} aria-label="Previous">
             <SkipBack className="h-4 w-4" />
