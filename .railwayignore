@@ -1,0 +1,24 @@
+# Dependencies / build artifacts
+node_modules
+.next
+out
+dist
+
+# Local databases / caches
+*.db
+*.db-shm
+*.db-wal
+db/*.db
+db/*.db-shm
+db/*.db-wal
+
+# Local env and editor artifacts
+.env*
+!.env.example
+.DS_Store
+
+# VCS and misc
+.git
+.github
+coverage
+*.log
