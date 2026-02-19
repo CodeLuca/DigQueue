@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { feedbackEvents, queueItems, releases, releaseSignals, tracks, youtubeMatches } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
@@ -165,8 +165,8 @@ export async function logFeedbackEvent(input: {
   userId?: string | null;
 }) {
   const userId = input.userId ?? (await requireCurrentAppUserId());
-  const trackScope = sql`tracks.user_id = ${userId}::uuid`;
-  const releaseScope = sql`releases.user_id = ${userId}::uuid`;
+  const trackScope = eq(tracks.userId, userId);
+  const releaseScope = eq(releases.userId, userId);
   const trackId = input.trackId ?? null;
   let releaseId = input.releaseId ?? null;
   let labelId = input.labelId ?? null;

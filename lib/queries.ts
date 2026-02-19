@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, lt, or } from "drizzle-orm";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
@@ -6,11 +6,11 @@ import { buildDeepRecommendations, buildExternalRecommendations } from "@/lib/re
 
 function userScope(userId: string) {
   return {
-    labels: sql`labels.user_id = ${userId}::uuid`,
-    releases: sql`releases.user_id = ${userId}::uuid`,
-    tracks: sql`tracks.user_id = ${userId}::uuid`,
-    queueItems: sql`queue_items.user_id = ${userId}::uuid`,
-    youtubeMatches: sql`youtube_matches.user_id = ${userId}::uuid`,
+    labels: eq(labels.userId, userId),
+    releases: eq(releases.userId, userId),
+    tracks: eq(tracks.userId, userId),
+    queueItems: eq(queueItems.userId, userId),
+    youtubeMatches: eq(youtubeMatches.userId, userId),
   };
 }
 

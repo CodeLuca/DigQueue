@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { labels, queueItems, releases, tracks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
@@ -16,10 +16,10 @@ import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
 
 function userScope(userId: string) {
   return {
-    labels: sql`labels.user_id = ${userId}::uuid`,
-    releases: sql`releases.user_id = ${userId}::uuid`,
-    tracks: sql`tracks.user_id = ${userId}::uuid`,
-    queueItems: sql`queue_items.user_id = ${userId}::uuid`,
+    labels: eq(labels.userId, userId),
+    releases: eq(releases.userId, userId),
+    tracks: eq(tracks.userId, userId),
+    queueItems: eq(queueItems.userId, userId),
   };
 }
 

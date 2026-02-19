@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { apiCache, labels, releases, tracks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
@@ -72,7 +72,7 @@ async function resolveWantLabel(
 async function ensureLabelForWantedRelease(userId: string, labelId: number, labelName: string) {
   const storedLabelId = toStoredDiscogsId(userId, labelId, "label");
   const now = new Date();
-  const labelScope = sql`labels.user_id = ${userId}::uuid`;
+  const labelScope = eq(labels.userId, userId);
   const existing = await db.query.labels.findFirst({ where: and(eq(labels.id, storedLabelId), labelScope) });
   if (!existing) {
     await db.insert(labels).values({
@@ -111,8 +111,8 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean }) {
   const userId = await requireCurrentAppUserId();
   const force = Boolean(options?.force);
   if (await shouldSkipAutoSync(force, userId)) return { synced: false as const, reason: "throttled" as const };
-  const releasesScope = sql`releases.user_id = ${userId}::uuid`;
-  const tracksScope = sql`tracks.user_id = ${userId}::uuid`;
+  const releasesScope = eq(releases.userId, userId);
+  const tracksScope = eq(tracks.userId, userId);
 
   const wantedItems = await fetchDiscogsWantItems();
   const wantedReleaseIds = wantedItems.map((item) => toStoredDiscogsId(userId, item.releaseId, "release"));

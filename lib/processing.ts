@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
 import { db } from "@/lib/db";
 import { extractYoutubeVideoId, fetchDiscogsLabelReleases, fetchDiscogsRelease, setDiscogsReleaseWishlist } from "@/lib/discogs";
@@ -15,11 +15,11 @@ function safeErrorMessage(error: unknown) {
 
 function userScope(userId: string) {
   return {
-    labels: sql`labels.user_id = ${userId}::uuid`,
-    releases: sql`releases.user_id = ${userId}::uuid`,
-    tracks: sql`tracks.user_id = ${userId}::uuid`,
-    youtubeMatches: sql`youtube_matches.user_id = ${userId}::uuid`,
-    queueItems: sql`queue_items.user_id = ${userId}::uuid`,
+    labels: eq(labels.userId, userId),
+    releases: eq(releases.userId, userId),
+    tracks: eq(tracks.userId, userId),
+    youtubeMatches: eq(youtubeMatches.userId, userId),
+    queueItems: eq(queueItems.userId, userId),
   };
 }
 
