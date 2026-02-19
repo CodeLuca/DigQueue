@@ -1,23 +1,36 @@
 "use server";
 
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { labels, queueItems, releases, tracks } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
 import { parseLabelIdFromInput, searchDiscogsLabels } from "@/lib/discogs";
 import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
+import { toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshLabelMetadata } from "@/lib/label-metadata";
 import { chooseTrackMatch, processSingleReleaseForLabel, toggleReleaseWishlist, toggleTrackTodo } from "@/lib/processing";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
 
-async function upsertLabelById(id: number, fallbackName?: string) {
+function userScope(userId: string) {
+  return {
+    labels: sql`labels.user_id = ${userId}::uuid`,
+    releases: sql`releases.user_id = ${userId}::uuid`,
+    tracks: sql`tracks.user_id = ${userId}::uuid`,
+    queueItems: sql`queue_items.user_id = ${userId}::uuid`,
+  };
+}
+
+async function upsertLabelById(userId: string, id: number, fallbackName?: string) {
+  const storedLabelId = toStoredDiscogsId(userId, id, "label");
   const now = new Date();
   await db
     .insert(labels)
     .values({
-      id,
+      id: storedLabelId,
+      userId,
       name: fallbackName || `Label ${id}`,
       discogsUrl: `https://www.discogs.com/label/${id}`,
       sourceType: "workspace",
@@ -39,22 +52,25 @@ async function upsertLabelById(id: number, fallbackName?: string) {
         lastError: null,
       },
     });
+  return storedLabelId;
 }
 
-async function recomputeReleaseListened(releaseId: number) {
-  const releaseTracks = await db.query.tracks.findMany({ where: eq(tracks.releaseId, releaseId) });
+async function recomputeReleaseListened(userId: string, releaseId: number) {
+  const scope = userScope(userId);
+  const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, releaseId), scope.tracks) });
   const listened = releaseTracks.length > 0 && releaseTracks.every((item) => item.listened);
-  await db.update(releases).set({ listened }).where(eq(releases.id, releaseId));
+  await db.update(releases).set({ listened }).where(and(eq(releases.id, releaseId), scope.releases));
 }
 
 async function seedLabelsInternal() {
+  const userId = await requireCurrentAppUserId();
   const keys = await getEffectiveApiKeys();
   const hasDiscogsToken = Boolean(keys.discogsToken);
 
   for (const label of seedLabels) {
     const id = parseLabelIdFromInput(label.discogs_url);
     if (!id) continue;
-    await upsertLabelById(id, label.name);
+    await upsertLabelById(userId, id, label.name);
   }
 
   if (hasDiscogsToken) {
@@ -63,7 +79,7 @@ async function seedLabelsInternal() {
         const search = await searchDiscogsLabels(searchName);
         const first = search.results[0];
         if (!first) continue;
-        await upsertLabelById(first.id, searchName);
+        await upsertLabelById(userId, first.id, searchName);
       } catch {
         // Best-effort: skip unresolved search labels so direct-ID seeds still succeed.
       }
@@ -72,6 +88,7 @@ async function seedLabelsInternal() {
 }
 
 export async function addLabelAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
   const raw = String(formData.get("label") || "").trim();
   if (!raw) return;
 
@@ -86,9 +103,9 @@ export async function addLabelAction(formData: FormData) {
     name = first.title;
   }
 
-  await upsertLabelById(id, name);
+  const storedLabelId = await upsertLabelById(userId, id, name);
   try {
-    await refreshLabelMetadata(id);
+    await refreshLabelMetadata(storedLabelId, userId);
   } catch {
     // Non-blocking: metadata enrichment should not block adding labels.
   }
@@ -96,11 +113,15 @@ export async function addLabelAction(formData: FormData) {
 }
 
 export async function refreshLabelMetadataAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const labelId = Number(formData.get("labelId"));
   if (!labelId) return;
+  const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), scope.labels) });
+  if (!label) return;
 
   try {
-    await refreshLabelMetadata(labelId);
+    await refreshLabelMetadata(labelId, userId);
   } catch {
     // Keep current label data when Discogs metadata lookup fails.
   }
@@ -110,14 +131,16 @@ export async function refreshLabelMetadataAction(formData: FormData) {
 }
 
 export async function refreshMissingLabelMetadataAction() {
-  const allLabels = await db.query.labels.findMany();
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const allLabels = await db.query.labels.findMany({ where: scope.labels });
   const missingMetadata = allLabels
     .filter((label) => label.sourceType === "workspace" && (!label.imageUrl || !label.blurb))
     .slice(0, 12);
 
   for (const label of missingMetadata) {
     try {
-      await refreshLabelMetadata(label.id);
+      await refreshLabelMetadata(label.id, userId);
     } catch {
       // Keep existing values and continue with the next label.
     }
@@ -133,42 +156,50 @@ export async function seedLabelsAction() {
 }
 
 export async function setLabelStatusAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const labelId = Number(formData.get("labelId"));
   const status = String(formData.get("status") || "queued");
-  await db.update(labels).set({ status, updatedAt: new Date() }).where(eq(labels.id, labelId));
+  await db.update(labels).set({ status, updatedAt: new Date() }).where(and(eq(labels.id, labelId), scope.labels));
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);
 }
 
 export async function retryErroredLabelsAction() {
-  const erroredLabels = await db.query.labels.findMany({ where: and(eq(labels.status, "error"), eq(labels.active, true)) });
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const erroredLabels = await db.query.labels.findMany({ where: and(eq(labels.status, "error"), eq(labels.active, true), scope.labels) });
   const now = new Date();
   for (const label of erroredLabels) {
     await db
       .update(labels)
       .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: now })
-      .where(eq(labels.id, label.id));
+      .where(and(eq(labels.id, label.id), scope.labels));
   }
   revalidatePath("/");
 }
 
 export async function retryLabelAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const labelId = Number(formData.get("labelId"));
   if (!labelId) return;
   await db
     .update(labels)
     .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: new Date() })
-    .where(eq(labels.id, labelId));
+    .where(and(eq(labels.id, labelId), scope.labels));
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);
 }
 
 export async function deleteLabelAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const labelId = Number(formData.get("labelId"));
   if (!labelId) return;
 
   const labelReleases = await db.query.releases.findMany({
-    where: eq(releases.labelId, labelId),
+    where: and(eq(releases.labelId, labelId), scope.releases),
     columns: { id: true },
   });
   const releaseIds = labelReleases.map((item) => item.id);
@@ -177,17 +208,19 @@ export async function deleteLabelAction(formData: FormData) {
     .delete(queueItems)
     .where(
       releaseIds.length > 0
-        ? or(eq(queueItems.labelId, labelId), inArray(queueItems.releaseId, releaseIds))
-        : eq(queueItems.labelId, labelId),
+        ? and(scope.queueItems, or(eq(queueItems.labelId, labelId), inArray(queueItems.releaseId, releaseIds)))
+        : and(scope.queueItems, eq(queueItems.labelId, labelId)),
     );
-  await db.delete(labels).where(eq(labels.id, labelId));
+  await db.delete(labels).where(and(eq(labels.id, labelId), scope.labels));
 
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);
 }
 
 export async function clearPlayedQueueAction() {
-  await db.delete(queueItems).where(eq(queueItems.status, "played"));
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  await db.delete(queueItems).where(and(eq(queueItems.status, "played"), scope.queueItems));
   revalidatePath("/");
 }
 
@@ -197,6 +230,8 @@ export async function pullDiscogsWantsAction() {
 }
 
 export async function oneClickFirstRunAction() {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const keys = await getEffectiveApiKeys();
   await seedLabelsInternal();
 
@@ -205,44 +240,48 @@ export async function oneClickFirstRunAction() {
     return;
   }
 
-  const firstLabel = await db.query.labels.findFirst({ where: and(eq(labels.status, "queued"), eq(labels.active, true)) });
+  const firstLabel = await db.query.labels.findFirst({ where: and(eq(labels.status, "queued"), eq(labels.active, true), scope.labels) });
   if (firstLabel) {
-    await db.update(labels).set({ status: "processing", updatedAt: new Date(), lastError: null }).where(eq(labels.id, firstLabel.id));
-    await processSingleReleaseForLabel(firstLabel.id);
+    await db.update(labels).set({ status: "processing", updatedAt: new Date(), lastError: null }).where(and(eq(labels.id, firstLabel.id), scope.labels));
+    await processSingleReleaseForLabel(firstLabel.id, userId);
   }
 
   revalidatePath("/");
 }
 
 export async function processLabelAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const labelId = Number(formData.get("labelId"));
   if (!labelId) return;
 
-  await db.update(labels).set({ status: "processing", updatedAt: new Date() }).where(eq(labels.id, labelId));
-  await processSingleReleaseForLabel(labelId);
+  await db.update(labels).set({ status: "processing", updatedAt: new Date() }).where(and(eq(labels.id, labelId), scope.labels));
+  await processSingleReleaseForLabel(labelId, userId);
 
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);
 }
 
 export async function chooseMatchAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
   const trackId = Number(formData.get("trackId"));
   const matchId = Number(formData.get("matchId"));
   const releaseId = Number(formData.get("releaseId"));
-  await chooseTrackMatch(trackId, matchId);
+  await chooseTrackMatch(trackId, matchId, userId);
   revalidatePath(`/releases/${releaseId}`);
   revalidatePath("/");
 }
 
 export async function toggleTrackAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
   const trackId = Number(formData.get("trackId"));
   const fieldRaw = String(formData.get("field"));
   const field = fieldRaw === "wishlist" ? "saved" : (fieldRaw as "listened" | "saved");
   const releaseId = Number(formData.get("releaseId"));
-  await toggleTrackTodo(trackId, field);
+  await toggleTrackTodo(trackId, field, userId);
 
   if (field === "listened") {
-    await recomputeReleaseListened(releaseId);
+    await recomputeReleaseListened(userId, releaseId);
   }
 
   revalidatePath(`/releases/${releaseId}`);
@@ -250,6 +289,8 @@ export async function toggleTrackAction(formData: FormData) {
 }
 
 export async function bulkTrackAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const trackIdsRaw = String(formData.get("trackIds") || "");
   const fieldRaw = String(formData.get("field"));
   const field = fieldRaw === "wishlist" ? "saved" : (fieldRaw as "listened" | "saved");
@@ -263,19 +304,20 @@ export async function bulkTrackAction(formData: FormData) {
 
   for (const trackId of trackIds) {
     if (field === "listened") {
-      await db.update(tracks).set({ listened: value }).where(eq(tracks.id, trackId));
+      await db.update(tracks).set({ listened: value }).where(and(eq(tracks.id, trackId), scope.tracks));
       if (value) {
-        await logFeedbackEvent({ eventType: "listened", source: "action_bulk_track", trackId });
+        await logFeedbackEvent({ eventType: "listened", source: "action_bulk_track", trackId, userId });
       }
     } else {
       await db
         .update(tracks)
         .set({ saved: value })
-        .where(eq(tracks.id, trackId));
+        .where(and(eq(tracks.id, trackId), scope.tracks));
       await logFeedbackEvent({
         eventType: value ? "saved_add" : "saved_remove",
         source: "action_bulk_track",
         trackId,
+        userId,
       });
     }
   }
@@ -285,12 +327,12 @@ export async function bulkTrackAction(formData: FormData) {
       await db
         .update(queueItems)
         .set({ status: "played" })
-        .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending")));
+        .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), scope.queueItems));
     }
-    const touchedTracks = await Promise.all(trackIds.map((trackId) => db.query.tracks.findFirst({ where: eq(tracks.id, trackId) })));
+    const touchedTracks = await Promise.all(trackIds.map((trackId) => db.query.tracks.findFirst({ where: and(eq(tracks.id, trackId), scope.tracks) })));
     const releaseIds = new Set(touchedTracks.map((item) => item?.releaseId).filter((item): item is number => typeof item === "number"));
     for (const releaseId of releaseIds) {
-      await recomputeReleaseListened(releaseId);
+      await recomputeReleaseListened(userId, releaseId);
     }
   }
 
@@ -299,14 +341,17 @@ export async function bulkTrackAction(formData: FormData) {
 }
 
 export async function toggleReleaseWishlistAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const releaseId = Number(formData.get("releaseId"));
-  await toggleReleaseWishlist(releaseId);
-  const release = await db.query.releases.findFirst({ where: eq(releases.id, releaseId) });
+  await toggleReleaseWishlist(releaseId, userId);
+  const release = await db.query.releases.findFirst({ where: and(eq(releases.id, releaseId), scope.releases) });
   await logFeedbackEvent({
     eventType: release?.wishlist ? "record_wishlist_add" : "record_wishlist_remove",
     source: "action_toggle_release",
     releaseId,
     labelId: release?.labelId ?? null,
+    userId,
   });
   revalidatePath(`/releases/${releaseId}`);
   revalidatePath("/");

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { logFeedbackEvent } from "@/lib/recommendations";
 
 const schema = z.object({
@@ -13,6 +14,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const userId = await requireCurrentAppUserId();
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -23,6 +25,7 @@ export async function POST(request: Request) {
     source: "api_recommendations_feedback",
     trackId: parsed.data.trackId ?? null,
     releaseId: parsed.data.releaseId ?? null,
+    userId,
   });
 
   return NextResponse.json({ ok: true });

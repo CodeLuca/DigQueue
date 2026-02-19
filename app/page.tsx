@@ -41,6 +41,20 @@ import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
 import { getVisibleLabelError } from "@/lib/utils";
 
+async function withTimeout<T>(promise: Promise<T>, ms: number) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("timeout")), ms);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -60,7 +74,7 @@ export default async function HomePage({
   const hasDiscogs = Boolean(keys.discogsToken);
   if (hasDiscogs) {
     try {
-      await syncDiscogsWantsToLocal();
+      await withTimeout(syncDiscogsWantsToLocal(), 4000);
     } catch {
       // Non-blocking on page load: keep rendering even if Discogs is unavailable.
     }
@@ -71,7 +85,14 @@ export default async function HomePage({
     getToListenData(undefined, false),
     getWishlistData(undefined, false),
     getPlayedReviewedData(undefined, false),
-    getBandcampWishlistData(),
+    withTimeout(getBandcampWishlistData(), 4000).catch(() => ({
+      enabled: false,
+      sourceUrl: null,
+      totalCount: 0,
+      items: [],
+      fetchedAt: null,
+      partial: false,
+    })),
   ]);
 
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
@@ -145,12 +166,12 @@ export default async function HomePage({
   const activeMeta = tabMeta[activeTab];
   const ActiveTabIcon = activeMeta.icon;
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8">
+    <main className="mx-auto max-w-[1400px] px-4 py-4 md:px-8 md:py-6">
       <KeyboardShortcuts />
 
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3 reveal">
         <div>
-          <h1 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight">
+          <h1 className="inline-flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
             <ActiveTabIcon className="h-6 w-6 text-[var(--color-accent)]" />
             {activeMeta.title}
           </h1>
@@ -245,7 +266,7 @@ export default async function HomePage({
                 </div>
               ) : null}
 
-              <form action={addLabelAction} className="flex gap-2">
+              <form action={addLabelAction} className="flex flex-col gap-2 sm:flex-row">
                 <Input id="label-input" name="label" placeholder="Paste Discogs label URL, ID, or name" required />
                 <Button type="submit">Add</Button>
               </form>
@@ -263,7 +284,7 @@ export default async function HomePage({
                   name="labelQuery"
                   defaultValue={labelQuery || ""}
                   placeholder="Search labels by name, summary, release tags..."
-                  className="w-full min-w-[240px] md:max-w-sm"
+                  className="w-full sm:max-w-sm"
                 />
                 <Button type="submit" size="sm" variant="outline">Search</Button>
                 {normalizedLabelQuery ? (
@@ -358,8 +379,8 @@ export default async function HomePage({
                       </div>
                     </div>
                     {visibleLastError ? <p className="mt-2 line-clamp-2 text-xs text-red-300">Error: {visibleLastError}</p> : null}
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-wrap items-center gap-2">
                         <a
                           className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                           href={toDiscogsWebUrl(label.discogsUrl, `/label/${label.id}`)}
@@ -387,7 +408,7 @@ export default async function HomePage({
                         ) : null}
                         <p className="text-xs text-[var(--color-muted)]">Retries {label.retryCount}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <LabelDeleteButton labelId={label.id} labelName={label.name} />
                         <ProcessingToggle
                           key={`${label.id}-${label.active ? "1" : "0"}-${label.status}`}

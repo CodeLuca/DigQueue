@@ -88,7 +88,7 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
 
   return (
     <div className="space-y-1">
-      <div className="flex gap-1">
+      <div className="flex flex-wrap gap-1">
         <Link
           href={youtubeSearchUrl}
           target="_blank"
@@ -125,7 +125,7 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
           )}
         </Button>
       </div>
-      {error ? <p className="max-w-[220px] text-right text-[11px] text-rose-300">{error}</p> : null}
+      {error ? <p className="max-w-full text-[11px] text-rose-300 sm:max-w-[220px] sm:text-right">{error}</p> : null}
     </div>
   );
 }

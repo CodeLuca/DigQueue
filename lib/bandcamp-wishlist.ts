@@ -1,5 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { apiCache } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 
@@ -142,20 +143,20 @@ function normalizeWishlistItem(raw: Record<string, unknown>): BandcampWishlistIt
   return { id, type, title, bandName, url, artUrl, addedAt };
 }
 
-async function fromCache<T>(key: string): Promise<T | null> {
+async function fromCache<T>(key: string, userId: string): Promise<T | null> {
   const row = await db.query.apiCache.findFirst({
-    where: and(eq(apiCache.key, key), gt(apiCache.expiresAt, new Date())),
+    where: and(eq(apiCache.key, key), eq(apiCache.userId, userId), gt(apiCache.expiresAt, new Date())),
   });
   if (!row) return null;
   return JSON.parse(row.responseJson) as T;
 }
 
-async function setCache(key: string, data: unknown, ttlSeconds: number) {
+async function setCache(key: string, data: unknown, ttlSeconds: number, userId: string) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
   await db
     .insert(apiCache)
-    .values({ key, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
+    .values({ key, userId, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
     .onConflictDoUpdate({
       target: apiCache.key,
       set: { responseJson: JSON.stringify(data), fetchedAt: now, expiresAt },
@@ -192,13 +193,14 @@ async function callBandcampWishlistApi(params: { fanId: number; olderThanToken: 
 }
 
 export async function getBandcampWishlistData(): Promise<BandcampWishlistResult> {
+  const userId = await requireCurrentAppUserId();
   const sourceUrl = normalizeWishlistUrl(env.BANDCAMP_WISHLIST_URL);
   if (!sourceUrl) {
     return { enabled: false, sourceUrl: null, totalCount: 0, items: [], fetchedAt: null, partial: false };
   }
 
-  const cacheKey = `bandcamp:wishlist:${sourceUrl.toLowerCase()}`;
-  const cached = await fromCache<BandcampWishlistResult>(cacheKey);
+  const cacheKey = `bandcamp:${userId}:wishlist:${sourceUrl.toLowerCase()}`;
+  const cached = await fromCache<BandcampWishlistResult>(cacheKey, userId);
   if (cached) return cached;
 
   try {
@@ -259,7 +261,7 @@ export async function getBandcampWishlistData(): Promise<BandcampWishlistResult>
       fetchedAt: new Date().toISOString(),
       partial: items.length < totalCount,
     };
-    await setCache(cacheKey, result, BANDCAMP_CACHE_TTL_SECONDS);
+    await setCache(cacheKey, result, BANDCAMP_CACHE_TTL_SECONDS, userId);
     return result;
   } catch {
     return { enabled: true, sourceUrl, totalCount: 0, items: [], fetchedAt: null, partial: true };

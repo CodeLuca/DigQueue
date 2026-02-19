@@ -1,8 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { releases, tracks } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { setDiscogsReleaseWishlist } from "@/lib/discogs";
 
@@ -15,10 +16,11 @@ function chunk<T>(items: T[], size: number) {
 }
 
 export async function POST() {
+  const userId = await requireCurrentAppUserId();
   const savedTrackRows = await db
     .select({ releaseId: tracks.releaseId })
     .from(tracks)
-    .where(eq(tracks.saved, true));
+    .where(and(eq(tracks.saved, true), eq(tracks.userId, userId)));
 
   const releaseIds = [...new Set(savedTrackRows.map((row) => row.releaseId))];
   if (releaseIds.length === 0) {
@@ -38,7 +40,7 @@ export async function POST() {
     const rows = await db
       .select({ id: releases.id, wishlist: releases.wishlist })
       .from(releases)
-      .where(inArray(releases.id, ids));
+      .where(and(inArray(releases.id, ids), eq(releases.userId, userId)));
     existingRows.push(...rows);
   }
 
@@ -72,7 +74,7 @@ export async function POST() {
 
   for (const ids of chunk(syncedReleaseIds, 500)) {
     if (ids.length === 0) continue;
-    await db.update(releases).set({ wishlist: true }).where(inArray(releases.id, ids));
+    await db.update(releases).set({ wishlist: true }).where(and(inArray(releases.id, ids), eq(releases.userId, userId)));
   }
 
   return NextResponse.json({

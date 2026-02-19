@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { getFirstDiscogsReleaseYoutubeVideoId } from "@/lib/discogs";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -21,29 +22,30 @@ const schema = z.object({
   queueMode: z.enum(["normal", "next"]).default("normal"),
 });
 
-async function nextQueuePriority() {
+async function nextQueuePriority(userId: string) {
   const maxPriorityRow = await db
     .select({ value: queueItems.priority })
     .from(queueItems)
-    .where(eq(queueItems.status, "pending"))
+    .where(and(eq(queueItems.status, "pending"), eq(queueItems.userId, userId)))
     .orderBy(desc(queueItems.priority), desc(queueItems.id))
     .limit(1);
   return (maxPriorityRow[0]?.value ?? 0) + 1;
 }
 
 export async function POST(request: Request) {
+  const userId = await requireCurrentAppUserId();
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const track = await db.query.tracks.findFirst({ where: eq(tracks.id, parsed.data.trackId) });
+  const track = await db.query.tracks.findFirst({ where: and(eq(tracks.id, parsed.data.trackId), eq(tracks.userId, userId)) });
   if (!track) {
     return NextResponse.json({ error: "Track not found" }, { status: 404 });
   }
 
-  const release = await db.query.releases.findFirst({ where: eq(releases.id, track.releaseId) });
-  const label = release ? await db.query.labels.findFirst({ where: eq(labels.id, release.labelId) }) : null;
+  const release = await db.query.releases.findFirst({ where: and(eq(releases.id, track.releaseId), eq(releases.userId, userId)) });
+  const label = release ? await db.query.labels.findFirst({ where: and(eq(labels.id, release.labelId), eq(labels.userId, userId)) }) : null;
   if (label && !label.active) {
     return NextResponse.json(
       { ok: false, reason: "label_inactive", error: "Label is inactive. Activate it to queue tracks." },
@@ -54,19 +56,21 @@ export async function POST(request: Request) {
   let chosenMatch = null;
   if (parsed.data.matchId) {
     const explicitMatch = await db.query.youtubeMatches.findFirst({
-      where: and(eq(youtubeMatches.id, parsed.data.matchId), eq(youtubeMatches.trackId, track.id)),
+      where: and(eq(youtubeMatches.id, parsed.data.matchId), eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)),
     });
     if (!explicitMatch) {
       return NextResponse.json({ ok: false, reason: "match_not_found", error: "Match not found for track." }, { status: 404 });
     }
-    await db.update(youtubeMatches).set({ chosen: false }).where(eq(youtubeMatches.trackId, track.id));
-    await db.update(youtubeMatches).set({ chosen: true }).where(eq(youtubeMatches.id, explicitMatch.id));
+    await db.update(youtubeMatches).set({ chosen: false }).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
+    await db.update(youtubeMatches).set({ chosen: true }).where(and(eq(youtubeMatches.id, explicitMatch.id), eq(youtubeMatches.userId, userId)));
     chosenMatch = explicitMatch;
   } else {
     chosenMatch =
       (await db.query.youtubeMatches.findFirst({
-        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true)),
-      })) ?? (await db.query.youtubeMatches.findFirst({ where: eq(youtubeMatches.trackId, track.id) }));
+        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
+      })) ?? (await db.query.youtubeMatches.findFirst({
+        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)),
+      }));
   }
 
   if (!chosenMatch) {
@@ -77,9 +81,10 @@ export async function POST(request: Request) {
         })
       : [];
     if (seeded.length > 0) {
-      await db.delete(youtubeMatches).where(eq(youtubeMatches.trackId, track.id));
+      await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
       for (const [index, seed] of seeded.entries()) {
         await db.insert(youtubeMatches).values({
+          userId,
           trackId: track.id,
           videoId: seed.videoId,
           title: seed.title,
@@ -91,7 +96,7 @@ export async function POST(request: Request) {
         });
       }
       chosenMatch = await db.query.youtubeMatches.findFirst({
-        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true)),
+        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
       });
     }
   }
@@ -100,8 +105,9 @@ export async function POST(request: Request) {
     if (release) {
       const discogsReleaseVideo = await getFirstDiscogsReleaseYoutubeVideoId(release.id);
       if (discogsReleaseVideo?.videoId) {
-        await db.delete(youtubeMatches).where(eq(youtubeMatches.trackId, track.id));
+        await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
         await db.insert(youtubeMatches).values({
+          userId,
           trackId: track.id,
           videoId: discogsReleaseVideo.videoId,
           title: discogsReleaseVideo.title,
@@ -112,7 +118,7 @@ export async function POST(request: Request) {
           fetchedAt: new Date(),
         });
         chosenMatch = await db.query.youtubeMatches.findFirst({
-          where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true)),
+          where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
         });
       }
     }
@@ -135,10 +141,11 @@ export async function POST(request: Request) {
       }));
 
       if (scored.length > 0) {
-        await db.delete(youtubeMatches).where(eq(youtubeMatches.trackId, track.id));
+        await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
 
         for (const [idx, match] of scored.entries()) {
           await db.insert(youtubeMatches).values({
+            userId,
             trackId: track.id,
             videoId: match.videoId,
             title: match.title,
@@ -151,7 +158,7 @@ export async function POST(request: Request) {
         }
 
         chosenMatch = await db.query.youtubeMatches.findFirst({
-          where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true)),
+          where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
         });
       }
     } catch (error) {
@@ -181,6 +188,7 @@ export async function POST(request: Request) {
       eq(queueItems.trackId, track.id),
       eq(queueItems.youtubeVideoId, chosenMatch.videoId),
       eq(queueItems.status, "pending"),
+      eq(queueItems.userId, userId),
     ),
     with: {
       track: true,
@@ -191,13 +199,13 @@ export async function POST(request: Request) {
 
   if (existing) {
     if (parsed.data.queueMode === "next") {
-      const priority = await nextQueuePriority();
+      const priority = await nextQueuePriority(userId);
       await db
         .update(queueItems)
         .set({ priority, bumpedAt: new Date() })
-        .where(eq(queueItems.id, existing.id));
+        .where(and(eq(queueItems.id, existing.id), eq(queueItems.userId, userId)));
       const promoted = await db.query.queueItems.findFirst({
-        where: eq(queueItems.id, existing.id),
+        where: and(eq(queueItems.id, existing.id), eq(queueItems.userId, userId)),
         with: { track: true, release: true, label: true },
       });
       return NextResponse.json({ ok: true, item: promoted ?? existing, reused: true, queuedNext: true });
@@ -205,8 +213,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, item: existing, reused: true });
   }
 
-  const priority = parsed.data.queueMode === "next" ? await nextQueuePriority() : 0;
+  const priority = parsed.data.queueMode === "next" ? await nextQueuePriority(userId) : 0;
   await db.insert(queueItems).values({
+    userId,
     youtubeVideoId: chosenMatch.videoId,
     trackId: track.id,
     releaseId: track.releaseId,
@@ -223,10 +232,11 @@ export async function POST(request: Request) {
     trackId: track.id,
     releaseId: track.releaseId,
     labelId: release?.labelId ?? null,
+    userId,
   });
 
   const inserted = await db.query.queueItems.findMany({
-    where: and(eq(queueItems.trackId, track.id), eq(queueItems.status, "pending")),
+    where: and(eq(queueItems.trackId, track.id), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)),
     orderBy: [desc(queueItems.id)],
     limit: 1,
     with: {

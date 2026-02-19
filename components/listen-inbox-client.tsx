@@ -835,7 +835,7 @@ export function ListenInboxClient({
               setSelectedLabelId(event.target.value ? Number(event.target.value) : null);
               setCursor(0);
             }}
-            className="h-9 min-w-[220px] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm"
+            className="h-9 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm sm:w-auto sm:min-w-[220px]"
             title="Filter tracks by label"
             aria-label="Filter tracks by label"
           >
@@ -850,7 +850,7 @@ export function ListenInboxClient({
             <ChevronRight className="h-3.5 w-3.5" />
             Next label
           </Button>
-          <div className="ml-1 inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs">
+          <div className="inline-flex w-full items-center gap-1 overflow-x-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs sm:ml-1 sm:w-auto sm:overflow-visible">
             <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
             <button
               type="button"
@@ -893,7 +893,7 @@ export function ListenInboxClient({
             </span>
           ) : null}
           {showWishlistSourceFilter ? (
-            <div className="ml-2 flex items-center gap-1 text-xs">
+            <div className="flex w-full items-center gap-1 overflow-x-auto text-xs sm:ml-2 sm:w-auto sm:overflow-visible">
               <button
                 type="button"
                 onClick={() => {
@@ -939,7 +939,7 @@ export function ListenInboxClient({
             </div>
           ) : null}
           {showQueueFilters ? (
-            <div className="ml-2 flex flex-wrap items-center gap-1 text-xs">
+            <div className="flex w-full flex-wrap items-center gap-1 text-xs sm:ml-2 sm:w-auto">
               <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
               <button
                 type="button"
@@ -1141,7 +1141,7 @@ export function ListenInboxClient({
               }`}
               onMouseEnter={() => setCursor(index)}
             >
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                   <input
                     type="checkbox"
@@ -1230,7 +1230,7 @@ export function ListenInboxClient({
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                   <a
                     href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
                     target="_blank"

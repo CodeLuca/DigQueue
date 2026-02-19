@@ -41,18 +41,18 @@ export function YoutubeKeyFixAssistant() {
         onChange={(event) => onProjectChange(event.target.value)}
         placeholder="Google Cloud project ID or number (optional but recommended)"
       />
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <a href={links.enableApi} target="_blank" rel="noreferrer">
-          <Button type="button" size="sm">1) Enable YouTube API</Button>
+          <Button type="button" size="sm" className="w-full">1) Enable YouTube API</Button>
         </a>
         <a href={links.apiRestrictions} target="_blank" rel="noreferrer">
-          <Button type="button" size="sm" variant="secondary">2) Open Credentials</Button>
+          <Button type="button" size="sm" variant="secondary" className="w-full">2) Open Credentials</Button>
         </a>
         <a href={links.apiDashboard} target="_blank" rel="noreferrer">
-          <Button type="button" size="sm" variant="outline">3) API Dashboard</Button>
+          <Button type="button" size="sm" variant="outline" className="w-full">3) API Dashboard</Button>
         </a>
         <a href={links.quotaPage} target="_blank" rel="noreferrer">
-          <Button type="button" size="sm" variant="outline">4) Check Quota</Button>
+          <Button type="button" size="sm" variant="outline" className="w-full">4) Check Quota</Button>
         </a>
       </div>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-[var(--color-muted)]">

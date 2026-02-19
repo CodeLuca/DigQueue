@@ -57,6 +57,15 @@ yarn db:migrate
 yarn dev
 ```
 
+## Git Workflow
+
+After every major change or feature is finished:
+1. Run checks (`yarn lint` and, when relevant, `yarn build`).
+2. Commit the completed work with a clear message.
+3. Push immediately to the remote branch.
+
+This repo should not accumulate multiple completed major features locally without pushing.
+
 Node:
 - Recommended: Node `20.x` (see `.nvmrc`)
 - Native sqlite bindings are auto-checked and rebuilt on `dev/build/start/migrate` if Node version changed.
@@ -123,3 +132,35 @@ Seed lists are included in `lib/seed-data.ts` and can be loaded with the **Load 
 2. Release mode fallback for weak per-track matches
 3. OAuth-based YouTube playlist export
 4. Multi-user profiles and sync
+
+## Supabase Bootstrap
+
+This repo is now initialized and linked for Supabase CLI (`project-ref: swmkzqnpkncgwpwwwkto`).
+
+Snapshot before migration:
+- `db/snapshots/2026-02-18-pre-supabase/schema.sql`
+- `db/snapshots/2026-02-18-pre-supabase/row-counts.json`
+- `db/snapshots/2026-02-18-pre-supabase/csv/*.csv`
+
+Schema migration:
+- `supabase/migrations/20260218224335_initial_sqlite_port.sql`
+
+Import tooling:
+- `supabase/import/load_snapshot.sql`
+- `scripts/supabase-import-snapshot.sh`
+- `supabase/import/README.md`
+
+Commands:
+```bash
+yarn supabase:start
+yarn supabase:status
+yarn supabase:db:push
+yarn supabase:import:snapshot
+```
+
+Local + production targeting:
+- Set `SUPABASE_ENV=local` for localhost stack (`supabase start`).
+- Set `SUPABASE_ENV=production` for hosted Supabase.
+- Configure matching keys in `.env.local`:
+  - local: `NEXT_PUBLIC_SUPABASE_URL_LOCAL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY_LOCAL`, `SUPABASE_SERVICE_ROLE_KEY_LOCAL`
+  - production: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`

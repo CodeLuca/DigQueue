@@ -107,7 +107,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
 
   return (
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-sm font-medium">Recently Played ({filteredItems.length})</p>
         <div className="flex flex-wrap gap-1.5 text-xs">
           <button
@@ -145,7 +145,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
           const discogsHref = toDiscogsWebUrl(item.release?.discogsUrl ?? "", item.release?.id ? `/release/${item.release.id}` : "");
           return (
             <div key={item.id} className="rounded-md border border-[var(--color-border)] px-2 py-1.5">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-2">
                   {item.release?.thumbUrl ? (
                     <img
@@ -168,7 +168,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
                     </p>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <Button
                     type="button"
                     size="sm"

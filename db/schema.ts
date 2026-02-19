@@ -1,95 +1,114 @@
 import { relations } from "drizzle-orm";
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { bigint, boolean, customType, doublePrecision, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
 
-export const labels = sqliteTable("labels", {
-  id: integer("id").primaryKey(),
+const timestampMs = customType<{ data: Date; driverData: number }>({
+  dataType() {
+    return "bigint";
+  },
+  toDriver(value) {
+    return value.getTime();
+  },
+  fromDriver(value) {
+    return new Date(Number(value));
+  },
+});
+
+export const labels = pgTable("labels", {
+  id: bigint("id", { mode: "number" }).primaryKey(),
+  userId: uuid("user_id"),
   name: text("name").notNull(),
   discogsUrl: text("discogs_url").notNull(),
   blurb: text("blurb"),
   imageUrl: text("image_url"),
   notableReleasesJson: text("notable_releases_json").notNull().default("[]"),
   sourceType: text("source_type").notNull().default("workspace"),
-  active: integer("active", { mode: "boolean" }).notNull().default(false),
+  active: boolean("active").notNull().default(false),
   status: text("status").notNull().default("queued"),
   currentPage: integer("current_page").notNull().default(1),
   totalPages: integer("total_pages").notNull().default(1),
   retryCount: integer("retry_count").notNull().default(0),
   lastError: text("last_error"),
-  addedAt: integer("added_at", { mode: "timestamp_ms" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  addedAt: timestampMs("added_at").notNull(),
+  updatedAt: timestampMs("updated_at").notNull(),
 });
 
-export const releases = sqliteTable("releases", {
-  id: integer("id").primaryKey(),
-  labelId: integer("label_id").notNull().references(() => labels.id, { onDelete: "cascade" }),
+export const releases = pgTable("releases", {
+  id: bigint("id", { mode: "number" }).primaryKey(),
+  userId: uuid("user_id"),
+  labelId: bigint("label_id", { mode: "number" }).notNull().references(() => labels.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   artist: text("artist").notNull().default("Unknown Artist"),
   year: integer("year"),
   catno: text("catno"),
   discogsUrl: text("discogs_url").notNull(),
   thumbUrl: text("thumb_url"),
-  detailsFetched: integer("details_fetched", { mode: "boolean" }).notNull().default(false),
-  youtubeMatched: integer("youtube_matched", { mode: "boolean" }).notNull().default(false),
-  listened: integer("listened", { mode: "boolean" }).notNull().default(false),
-  wishlist: integer("wishlist", { mode: "boolean" }).notNull().default(false),
-  matchConfidence: real("match_confidence").notNull().default(0),
+  detailsFetched: boolean("details_fetched").notNull().default(false),
+  youtubeMatched: boolean("youtube_matched").notNull().default(false),
+  listened: boolean("listened").notNull().default(false),
+  wishlist: boolean("wishlist").notNull().default(false),
+  matchConfidence: doublePrecision("match_confidence").notNull().default(0),
   processingError: text("processing_error"),
-  fetchedAt: integer("fetched_at", { mode: "timestamp_ms" }).notNull(),
+  fetchedAt: timestampMs("fetched_at").notNull(),
   releaseOrder: integer("release_order").notNull().default(0),
   importSource: text("import_source").notNull().default("label"),
 });
 
-export const tracks = sqliteTable("tracks", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  releaseId: integer("release_id").notNull().references(() => releases.id, { onDelete: "cascade" }),
+export const tracks = pgTable("tracks", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+  userId: uuid("user_id"),
+  releaseId: bigint("release_id", { mode: "number" }).notNull().references(() => releases.id, { onDelete: "cascade" }),
   position: text("position").notNull(),
   title: text("title").notNull(),
   duration: text("duration"),
   artistsText: text("artists_text"),
-  listened: integer("listened", { mode: "boolean" }).notNull().default(false),
-  saved: integer("saved", { mode: "boolean" }).notNull().default(false),
-  wishlist: integer("wishlist", { mode: "boolean" }).notNull().default(false),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  listened: boolean("listened").notNull().default(false),
+  saved: boolean("saved").notNull().default(false),
+  wishlist: boolean("wishlist").notNull().default(false),
+  createdAt: timestampMs("created_at").notNull(),
 });
 
-export const youtubeMatches = sqliteTable("youtube_matches", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  trackId: integer("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" }),
+export const youtubeMatches = pgTable("youtube_matches", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+  userId: uuid("user_id"),
+  trackId: bigint("track_id", { mode: "number" }).notNull().references(() => tracks.id, { onDelete: "cascade" }),
   videoId: text("video_id").notNull(),
   title: text("title").notNull(),
   channelTitle: text("channel_title").notNull(),
-  score: real("score").notNull().default(0),
-  embeddable: integer("embeddable", { mode: "boolean" }).notNull().default(true),
-  chosen: integer("chosen", { mode: "boolean" }).notNull().default(false),
-  fetchedAt: integer("fetched_at", { mode: "timestamp_ms" }).notNull(),
+  score: doublePrecision("score").notNull().default(0),
+  embeddable: boolean("embeddable").notNull().default(true),
+  chosen: boolean("chosen").notNull().default(false),
+  fetchedAt: timestampMs("fetched_at").notNull(),
 });
 
-export const queueItems = sqliteTable("queue_items", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const queueItems = pgTable("queue_items", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+  userId: uuid("user_id"),
   youtubeVideoId: text("youtube_video_id").notNull(),
-  trackId: integer("track_id").references(() => tracks.id, { onDelete: "set null" }),
-  releaseId: integer("release_id").references(() => releases.id, { onDelete: "set null" }),
-  labelId: integer("label_id").references(() => labels.id, { onDelete: "set null" }),
+  trackId: bigint("track_id", { mode: "number" }).references(() => tracks.id, { onDelete: "set null" }),
+  releaseId: bigint("release_id", { mode: "number" }).references(() => releases.id, { onDelete: "set null" }),
+  labelId: bigint("label_id", { mode: "number" }).references(() => labels.id, { onDelete: "set null" }),
   source: text("source").notNull().default("track"),
   priority: integer("priority").notNull().default(0),
-  bumpedAt: integer("bumped_at", { mode: "timestamp_ms" }),
+  bumpedAt: timestampMs("bumped_at"),
   status: text("status").notNull().default("pending"),
-  addedAt: integer("added_at", { mode: "timestamp_ms" }).notNull(),
+  addedAt: timestampMs("added_at").notNull(),
 });
 
-export const feedbackEvents = sqliteTable("feedback_events", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  trackId: integer("track_id").references(() => tracks.id, { onDelete: "set null" }),
-  releaseId: integer("release_id").references(() => releases.id, { onDelete: "set null" }),
-  labelId: integer("label_id").references(() => labels.id, { onDelete: "set null" }),
+export const feedbackEvents = pgTable("feedback_events", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+  userId: uuid("user_id"),
+  trackId: bigint("track_id", { mode: "number" }).references(() => tracks.id, { onDelete: "set null" }),
+  releaseId: bigint("release_id", { mode: "number" }).references(() => releases.id, { onDelete: "set null" }),
+  labelId: bigint("label_id", { mode: "number" }).references(() => labels.id, { onDelete: "set null" }),
   eventType: text("event_type").notNull(),
-  eventValue: real("event_value").notNull().default(1),
+  eventValue: doublePrecision("event_value").notNull().default(1),
   source: text("source").notNull().default("app"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  createdAt: timestampMs("created_at").notNull(),
 });
 
-export const releaseSignals = sqliteTable("release_signals", {
-  releaseId: integer("release_id").primaryKey().references(() => releases.id, { onDelete: "cascade" }),
+export const releaseSignals = pgTable("release_signals", {
+  releaseId: bigint("release_id", { mode: "number" }).primaryKey().references(() => releases.id, { onDelete: "cascade" }),
+  userId: uuid("user_id"),
   primaryArtist: text("primary_artist"),
   stylesText: text("styles_text").notNull().default(""),
   genresText: text("genres_text").notNull().default(""),
@@ -98,21 +117,23 @@ export const releaseSignals = sqliteTable("release_signals", {
   formatText: text("format_text").notNull().default(""),
   country: text("country"),
   year: integer("year"),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: timestampMs("updated_at").notNull(),
 });
 
-export const apiCache = sqliteTable("api_cache", {
+export const apiCache = pgTable("api_cache", {
   key: text("key").primaryKey(),
+  userId: uuid("user_id"),
   responseJson: text("response_json").notNull(),
-  fetchedAt: integer("fetched_at", { mode: "timestamp_ms" }).notNull(),
-  expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+  fetchedAt: timestampMs("fetched_at").notNull(),
+  expiresAt: timestampMs("expires_at").notNull(),
 });
 
-export const appSecrets = sqliteTable("app_secrets", {
-  id: integer("id").primaryKey(),
+export const appSecrets = pgTable("app_secrets", {
+  id: bigint("id", { mode: "number" }).primaryKey(),
+  userId: uuid("user_id"),
   discogsToken: text("discogs_token"),
   youtubeApiKey: text("youtube_api_key"),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: timestampMs("updated_at").notNull(),
 });
 
 export const labelsRelations = relations(labels, ({ many }) => ({

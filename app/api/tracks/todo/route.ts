@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { queueItems, releases, tracks } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { logFeedbackEvent } from "@/lib/recommendations";
 
@@ -14,13 +15,14 @@ const schema = z.object({
   value: z.boolean().optional(),
 });
 
-async function recomputeReleaseListened(releaseId: number) {
-  const releaseTracks = await db.query.tracks.findMany({ where: eq(tracks.releaseId, releaseId) });
+async function recomputeReleaseListened(releaseId: number, userId: string) {
+  const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, releaseId), eq(tracks.userId, userId)) });
   const listened = releaseTracks.length > 0 && releaseTracks.every((item) => item.listened);
-  await db.update(releases).set({ listened }).where(eq(releases.id, releaseId));
+  await db.update(releases).set({ listened }).where(and(eq(releases.id, releaseId), eq(releases.userId, userId)));
 }
 
 export async function POST(request: Request) {
+  const userId = await requireCurrentAppUserId();
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -32,36 +34,38 @@ export async function POST(request: Request) {
   const updatedTracks: Array<{ trackId: number; releaseId: number; listened: boolean; saved: boolean }> = [];
 
   for (const trackId of trackIds) {
-    const track = await db.query.tracks.findFirst({ where: eq(tracks.id, trackId) });
+    const track = await db.query.tracks.findFirst({ where: and(eq(tracks.id, trackId), eq(tracks.userId, userId)) });
     if (!track) continue;
 
     releaseIds.add(track.releaseId);
 
     const nextValue = mode === "set" ? Boolean(value) : !(normalizedField === "saved" ? track.saved : track.listened);
     if (normalizedField === "listened") {
-      await db.update(tracks).set({ listened: nextValue }).where(eq(tracks.id, trackId));
+      await db.update(tracks).set({ listened: nextValue }).where(and(eq(tracks.id, trackId), eq(tracks.userId, userId)));
       if (nextValue) {
         await db
           .update(queueItems)
           .set({ status: "played" })
-          .where(and(eq(queueItems.trackId, trackId), eq(queueItems.status, "pending")));
+          .where(and(eq(queueItems.trackId, trackId), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)));
         await logFeedbackEvent({
           eventType: "listened",
           source: "api_tracks_todo",
           trackId,
           releaseId: track.releaseId,
+          userId,
         });
       }
     } else {
       await db
         .update(tracks)
         .set({ saved: nextValue })
-        .where(eq(tracks.id, trackId));
+        .where(and(eq(tracks.id, trackId), eq(tracks.userId, userId)));
       await logFeedbackEvent({
         eventType: nextValue ? "saved_add" : "saved_remove",
         source: "api_tracks_todo",
         trackId,
         releaseId: track.releaseId,
+        userId,
       });
     }
 
@@ -75,7 +79,7 @@ export async function POST(request: Request) {
 
   if (normalizedField === "listened") {
     for (const releaseId of releaseIds) {
-      await recomputeReleaseListened(releaseId);
+      await recomputeReleaseListened(releaseId, userId);
     }
   }
 

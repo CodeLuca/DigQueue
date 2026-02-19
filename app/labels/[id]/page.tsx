@@ -39,12 +39,12 @@ export default async function LabelPage({
 
   return (
     <main className="mx-auto max-w-[1200px] px-4 py-6 md:px-8">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{data.label.name}</h1>
           <p className="text-sm text-[var(--color-muted)]">Label ID {data.label.id}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge>{data.label.active ? "active" : "inactive"}</Badge>
           <ProcessingToggle
             key={`${data.label.id}-${data.label.active ? "1" : "0"}-${data.label.status}`}
@@ -108,9 +108,9 @@ export default async function LabelPage({
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Releases</CardTitle>
-          <form method="GET" className="flex items-center gap-2">
+          <form method="GET" className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
               <input type="checkbox" name="playableOnly" value="1" defaultChecked={onlyPlayable} />
               Playable only
@@ -126,7 +126,7 @@ export default async function LabelPage({
         <CardContent className="space-y-2">
           {visibleReleases.map((release) => (
             <div key={release.id} className="rounded-lg border border-[var(--color-border)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                   {release.thumbUrl ? (
                     <img

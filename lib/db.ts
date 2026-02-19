@@ -1,9 +1,17 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "@/db/schema";
 import { env } from "@/lib/env";
 
-const sqlite = new Database(env.DATABASE_URL, { timeout: 5000 });
-sqlite.pragma("busy_timeout = 5000");
+const dbUrl = env.SUPABASE_DB_URL ?? env.DATABASE_URL;
+const fallbackDbUrl = "postgres://postgres:postgres@127.0.0.1:5432/postgres";
+const postgresDbUrl =
+  dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://") ? dbUrl : fallbackDbUrl;
 
-export const db = drizzle(sqlite, { schema });
+const client = postgres(postgresDbUrl, {
+  ssl: "require",
+  prepare: false,
+  max: 10,
+});
+
+export const db = drizzle(client, { schema });

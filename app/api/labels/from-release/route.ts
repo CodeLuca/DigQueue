@@ -3,8 +3,10 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { fetchDiscogsRelease } from "@/lib/discogs";
+import { toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshLabelMetadata } from "@/lib/label-metadata";
 
 const schema = z.object({
@@ -20,6 +22,7 @@ function parseLabelIdFromResourceUrl(value: string | undefined) {
 }
 
 export async function POST(request: Request) {
+  const userId = await requireCurrentAppUserId();
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -27,18 +30,20 @@ export async function POST(request: Request) {
 
   const release = await fetchDiscogsRelease(parsed.data.releaseId);
   const label = (release.labels ?? []).find((item) => typeof item?.id === "number" || item?.resource_url);
-  const labelId = typeof label?.id === "number" ? label.id : parseLabelIdFromResourceUrl(label?.resource_url);
-  if (!labelId) {
+  const externalLabelId = typeof label?.id === "number" ? label.id : parseLabelIdFromResourceUrl(label?.resource_url);
+  if (!externalLabelId) {
     return NextResponse.json({ error: "No label metadata found for release." }, { status: 404 });
   }
+  const labelId = toStoredDiscogsId(userId, externalLabelId, "label");
 
   const now = new Date();
   await db
     .insert(labels)
     .values({
       id: labelId,
-      name: label?.name?.trim() || `Label ${labelId}`,
-      discogsUrl: `https://www.discogs.com/label/${labelId}`,
+      userId,
+      name: label?.name?.trim() || `Label ${externalLabelId}`,
+      discogsUrl: `https://www.discogs.com/label/${externalLabelId}`,
       sourceType: "workspace",
       active: true,
       status: "queued",
@@ -52,8 +57,8 @@ export async function POST(request: Request) {
     .onConflictDoUpdate({
       target: labels.id,
       set: {
-        name: label?.name?.trim() || `Label ${labelId}`,
-        discogsUrl: `https://www.discogs.com/label/${labelId}`,
+        name: label?.name?.trim() || `Label ${externalLabelId}`,
+        discogsUrl: `https://www.discogs.com/label/${externalLabelId}`,
         sourceType: "workspace",
         active: true,
         updatedAt: now,
@@ -63,7 +68,7 @@ export async function POST(request: Request) {
     });
 
   try {
-    await refreshLabelMetadata(labelId);
+    await refreshLabelMetadata(labelId, userId);
   } catch {
     // Non-blocking: label creation should succeed even if metadata lookup fails.
   }

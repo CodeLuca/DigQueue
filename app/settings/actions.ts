@@ -44,3 +44,23 @@ export async function clearApiKeysAction() {
   revalidatePath("/settings");
   revalidatePath("/");
 }
+
+export async function clearDiscogsKeyAction() {
+  const existing = await getApiKeys();
+  await setApiKeys({
+    discogsToken: "",
+    youtubeApiKey: existing.youtubeApiKey || "",
+  });
+  revalidatePath("/settings");
+  revalidatePath("/");
+}
+
+export async function clearYoutubeKeyAction() {
+  const existing = await getApiKeys();
+  await setApiKeys({
+    discogsToken: existing.discogsToken || "",
+    youtubeApiKey: "",
+  });
+  revalidatePath("/settings");
+  revalidatePath("/");
+}

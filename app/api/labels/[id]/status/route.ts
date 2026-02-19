@@ -1,14 +1,16 @@
 export const dynamic = "force-dynamic";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 
 const schema = z.object({ status: z.enum(["queued", "processing", "paused", "complete", "error"]) });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const userId = await requireCurrentAppUserId();
   const { id } = await params;
   const labelId = Number(id);
   const payload = schema.safeParse(await request.json());
@@ -17,7 +19,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    const label = await db.query.labels.findFirst({ where: eq(labels.id, labelId) });
+    const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), eq(labels.userId, userId)) });
     if (!label) {
       return NextResponse.json({ error: "Label not found" }, { status: 404 });
     }
@@ -30,7 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         ? { status: payload.data.status, lastError: null, updatedAt: new Date() }
         : { status: payload.data.status, updatedAt: new Date() };
 
-    await db.update(labels).set(setValues).where(eq(labels.id, labelId));
+    await db.update(labels).set(setValues).where(and(eq(labels.id, labelId), eq(labels.userId, userId)));
     return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -40,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       message.includes("no such column") &&
       (message.includes("last_error") || message.includes("active"))
     ) {
-      await db.update(labels).set({ status: payload.data.status, updatedAt: new Date() }).where(eq(labels.id, labelId));
+      await db.update(labels).set({ status: payload.data.status, updatedAt: new Date() }).where(and(eq(labels.id, labelId), eq(labels.userId, userId)));
       return NextResponse.json({ ok: true, fallback: "legacy-schema" });
     }
 

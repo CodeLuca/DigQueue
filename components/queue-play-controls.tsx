@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function QueuePlayControls() {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       <Button
         type="button"
         size="sm"
@@ -13,7 +13,7 @@ export function QueuePlayControls() {
       >
         Play Queue
       </Button>
-      <p className="self-center text-xs text-[var(--color-muted)]">
+      <p className="text-xs text-[var(--color-muted)] sm:self-center">
         Uses the bottom mini-player and starts/advances queue playback.
       </p>
     </div>

@@ -1,5 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { apiCache } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -116,18 +117,20 @@ function parseYoutubeError(status: number, rawBody: string) {
   return new Error(`YouTube API error ${status}: ${message}`);
 }
 
-async function fromCache<T>(key: string): Promise<T | null> {
-  const row = await db.query.apiCache.findFirst({ where: and(eq(apiCache.key, key), gt(apiCache.expiresAt, new Date())) });
+async function fromCache<T>(key: string, userId: string): Promise<T | null> {
+  const row = await db.query.apiCache.findFirst({
+    where: and(eq(apiCache.key, key), eq(apiCache.userId, userId), gt(apiCache.expiresAt, new Date())),
+  });
   if (!row) return null;
   return JSON.parse(row.responseJson) as T;
 }
 
-async function setCache(key: string, data: unknown, ttlSeconds: number) {
+async function setCache(key: string, data: unknown, ttlSeconds: number, userId: string) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
   await db
     .insert(apiCache)
-    .values({ key, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
+    .values({ key, userId, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
     .onConflictDoUpdate({
       target: apiCache.key,
       set: { responseJson: JSON.stringify(data), fetchedAt: now, expiresAt },
@@ -169,8 +172,9 @@ async function scheduleYoutubeCall<T>(task: () => Promise<T>) {
 }
 
 export async function searchYoutube(query: string) {
-  const cacheKey = `youtube:${query.toLowerCase()}`;
-  const cached = await fromCache<YoutubeSearchItem[]>(cacheKey);
+  const userId = await requireCurrentAppUserId();
+  const cacheKey = `youtube:${userId}:${query.toLowerCase()}`;
+  const cached = await fromCache<YoutubeSearchItem[]>(cacheKey, userId);
   if (cached) return cached;
 
   const keys = await getApiKeys();
@@ -182,18 +186,18 @@ export async function searchYoutube(query: string) {
   const quotaBlockKey = buildQuotaBlockKey(youtubeApiKey);
   const fatalBlockKey = buildFatalBlockKey(youtubeApiKey);
   const transientBlockKey = buildTransientBlockKey(youtubeApiKey);
-  const quotaBlocked = await fromCache<{ blockedAt?: string }>(quotaBlockKey);
+  const quotaBlocked = await fromCache<{ blockedAt?: string }>(quotaBlockKey, userId);
   if (quotaBlocked) {
     throw new Error("YouTube quota exceeded for this key. Wait for quota reset or use another key.");
   }
-  const fatalBlocked = await fromCache<{ blockedAt?: string; message?: string }>(fatalBlockKey);
+  const fatalBlocked = await fromCache<{ blockedAt?: string; message?: string }>(fatalBlockKey, userId);
   if (fatalBlocked) {
     throw new Error(
       fatalBlocked.message ||
         "YouTube key blocked (API_KEY_SERVICE_BLOCKED). In Google Cloud: enable YouTube Data API v3 and ensure your key is allowed to call youtube.googleapis.com.",
     );
   }
-  const transientBlocked = await fromCache<{ blockedAt?: string; message?: string }>(transientBlockKey);
+  const transientBlocked = await fromCache<{ blockedAt?: string; message?: string }>(transientBlockKey, userId);
   if (transientBlocked) {
     throw new Error(
       transientBlocked.message || "YouTube API temporarily unavailable. Requests paused to preserve quota. Please retry shortly.",
@@ -221,7 +225,7 @@ export async function searchYoutube(query: string) {
 
       if (response.ok) {
         const data = (await response.json()) as { items: YoutubeSearchItem[] };
-        await setCache(cacheKey, data.items, YOUTUBE_CACHE_TTL_SECONDS);
+        await setCache(cacheKey, data.items, YOUTUBE_CACHE_TTL_SECONDS, userId);
         return data.items;
       }
 
@@ -236,6 +240,7 @@ export async function searchYoutube(query: string) {
               message: "YouTube API is unstable (429/5xx). Requests paused briefly to preserve quota.",
             },
             YOUTUBE_TRANSIENT_BLOCK_TTL_SECONDS,
+            userId,
           );
           throw new Error(`YouTube API transient error ${response.status}. Retries exhausted.`);
         }
@@ -245,7 +250,7 @@ export async function searchYoutube(query: string) {
 
       const parsed = parseYoutubeError(response.status, body);
       if (isYoutubeQuotaExceededError(parsed)) {
-        await setCache(quotaBlockKey, { blockedAt: new Date().toISOString() }, YOUTUBE_QUOTA_BLOCK_TTL_SECONDS);
+        await setCache(quotaBlockKey, { blockedAt: new Date().toISOString() }, YOUTUBE_QUOTA_BLOCK_TTL_SECONDS, userId);
       }
       if (isYoutubeFatalConfigError(parsed)) {
         await setCache(
@@ -255,6 +260,7 @@ export async function searchYoutube(query: string) {
             message: parsed.message,
           },
           YOUTUBE_FATAL_BLOCK_TTL_SECONDS,
+          userId,
         );
       }
       throw parsed;
@@ -277,6 +283,7 @@ export async function searchYoutube(query: string) {
               message: "YouTube network failures detected. Requests paused briefly to preserve quota.",
             },
             YOUTUBE_TRANSIENT_BLOCK_TTL_SECONDS,
+            userId,
           );
           throw new Error("YouTube network failure. Retries exhausted.");
         }

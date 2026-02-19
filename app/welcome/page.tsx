@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Disc3, KeyRound, ListMusic, Sparkles } from "lucide-react";
 
 const highlights = [
@@ -19,7 +20,12 @@ const highlights = [
   },
 ];
 
-export default function WelcomePage() {
+export default async function WelcomePage() {
+  const cookieStore = await cookies();
+  const isLoggedIn = cookieStore
+    .getAll()
+    .some((cookie) => /^sb-.*-auth-token(?:\.\d+)?$/.test(cookie.name));
+
   return (
     <main className="mx-auto max-w-[1200px] px-4 py-8 md:px-8">
       <section className="marketing-hero reveal">
@@ -28,26 +34,28 @@ export default function WelcomePage() {
             <KeyRound className="h-3.5 w-3.5" />
             Discogs-first digging workflow
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-5xl">
             Discover smarter from labels you trust, not random algorithm noise.
           </h1>
           <p className="mt-4 max-w-2xl text-sm text-[var(--color-muted)] md:text-base">
             DigQueue turns your label list into a clear processing and listening system: import releases, rank playable tracks, and
             decide what deserves your attention.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
             <Link
-              href="/register"
+              href="/login"
               className="rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
             >
-              Create Account
+              Login
             </Link>
-            <Link href="/login" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
-              Login with Discogs
+            <Link href="/register" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
+              Register
             </Link>
-            <Link href="/" className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
-              Open Current App
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/" className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
+                Open Current App
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>
@@ -68,22 +76,23 @@ export default function WelcomePage() {
           <ol className="mt-4 space-y-3 text-sm">
             <li className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
               <p className="font-medium">1. Create your account</p>
-              <p className="mt-1 text-[var(--color-muted)]">Start at Register, then return here to continue setup.</p>
+              <p className="mt-1 text-[var(--color-muted)]">Use email/password or Google to access your account.</p>
             </li>
             <li className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-              <p className="font-medium">2. Login with Discogs</p>
-              <p className="mt-1 text-[var(--color-muted)]">Use Discogs as your DigQueue sign-in and connect your digging identity.</p>
+              <p className="font-medium">2. Connect Discogs</p>
+              <p className="mt-1 text-[var(--color-muted)]">After account auth, connect Discogs once to link your digging identity.</p>
             </li>
             <li className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
               <p className="font-medium">3. Add one label and process</p>
               <p className="mt-1 text-[var(--color-muted)]">Go to Labels and run your first ingestion cycle.</p>
             </li>
           </ol>
-          <div className="mt-4 flex flex-wrap gap-2 text-sm">
-            <Link href="/register" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Register</Link>
-            <Link href="/login" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Login with Discogs</Link>
-            <Link href="/?tab=step-1" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Open Labels</Link>
-          </div>
+          {isLoggedIn ? (
+            <div className="mt-4 flex flex-wrap gap-2 text-sm">
+              <Link href="/settings" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Discogs Setup (Settings)</Link>
+              <Link href="/?tab=step-1" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Open Labels</Link>
+            </div>
+          ) : null}
         </div>
       </section>
     </main>

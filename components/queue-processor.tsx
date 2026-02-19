@@ -80,7 +80,7 @@ export function QueueProcessor({ labels, disabled }: { labels: LabelSummary[]; d
   }, [autoRetryErrors, disabled, processingIds, readyIds, retryableErroredIds, router, running]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       <Button
         variant={running ? "secondary" : "default"}
         onClick={() => setRunning((prev) => !prev)}

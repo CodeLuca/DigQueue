@@ -58,7 +58,7 @@ export function SyncSavedToDiscogsButton({ enabled }: { enabled: boolean }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
       <Button type="button" size="sm" variant="secondary" disabled={!enabled || pending} onClick={() => void run()}>
         {pending ? "Sending..." : "Send Saved To Discogs Wishlist"}
       </Button>

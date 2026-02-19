@@ -1,40 +1,55 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, lt, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { buildDeepRecommendations, buildExternalRecommendations } from "@/lib/recommendations";
 
+function userScope(userId: string) {
+  return {
+    labels: sql`labels.user_id = ${userId}::uuid`,
+    releases: sql`releases.user_id = ${userId}::uuid`,
+    tracks: sql`tracks.user_id = ${userId}::uuid`,
+    queueItems: sql`queue_items.user_id = ${userId}::uuid`,
+    youtubeMatches: sql`youtube_matches.user_id = ${userId}::uuid`,
+  };
+}
+
 export async function getDashboardData() {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const [labelRows, allLabelNameRows, releaseThumbRows, releaseLabelRows, queueCountRows, fetchedReleaseRows, trackCountRows] = await Promise.all([
     db.query.labels.findMany({
-      where: eq(labels.sourceType, "workspace"),
+      where: and(eq(labels.sourceType, "workspace"), scope.labels),
       orderBy: [asc(labels.addedAt)],
     }),
     db.query.labels.findMany({
+      where: scope.labels,
       columns: { name: true },
       orderBy: [asc(labels.name)],
     }),
     db
       .select({ labelId: releases.labelId, thumbUrl: releases.thumbUrl })
       .from(releases)
-      .where(isNotNull(releases.thumbUrl))
+      .where(and(isNotNull(releases.thumbUrl), scope.releases))
       .orderBy(asc(releases.labelId), asc(releases.releaseOrder)),
-    db.select({ releaseId: releases.id, labelId: releases.labelId }).from(releases),
+    db.select({ releaseId: releases.id, labelId: releases.labelId }).from(releases).where(scope.releases),
     db
       .select({ value: count() })
       .from(queueItems)
       .innerJoin(tracks, eq(queueItems.trackId, tracks.id))
       .innerJoin(releases, eq(tracks.releaseId, releases.id))
       .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(queueItems.status, "pending"), eq(tracks.listened, false), eq(labels.active, true))),
+      .where(and(eq(queueItems.status, "pending"), eq(tracks.listened, false), eq(labels.active, true), scope.queueItems, scope.tracks, scope.releases, scope.labels)),
     db
       .select({ labelId: releases.labelId, value: count() })
       .from(releases)
-      .where(eq(releases.detailsFetched, true))
+      .where(and(eq(releases.detailsFetched, true), scope.releases))
       .groupBy(releases.labelId),
     db
       .select({ labelId: releases.labelId, value: count() })
       .from(tracks)
       .innerJoin(releases, eq(tracks.releaseId, releases.id))
+      .where(and(scope.tracks, scope.releases))
       .groupBy(releases.labelId),
   ]);
 
@@ -88,49 +103,49 @@ export async function getDashboardData() {
       .from(tracks)
       .innerJoin(releases, eq(tracks.releaseId, releases.id))
       .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(tracks.listened, false), eq(labels.active, true))),
+      .where(and(eq(tracks.listened, false), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)),
     db
       .select({ value: count() })
       .from(queueItems)
       .innerJoin(releases, eq(queueItems.releaseId, releases.id))
       .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(queueItems.status, "played"), eq(labels.active, true))),
+      .where(and(eq(queueItems.status, "played"), eq(labels.active, true), scope.queueItems, scope.releases, scope.labels)),
     db
       .select({ value: count() })
       .from(tracks)
       .innerJoin(releases, eq(tracks.releaseId, releases.id))
       .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(tracks.listened, true), eq(labels.active, true))),
+      .where(and(eq(tracks.listened, true), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)),
     db
       .select({ value: count() })
       .from(tracks)
       .innerJoin(releases, eq(tracks.releaseId, releases.id))
       .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(tracks.saved, true), eq(labels.active, true))),
+      .where(and(eq(tracks.saved, true), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)),
     db
       .select({ value: count() })
       .from(releases)
       .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(releases.wishlist, true), eq(labels.active, true))),
+      .where(and(eq(releases.wishlist, true), eq(labels.active, true), scope.releases, scope.labels)),
   ]);
 
   const [labelsErrorCount, lowConfidenceCount] = await Promise.all([
-    db.select({ value: count() }).from(labels).where(and(eq(labels.status, "error"), eq(labels.active, true))),
+    db.select({ value: count() }).from(labels).where(and(eq(labels.status, "error"), eq(labels.active, true), scope.labels)),
     db
       .select({ value: count() })
       .from(releases)
       .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(releases.youtubeMatched, true), lt(releases.matchConfidence, 0.4), eq(labels.active, true))),
+      .where(and(eq(releases.youtubeMatched, true), lt(releases.matchConfidence, 0.4), eq(labels.active, true), scope.releases, scope.labels)),
   ]);
 
   const erroredLabels = await db.query.labels.findMany({
-    where: and(eq(labels.status, "error"), eq(labels.active, true)),
+    where: and(eq(labels.status, "error"), eq(labels.active, true), scope.labels),
     orderBy: [asc(labels.updatedAt)],
     limit: 20,
   });
 
   const recentlyPlayed = await db.query.queueItems.findMany({
-    where: eq(queueItems.status, "played"),
+    where: and(eq(queueItems.status, "played"), scope.queueItems),
     orderBy: [desc(queueItems.id)],
     limit: 12,
     with: { track: true, release: true, label: true },
@@ -138,19 +153,19 @@ export async function getDashboardData() {
 
   const [candidateTracks, listenedTracks, playedQueueItems] = await Promise.all([
     db.query.tracks.findMany({
-      where: eq(tracks.listened, false),
+      where: and(eq(tracks.listened, false), scope.tracks),
       orderBy: [asc(tracks.id)],
       limit: 3600,
       with: { release: { with: { label: true } } },
     }),
     db.query.tracks.findMany({
-      where: eq(tracks.listened, true),
+      where: and(eq(tracks.listened, true), scope.tracks),
       orderBy: [asc(tracks.id)],
       limit: 5200,
       with: { release: { with: { label: true } } },
     }),
     db.query.queueItems.findMany({
-      where: and(eq(queueItems.status, "played"), isNotNull(queueItems.trackId)),
+      where: and(eq(queueItems.status, "played"), isNotNull(queueItems.trackId), scope.queueItems),
       orderBy: [desc(queueItems.id)],
       limit: 2400,
       columns: { trackId: true, releaseId: true, labelId: true },
@@ -191,19 +206,21 @@ export async function getDashboardData() {
 }
 
 export async function getLabelDetail(labelId: number) {
-  const label = await db.query.labels.findFirst({ where: eq(labels.id, labelId) });
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), scope.labels) });
   if (!label) return null;
 
   const labelReleases = await db.query.releases.findMany({
-    where: eq(releases.labelId, labelId),
+    where: and(eq(releases.labelId, labelId), scope.releases),
     orderBy: [asc(releases.releaseOrder)],
     limit: 400,
   });
 
   const counts = await Promise.all([
-    db.select({ value: count() }).from(releases).where(eq(releases.labelId, labelId)),
-    db.select({ value: count() }).from(releases).where(and(eq(releases.labelId, labelId), eq(releases.detailsFetched, true))),
-    db.select({ value: count() }).from(releases).where(and(eq(releases.labelId, labelId), eq(releases.youtubeMatched, true))),
+    db.select({ value: count() }).from(releases).where(and(eq(releases.labelId, labelId), scope.releases)),
+    db.select({ value: count() }).from(releases).where(and(eq(releases.labelId, labelId), eq(releases.detailsFetched, true), scope.releases)),
+    db.select({ value: count() }).from(releases).where(and(eq(releases.labelId, labelId), eq(releases.youtubeMatched, true), scope.releases)),
   ]);
 
   return {
@@ -218,14 +235,18 @@ export async function getLabelDetail(labelId: number) {
 }
 
 export async function getReleaseDetail(releaseId: number) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const release = await db.query.releases.findFirst({
-    where: eq(releases.id, releaseId),
+    where: and(eq(releases.id, releaseId), scope.releases),
     with: { label: true, tracks: { with: { matches: true }, orderBy: [asc(tracks.id)] } },
   });
   return release;
 }
 
 export async function exportQueueRows() {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const rows = await db
     .select({
       id: queueItems.id,
@@ -240,17 +261,20 @@ export async function exportQueueRows() {
     .leftJoin(tracks, eq(queueItems.trackId, tracks.id))
     .leftJoin(releases, eq(queueItems.releaseId, releases.id))
     .leftJoin(labels, eq(queueItems.labelId, labels.id))
+    .where(scope.queueItems)
     .orderBy(asc(queueItems.id));
 
   return rows;
 }
 
 export async function getToListenData(labelId?: number, onlyPlayable = true) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const whereClause = labelId
-    ? and(or(eq(tracks.listened, false), eq(tracks.saved, true)), eq(releases.labelId, labelId), eq(labels.active, true))
-    : and(or(eq(tracks.listened, false), eq(tracks.saved, true)), eq(labels.active, true));
+    ? and(or(eq(tracks.listened, false), eq(tracks.saved, true)), eq(releases.labelId, labelId), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)
+    : and(or(eq(tracks.listened, false), eq(tracks.saved, true)), eq(labels.active, true), scope.tracks, scope.releases, scope.labels);
   const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
-  const combinedWhere = playableClause ? and(whereClause, playableClause) : whereClause;
+  const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
 
   const rows = await db
     .select({
@@ -287,13 +311,13 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
   const [pendingQueueRows, playedQueueRows] = trackIds.length
     ? await Promise.all([
         db
-          .select({ trackId: queueItems.trackId })
+      .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"))),
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), scope.queueItems)),
         db
           .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"))),
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), scope.queueItems)),
       ])
     : [[], []];
 
@@ -320,18 +344,20 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
   });
 
   const allLabels = await db.query.labels.findMany({
-    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace")),
+    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
     orderBy: [asc(labels.name)],
   });
   return { rows: enrichedRows, labels: allLabels };
 }
 
 export async function getWishlistData(labelId?: number, onlyPlayable = false) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const whereClause = labelId
-    ? and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), eq(releases.labelId, labelId))
-    : or(eq(tracks.saved, true), eq(releases.wishlist, true));
+    ? and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), eq(releases.labelId, labelId), scope.tracks, scope.releases, scope.labels)
+    : and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), scope.tracks, scope.releases, scope.labels);
   const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
-  const combinedWhere = playableClause ? and(whereClause, playableClause) : whereClause;
+  const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
 
   const rows = await db
     .select({
@@ -370,11 +396,11 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
         db
           .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"))),
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), scope.queueItems)),
         db
           .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"))),
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), scope.queueItems)),
       ])
     : [[], []];
 
@@ -401,19 +427,21 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
   });
 
   const allLabels = await db.query.labels.findMany({
-    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace")),
+    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
     orderBy: [asc(labels.name)],
   });
   return { rows: enrichedRows, labels: allLabels };
 }
 
 export async function getPlayedReviewedData(labelId?: number, onlyPlayable = false) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const playedTrackRows = await db
     .select({ trackId: queueItems.trackId })
     .from(queueItems)
     .innerJoin(releases, eq(queueItems.releaseId, releases.id))
     .innerJoin(labels, eq(releases.labelId, labels.id))
-    .where(and(eq(queueItems.status, "played"), eq(labels.active, true), isNotNull(queueItems.trackId)));
+    .where(and(eq(queueItems.status, "played"), eq(labels.active, true), isNotNull(queueItems.trackId), scope.queueItems, scope.releases, scope.labels));
 
   const playedTrackIds = [
     ...new Set(
@@ -424,10 +452,10 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
   ];
 
   const whereClause = labelId
-    ? and(or(eq(tracks.listened, true), inArray(tracks.id, playedTrackIds.length ? playedTrackIds : [-1])), eq(releases.labelId, labelId), eq(labels.active, true))
-    : and(or(eq(tracks.listened, true), inArray(tracks.id, playedTrackIds.length ? playedTrackIds : [-1])), eq(labels.active, true));
+    ? and(or(eq(tracks.listened, true), inArray(tracks.id, playedTrackIds.length ? playedTrackIds : [-1])), eq(releases.labelId, labelId), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)
+    : and(or(eq(tracks.listened, true), inArray(tracks.id, playedTrackIds.length ? playedTrackIds : [-1])), eq(labels.active, true), scope.tracks, scope.releases, scope.labels);
   const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
-  const combinedWhere = playableClause ? and(whereClause, playableClause) : whereClause;
+  const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
 
   const rows = await db
     .select({
@@ -466,11 +494,11 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
         db
           .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"))),
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), scope.queueItems)),
         db
           .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"))),
+          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), scope.queueItems)),
       ])
     : [[], []];
 
@@ -497,16 +525,18 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
   });
 
   const allLabels = await db.query.labels.findMany({
-    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace")),
+    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
     orderBy: [asc(labels.name)],
   });
   return { rows: enrichedRows, labels: allLabels };
 }
 
 export async function getWishlistedRecordsData(labelId?: number) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
   const whereClause = labelId
-    ? and(eq(releases.wishlist, true), eq(releases.labelId, labelId))
-    : eq(releases.wishlist, true);
+    ? and(eq(releases.wishlist, true), eq(releases.labelId, labelId), scope.releases, scope.labels)
+    : and(eq(releases.wishlist, true), scope.releases, scope.labels);
 
   const rows = await db
     .select({

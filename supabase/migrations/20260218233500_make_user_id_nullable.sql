@@ -1,0 +1,9 @@
+alter table public.labels alter column user_id drop not null;
+alter table public.releases alter column user_id drop not null;
+alter table public.tracks alter column user_id drop not null;
+alter table public.youtube_matches alter column user_id drop not null;
+alter table public.queue_items alter column user_id drop not null;
+alter table public.feedback_events alter column user_id drop not null;
+alter table public.release_signals alter column user_id drop not null;
+alter table public.api_cache alter column user_id drop not null;
+alter table public.app_secrets alter column user_id drop not null;

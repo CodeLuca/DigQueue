@@ -14,9 +14,9 @@ const buttonVariants = cva(
         outline: "border border-[var(--color-border-soft)] text-[var(--color-text)] hover:bg-[var(--color-surface2)]/80",
       },
       size: {
-        default: "h-9 px-3.5 py-2",
-        sm: "h-8 px-2.5 text-xs",
-        lg: "h-10 px-5",
+        default: "h-10 px-4 py-2 sm:h-9 sm:px-3.5",
+        sm: "h-9 px-3 text-xs sm:h-8 sm:px-2.5",
+        lg: "h-11 px-5 sm:h-10",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

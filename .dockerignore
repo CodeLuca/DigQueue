@@ -1,0 +1,9 @@
+.git
+.gitignore
+.next
+node_modules
+.DS_Store
+db/snapshots
+db/*.db
+db/*.db-shm
+db/*.db-wal

@@ -44,12 +44,12 @@ export default async function ReleasePage({
         <CardContent className="space-y-3">
           {visibleTracks.map((track) => (
             <div key={track.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium">{track.position} {track.title}</p>
                   <p className="text-xs text-[var(--color-muted)]">{track.artistsText || "Unknown artist"} {track.duration ? `• ${track.duration}` : ""}</p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-1">
                   <TrackQueueButtons
                     trackId={track.id}
                     youtubeSearchUrl={`https://www.youtube.com/results?search_query=${encodeURIComponent(
@@ -101,12 +101,12 @@ export default async function ReleasePage({
 
               <div className="space-y-1">
                 {track.matches.slice(0, 5).map((match) => (
-                  <div key={match.id} className="flex items-center justify-between gap-2 rounded-md border border-[var(--color-border)] p-2 text-xs">
+                  <div key={match.id} className="flex flex-col gap-2 rounded-md border border-[var(--color-border)] p-2 text-xs sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="line-clamp-1">{match.title}</p>
                       <p className="line-clamp-1 text-[var(--color-muted)]">{match.channelTitle} • score {match.score.toFixed(1)}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {match.chosen ? <Badge>chosen</Badge> : null}
                       <PlayMatchButton trackId={track.id} matchId={match.id} />
                       <a className="text-[var(--color-accent)] hover:underline" href={`https://www.youtube.com/watch?v=${match.videoId}`} target="_blank" rel="noreferrer">Open</a>

@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic";
 
-import { eq, inArray, like, or } from "drizzle-orm";
+import { and, eq, inArray, like, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { releases, tracks } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { setDiscogsReleaseWishlist } from "@/lib/discogs";
 
@@ -24,12 +25,13 @@ function parseDiscogsReleaseId(value: string | null | undefined) {
 }
 
 export async function POST(request: Request) {
+  const userId = await requireCurrentAppUserId();
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const release = await db.query.releases.findFirst({ where: eq(releases.id, parsed.data.releaseId) });
+  const release = await db.query.releases.findFirst({ where: and(eq(releases.id, parsed.data.releaseId), eq(releases.userId, userId)) });
   const nextWishlist =
     parsed.data.mode === "set" ? Boolean(parsed.data.value) : release ? !release.wishlist : true;
 
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
     const linkedReleases = await db
       .select({ id: releases.id })
       .from(releases)
-      .where(eq(releases.discogsUrl, release.discogsUrl));
+      .where(and(eq(releases.discogsUrl, release.discogsUrl), eq(releases.userId, userId)));
     if (linkedReleases.length > 0) {
       affectedReleaseIds = linkedReleases.map((row) => row.id);
     }
@@ -49,9 +51,12 @@ export async function POST(request: Request) {
         .select({ id: releases.id })
         .from(releases)
         .where(
-          or(
-            like(releases.discogsUrl, `%/release/${canonicalId}%`),
-            like(releases.discogsUrl, `%/releases/${canonicalId}%`),
+          and(
+            or(
+              like(releases.discogsUrl, `%/release/${canonicalId}%`),
+              like(releases.discogsUrl, `%/releases/${canonicalId}%`),
+            ),
+            eq(releases.userId, userId),
           ),
         );
       if (canonicalMatches.length > 0) {
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
   }
 
   if (affectedReleaseIds.length > 0) {
-    await db.update(releases).set({ wishlist: nextWishlist }).where(inArray(releases.id, affectedReleaseIds));
+    await db.update(releases).set({ wishlist: nextWishlist }).where(and(inArray(releases.id, affectedReleaseIds), eq(releases.userId, userId)));
   }
 
   let discogsSynced = true;
@@ -80,7 +85,7 @@ export async function POST(request: Request) {
     ? await db
         .select({ id: releases.id, wishlist: releases.wishlist })
         .from(releases)
-        .where(inArray(releases.id, affectedReleaseIds))
+        .where(and(inArray(releases.id, affectedReleaseIds), eq(releases.userId, userId)))
     : [];
   const localConfirmedAll = confirmedRows.every((row) => row.wishlist === nextWishlist);
 
@@ -89,7 +94,7 @@ export async function POST(request: Request) {
       await db
         .select({ id: tracks.id })
         .from(tracks)
-        .where(inArray(tracks.releaseId, affectedReleaseIds))
+        .where(and(inArray(tracks.releaseId, affectedReleaseIds), eq(tracks.userId, userId)))
     ).length
     : 0;
 

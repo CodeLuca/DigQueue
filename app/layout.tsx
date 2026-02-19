@@ -15,11 +15,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} ${plexMono.variable} min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] antialiased`}>
+      <body className={`${spaceGrotesk.variable} ${plexMono.variable} min-h-screen overflow-x-hidden bg-[var(--color-bg)] text-[var(--color-text)] antialiased`}>
         <Suspense fallback={<div className="h-12 border-b border-[var(--color-border-soft)]" />}>
           <ChromeShell />
         </Suspense>
-        <div className="pb-24">{children}</div>
+        <div className="pb-36 md:pb-24">{children}</div>
       </body>
     </html>
   );

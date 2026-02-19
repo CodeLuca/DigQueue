@@ -1,5 +1,6 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { feedbackEvents, queueItems, releases, releaseSignals, tracks, youtubeMatches } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { searchDiscogsReleases } from "@/lib/discogs";
 
@@ -161,21 +162,26 @@ export async function logFeedbackEvent(input: {
   trackId?: number | null;
   releaseId?: number | null;
   labelId?: number | null;
+  userId?: string | null;
 }) {
+  const userId = input.userId ?? (await requireCurrentAppUserId());
+  const trackScope = sql`tracks.user_id = ${userId}::uuid`;
+  const releaseScope = sql`releases.user_id = ${userId}::uuid`;
   const trackId = input.trackId ?? null;
   let releaseId = input.releaseId ?? null;
   let labelId = input.labelId ?? null;
 
   if (typeof trackId === "number" && (!releaseId || !labelId)) {
-    const track = await db.query.tracks.findFirst({ where: eq(tracks.id, trackId) });
+    const track = await db.query.tracks.findFirst({ where: and(eq(tracks.id, trackId), trackScope) });
     if (track?.releaseId && !releaseId) releaseId = track.releaseId;
   }
   if (typeof releaseId === "number" && !labelId) {
-    const release = await db.query.releases.findFirst({ where: eq(releases.id, releaseId) });
+    const release = await db.query.releases.findFirst({ where: and(eq(releases.id, releaseId), releaseScope) });
     if (release?.labelId) labelId = release.labelId;
   }
 
   await db.insert(feedbackEvents).values({
+    userId,
     trackId,
     releaseId,
     labelId,
@@ -186,11 +192,13 @@ export async function logFeedbackEvent(input: {
   });
 }
 
-export async function upsertReleaseSignals(input: ReleaseSignalInput) {
+export async function upsertReleaseSignals(input: ReleaseSignalInput, userId?: string) {
+  const scopedUserId = userId ?? (await requireCurrentAppUserId());
   await db
     .insert(releaseSignals)
     .values({
       releaseId: input.releaseId,
+      userId: scopedUserId,
       primaryArtist: input.primaryArtist?.trim() || null,
       stylesText: encodeTokens(input.styles ?? []),
       genresText: encodeTokens(input.genres ?? []),

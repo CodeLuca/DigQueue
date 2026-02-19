@@ -1,7 +1,9 @@
 import { and, eq, gt } from "drizzle-orm";
 import { apiCache } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
+import { toExternalDiscogsId } from "@/lib/discogs-id";
 import { env } from "@/lib/env";
 
 let lastDiscogsCall = 0;
@@ -40,20 +42,20 @@ async function scheduleDiscogsCall<T>(task: () => Promise<T>) {
   return run;
 }
 
-async function fromCache<T>(key: string): Promise<T | null> {
+async function fromCache<T>(key: string, userId: string): Promise<T | null> {
   const row = await db.query.apiCache.findFirst({
-    where: and(eq(apiCache.key, key), gt(apiCache.expiresAt, new Date())),
+    where: and(eq(apiCache.key, key), eq(apiCache.userId, userId), gt(apiCache.expiresAt, new Date())),
   });
   if (!row) return null;
   return JSON.parse(row.responseJson) as T;
 }
 
-async function setCache(key: string, data: unknown, ttlSeconds: number) {
+async function setCache(key: string, data: unknown, ttlSeconds: number, userId: string) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
   await db
     .insert(apiCache)
-    .values({ key, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
+    .values({ key, userId, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
     .onConflictDoUpdate({
       target: apiCache.key,
       set: { responseJson: JSON.stringify(data), fetchedAt: now, expiresAt },
@@ -68,9 +70,10 @@ async function getDiscogsToken() {
 }
 
 export async function discogsRequest<T>(path: string, cacheTtl = 60 * 60 * 24): Promise<T> {
-  const key = `discogs:${path}`;
+  const userId = await requireCurrentAppUserId();
+  const key = `discogs:${userId}:${path}`;
   if (cacheTtl > 0) {
-    const cached = await fromCache<T>(key);
+    const cached = await fromCache<T>(key, userId);
     if (cached) return cached;
   }
 
@@ -89,7 +92,7 @@ export async function discogsRequest<T>(path: string, cacheTtl = 60 * 60 * 24): 
     if (response.ok) {
       const json = (await response.json()) as T;
       if (cacheTtl > 0) {
-        await setCache(key, json, cacheTtl);
+        await setCache(key, json, cacheTtl, userId);
       }
       return json;
     }
@@ -114,13 +117,14 @@ export async function fetchDiscogsIdentity() {
 }
 
 export async function setDiscogsReleaseWishlist(releaseId: number, enabled: boolean) {
+  const externalReleaseId = toExternalDiscogsId(releaseId);
   const discogsToken = await getDiscogsToken();
   const identity = await fetchDiscogsIdentity();
   const method = enabled ? "PUT" : "DELETE";
   let attempt = 0;
   while (attempt < DISCOGS_MAX_RETRIES) {
     const response = await scheduleDiscogsCall(() =>
-      fetch(`${DISCOGS_API}/users/${encodeURIComponent(identity.username)}/wants/${releaseId}`, {
+      fetch(`${DISCOGS_API}/users/${encodeURIComponent(identity.username)}/wants/${externalReleaseId}`, {
         method,
         headers: {
           Authorization: `Discogs token=${discogsToken}`,
@@ -239,8 +243,9 @@ type DiscogsLabelReleasesResponse = {
 };
 
 export async function fetchDiscogsLabelReleases(labelId: number, page = 1, perPage = 100) {
+  const externalLabelId = toExternalDiscogsId(labelId);
   return discogsRequest<DiscogsLabelReleasesResponse>(
-    `/labels/${labelId}/releases?page=${page}&per_page=${perPage}`,
+    `/labels/${externalLabelId}/releases?page=${page}&per_page=${perPage}`,
     60 * 60 * 6,
   );
 }
@@ -267,7 +272,8 @@ function cleanDiscogsProfile(profile?: string | null) {
 }
 
 export async function fetchDiscogsLabelProfile(labelId: number) {
-  const profile = await discogsRequest<DiscogsLabelProfileResponse>(`/labels/${labelId}`, 60 * 60 * 24 * 14);
+  const externalLabelId = toExternalDiscogsId(labelId);
+  const profile = await discogsRequest<DiscogsLabelProfileResponse>(`/labels/${externalLabelId}`, 60 * 60 * 24 * 14);
   const image = profile.images?.[0];
   return {
     blurb: cleanDiscogsProfile(profile.profile),
@@ -311,11 +317,13 @@ export type DiscogsReleaseMarketStats = {
 };
 
 export async function fetchDiscogsRelease(releaseId: number) {
-  return discogsRequest<DiscogsRelease>(`/releases/${releaseId}`, 60 * 60 * 24 * 14);
+  const externalReleaseId = toExternalDiscogsId(releaseId);
+  return discogsRequest<DiscogsRelease>(`/releases/${externalReleaseId}`, 60 * 60 * 24 * 14);
 }
 
 export async function fetchDiscogsReleaseMarketStats(releaseId: number) {
-  return discogsRequest<DiscogsReleaseMarketStats>(`/marketplace/stats/${releaseId}`, 60 * 60 * 12);
+  const externalReleaseId = toExternalDiscogsId(releaseId);
+  return discogsRequest<DiscogsReleaseMarketStats>(`/marketplace/stats/${externalReleaseId}`, 60 * 60 * 12);
 }
 
 export function extractYoutubeVideoId(url: string): string | null {

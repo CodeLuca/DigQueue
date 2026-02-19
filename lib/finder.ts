@@ -1,5 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { apiCache, releases } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
@@ -42,24 +43,26 @@ function decodeHtmlEntities(input: string) {
     .replaceAll("&nbsp;", " ");
 }
 
-async function fromCache<T>(key: string): Promise<T | null> {
-  const row = await db.query.apiCache.findFirst({ where: and(eq(apiCache.key, key), gt(apiCache.expiresAt, new Date())) });
+async function fromCache<T>(key: string, userId: string): Promise<T | null> {
+  const row = await db.query.apiCache.findFirst({
+    where: and(eq(apiCache.key, key), eq(apiCache.userId, userId), gt(apiCache.expiresAt, new Date())),
+  });
   if (!row) return null;
   return JSON.parse(row.responseJson) as T;
 }
 
-async function setCache(key: string, data: unknown, ttlSeconds: number) {
+async function setCache(key: string, data: unknown, ttlSeconds: number, userId: string) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
   await db
     .insert(apiCache)
-    .values({ key, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
+    .values({ key, userId, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
     .onConflictDoUpdate({ target: apiCache.key, set: { responseJson: JSON.stringify(data), fetchedAt: now, expiresAt } });
 }
 
-async function searchBandcamp(query: string) {
-  const key = `finder:bandcamp:${query.toLowerCase()}`;
-  const cached = await fromCache<FinderCandidate[]>(key);
+async function searchBandcamp(query: string, userId: string) {
+  const key = `finder:${userId}:bandcamp:${query.toLowerCase()}`;
+  const cached = await fromCache<FinderCandidate[]>(key, userId);
   if (cached) return cached;
 
   const searchUrl = `https://bandcamp.com/search?q=${encodeURIComponent(query)}`;
@@ -92,19 +95,23 @@ async function searchBandcamp(query: string) {
   }
 
   const ranked = candidates.sort((a, b) => b.score - a.score).slice(0, 6);
-  await setCache(key, ranked, 60 * 60 * 24 * 3);
+  await setCache(key, ranked, 60 * 60 * 24 * 3, userId);
   return ranked;
 }
 
 export async function findReleaseLinks(releaseId: number) {
-  const release = await db.query.releases.findFirst({ where: eq(releases.id, releaseId), with: { label: true } });
+  const userId = await requireCurrentAppUserId();
+  const release = await db.query.releases.findFirst({
+    where: and(eq(releases.id, releaseId), eq(releases.userId, userId)),
+    with: { label: true },
+  });
   if (!release) throw new Error("Release not found.");
 
   const baseQuery = `${release.artist} ${release.title}`.trim();
   const catnoQuery = `${release.label?.name ?? ""} ${release.catno ?? ""}`.trim();
   const queryVariants = [baseQuery, `${baseQuery} ${release.catno ?? ""}`.trim(), catnoQuery].filter(Boolean);
 
-  const bandcampResults = (await Promise.all(queryVariants.map((query) => searchBandcamp(query)))).flat();
+  const bandcampResults = (await Promise.all(queryVariants.map((query) => searchBandcamp(query, userId)))).flat();
   const dedupedBandcamp = new Map<string, FinderCandidate>();
   for (const item of bandcampResults) {
     const existing = dedupedBandcamp.get(item.url);

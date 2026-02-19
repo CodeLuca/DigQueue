@@ -38,6 +38,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 .marketing-hero {
   position: relative;
   overflow: hidden;
@@ -109,6 +115,15 @@ input[type="reset"] {
     box-shadow 150ms ease,
     filter 150ms ease,
     transform 120ms ease;
+}
+
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
 }
 
 @media (hover: hover) {

@@ -276,7 +276,7 @@ export function RecommendationsPanel({
         };
         return (
           <div key={track.id} className="rounded-md border border-[var(--color-border)] p-3">
-            <div className="mb-1 flex items-start justify-between gap-2">
+            <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 items-start gap-2">
                 {release.thumbUrl ? (
                   <img
@@ -370,7 +370,7 @@ export function RecommendationsPanel({
           const loading = loadingReleaseId === item.releaseId;
           return (
             <div key={item.releaseId} className="rounded-md border border-[var(--color-border)] p-3">
-              <div className="mb-1 flex items-start justify-between gap-2">
+            <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-2">
                   {item.thumbUrl ? (
                     <img

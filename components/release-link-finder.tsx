@@ -50,7 +50,7 @@ export function ReleaseLinkFinder({ releaseId }: { releaseId: number }) {
 
   return (
     <Card className="mt-4">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Best Buy Link Finder</CardTitle>
         <Button type="button" variant="secondary" onClick={() => void runFinder()} disabled={loading}>
           {loading ? "Searching..." : "Find Best Links"}
@@ -78,7 +78,7 @@ export function ReleaseLinkFinder({ releaseId }: { releaseId: number }) {
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-wider text-[var(--color-muted)]">Bandcamp Candidates</p>
             {result.bandcamp.map((item) => (
-              <div key={item.url} className="flex items-center justify-between gap-2 rounded-md border border-[var(--color-border)] p-2">
+              <div key={item.url} className="rounded-md border border-[var(--color-border)] p-2">
                 <div className="min-w-0">
                   <a href={item.url} target="_blank" rel="noreferrer" className="line-clamp-1 text-[var(--color-accent)] hover:underline">{item.title}</a>
                   <p className={`text-xs ${confidenceClass(item.confidence)}`}>{item.confidence} • score {item.score}</p>

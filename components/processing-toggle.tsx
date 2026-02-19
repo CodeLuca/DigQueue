@@ -18,8 +18,15 @@ export function ProcessingToggle({
   const [active, setActive] = useState(initialActive);
   const [status, setStatus] = useState(initialStatus);
   const [pending, setPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const runningRef = useRef(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setActive(initialActive);
+    setStatus(initialStatus);
+    setErrorMessage(null);
+  }, [initialActive, initialStatus]);
 
   useEffect(() => {
     runningRef.current = active && status !== "complete";
@@ -55,28 +62,40 @@ export function ProcessingToggle({
 
   const setRemoteActive = async (nextActive: boolean) => {
     setPending(true);
-    const response = await fetch(`/api/labels/${labelId}/active`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: nextActive }),
-    });
-    if (response.ok) {
-      const data = (await response.json()) as { active: boolean; status: string };
-      setActive(data.active);
-      setStatus(data.status);
+    setErrorMessage(null);
+    try {
+      const response = await fetch(`/api/labels/${labelId}/active`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: nextActive }),
+      });
+      const body = (await response.json().catch(() => null)) as { error?: string; detail?: string } | null;
+      if (!response.ok) {
+        setErrorMessage(body?.error || "Activation update failed.");
+        return;
+      }
+      const data = body as { active?: boolean; status?: string } | null;
+      if (typeof data?.active === "boolean" && typeof data?.status === "string") {
+        setActive(data.active);
+        setStatus(data.status);
+      }
+    } finally {
+      setPending(false);
+      router.refresh();
     }
-    setPending(false);
-    router.refresh();
   };
 
   return (
-    <Button
-      size="sm"
-      variant={active ? "secondary" : "outline"}
-      onClick={() => void setRemoteActive(!active)}
-      disabled={disabled || pending}
-    >
-      {pending ? "..." : active ? "Deactivate" : "Activate"}
-    </Button>
+    <div className="flex flex-col items-start gap-1 sm:items-end">
+      <Button
+        size="sm"
+        variant={active ? "secondary" : "outline"}
+        onClick={() => void setRemoteActive(!active)}
+        disabled={disabled || pending}
+      >
+        {pending ? "..." : active ? "Deactivate" : "Activate"}
+      </Button>
+      {errorMessage ? <p className="text-[11px] text-red-300">{errorMessage}</p> : null}
+    </div>
   );
 }

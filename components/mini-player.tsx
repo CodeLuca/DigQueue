@@ -157,6 +157,12 @@ export function MiniPlayer() {
     const stored = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
     return stored === "shuffle" ? "shuffle" : "in_order";
   });
+  const isIOS = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    const platform = navigator.platform || "";
+    return /iPad|iPhone|iPod/.test(ua) || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }, []);
 
   const syncQueueToListeningScope = useCallback(async () => {
     if (!isListeningStationTab || !listeningScopeEnabledRef.current) return;
@@ -650,6 +656,10 @@ export function MiniPlayer() {
 
   const sliderMax = Math.max(1, Math.floor(duration || 0));
   const sliderValue = Math.min(sliderMax, Math.max(0, Math.floor(currentTime || 0)));
+  const currentYoutubeUrl = useMemo(
+    () => (current?.youtubeVideoId ? `https://www.youtube.com/watch?v=${current.youtubeVideoId}` : null),
+    [current?.youtubeVideoId],
+  );
 
   const formatTime = (seconds: number) => {
     const total = Math.max(0, Math.floor(seconds));
@@ -667,6 +677,20 @@ export function MiniPlayer() {
       maximumFractionDigits: 2,
     }).format(amount);
   };
+
+  const openCurrentInYouTubeApp = useCallback(() => {
+    if (!current?.youtubeVideoId) return;
+    const watchUrl = `https://www.youtube.com/watch?v=${current.youtubeVideoId}`;
+    if (!isIOS) {
+      window.open(watchUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    // iOS cannot keep iframe playback alive after Safari closes, so hand off to YouTube.
+    window.location.href = `youtube://www.youtube.com/watch?v=${current.youtubeVideoId}`;
+    window.setTimeout(() => {
+      window.open(watchUrl, "_blank", "noopener,noreferrer");
+    }, 700);
+  }, [current?.youtubeVideoId, isIOS]);
 
   useEffect(() => {
     window.dispatchEvent(
@@ -825,7 +849,7 @@ export function MiniPlayer() {
     "pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-56 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-surface)_90%,black_10%)]/95 px-4 py-2 backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-surface)_90%,black_10%)] px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur md:px-4">
       {queueOpen ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-full z-40 mb-2 flex justify-center px-4">
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[100vh] bg-black/40" aria-hidden />
@@ -847,7 +871,7 @@ export function MiniPlayer() {
               {!queueLoading && queueItemsState.length === 0 ? <p className="p-2 text-xs text-[var(--color-muted)]">Queue is empty.</p> : null}
               <div className="space-y-2">
                 {queueItemsState.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between gap-2 rounded-md border border-[var(--color-border)] px-2 py-1.5">
+                  <div key={item.id} className="flex flex-col gap-2 rounded-md border border-[var(--color-border)] px-2 py-1.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-2">
                       {item.release?.thumbUrl ? (
                         <img
@@ -969,13 +993,13 @@ export function MiniPlayer() {
           ) : null}
         </div>
       ) : null}
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-2">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-start gap-2 md:items-center">
         <div
           id="digqueue-youtube-player"
           className="h-16 w-28 overflow-hidden rounded-md border border-[var(--color-border-soft)] md:h-20 md:w-36"
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-semibold text-[var(--color-text)] md:text-lg">
+          <div className="truncate text-sm font-semibold text-[var(--color-text)] sm:text-base md:text-lg">
             {current?.track?.title || "Now Playing"}
             {currentCatalogNumber ? <span className="ml-1 text-xs font-medium text-[var(--color-muted)]">({currentCatalogNumber})</span> : null}
             {current?.release ? (
@@ -993,8 +1017,8 @@ export function MiniPlayer() {
           </div>
           <div className="truncate text-xs text-[var(--color-muted)]">{currentArtistLine}</div>
           <div className="truncate text-xs text-[var(--color-muted)]">{releaseMeta}</div>
-          <div className="mt-1 flex items-center gap-2">
-            <span className="w-10 text-right text-[11px] text-[var(--color-muted)]">{formatTime(sliderValue)}</span>
+          <div className="mt-1 flex items-center gap-1.5 sm:gap-2">
+            <span className="w-8 text-right text-[11px] text-[var(--color-muted)] sm:w-10">{formatTime(sliderValue)}</span>
             <input
               type="range"
               min={0}
@@ -1016,11 +1040,11 @@ export function MiniPlayer() {
               className="h-1 w-full accent-[var(--color-accent)]"
               aria-label="Track timeline"
             />
-            <span className="w-10 text-[11px] text-[var(--color-muted)]">{formatTime(sliderMax)}</span>
+            <span className="w-8 text-[11px] text-[var(--color-muted)] sm:w-10">{formatTime(sliderMax)}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
+        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 md:w-auto md:overflow-visible md:pb-0">
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
             <span className="group relative inline-flex">
               <Button
                 type="button"
@@ -1057,7 +1081,7 @@ export function MiniPlayer() {
               <span role="tooltip" className={tooltipClass}>Open queue</span>
             </span>
           </div>
-          <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
             {!isLibraryTab ? (
               <span className="group relative inline-flex">
                 <Button
@@ -1134,7 +1158,7 @@ export function MiniPlayer() {
           </div>
         </div>
         {current?.youtubeVideoId ? (
-          <span className="group relative inline-flex">
+          <span className="group relative inline-flex shrink-0">
             <a
               href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
               target="_blank"
@@ -1148,7 +1172,25 @@ export function MiniPlayer() {
             <span role="tooltip" className={tooltipClass}>Open on YouTube</span>
           </span>
         ) : null}
-        <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1">
+        {currentYoutubeUrl ? (
+          <span className="group relative inline-flex shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={iconButtonClass}
+              onClick={openCurrentInYouTubeApp}
+              title={isIOS ? "Open in YouTube app for background playback" : "Open in YouTube"}
+              aria-label={isIOS ? "Open in YouTube app for background playback" : "Open in YouTube"}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+            <span role="tooltip" className={tooltipClass}>
+              {isIOS ? "Open in YouTube app (best for background play)" : "Open video in YouTube"}
+            </span>
+          </span>
+        ) : null}
+        <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1">
           <span className="group relative inline-flex">
             <Button
               type="button"
@@ -1178,7 +1220,7 @@ export function MiniPlayer() {
             <span role="tooltip" className={tooltipClass}>Shuffle playback</span>
           </span>
         </div>
-        <div className="flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.25)]">
+        <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.25)]">
           <Button variant="ghost" size="sm" className={iconButtonClass} onClick={() => loadPrev()} aria-label="Previous">
             <SkipBack className="h-4 w-4" />
           </Button>
@@ -1204,6 +1246,11 @@ export function MiniPlayer() {
           </Button>
         </div>
       </div>
+      {isIOS ? (
+        <p className="mx-auto mt-1 max-w-[1400px] text-[11px] text-[var(--color-muted)]">
+          iOS limitation: embedded YouTube playback stops when Safari closes. Use the open-in-YouTube button for reliable background playback.
+        </p>
+      ) : null}
     </div>
   );
 }

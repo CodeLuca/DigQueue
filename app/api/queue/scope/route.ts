@@ -4,6 +4,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
+import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 
 const schema = z.object({
@@ -12,6 +13,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const userId = await requireCurrentAppUserId();
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
   const pendingItems = await db
     .select({ id: queueItems.id, trackId: queueItems.trackId, source: queueItems.source })
     .from(queueItems)
-    .where(eq(queueItems.status, "pending"));
+    .where(and(eq(queueItems.status, "pending"), eq(queueItems.userId, userId)));
 
   const playedTrackIds = orderedTrackIds.length
     ? new Set(
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
           await db
             .select({ trackId: queueItems.trackId })
             .from(queueItems)
-            .where(and(eq(queueItems.status, "played"), inArray(queueItems.trackId, orderedTrackIds)))
+            .where(and(eq(queueItems.status, "played"), inArray(queueItems.trackId, orderedTrackIds), eq(queueItems.userId, userId)))
         )
           .map((row) => row.trackId)
           .filter((trackId): trackId is number => typeof trackId === "number"),
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
   if (idsToRemove.length > 0) {
     for (let start = 0; start < idsToRemove.length; start += 200) {
       const chunk = idsToRemove.slice(start, start + 200);
-      await db.delete(queueItems).where(and(eq(queueItems.status, "pending"), inArray(queueItems.id, chunk)));
+      await db.delete(queueItems).where(and(eq(queueItems.status, "pending"), inArray(queueItems.id, chunk), eq(queueItems.userId, userId)));
     }
   }
 
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
       id: youtubeMatches.id,
     })
     .from(youtubeMatches)
-    .where(inArray(youtubeMatches.trackId, missingTrackIds))
+    .where(and(inArray(youtubeMatches.trackId, missingTrackIds), eq(youtubeMatches.userId, userId)))
     .orderBy(desc(youtubeMatches.chosen), desc(youtubeMatches.score), asc(youtubeMatches.id));
 
   const videoByTrackId = new Map<number, string>();
@@ -90,20 +92,20 @@ export async function POST(request: Request) {
   const trackRows = await db
     .select({ id: tracks.id, releaseId: tracks.releaseId })
     .from(tracks)
-    .where(inArray(tracks.id, missingTrackIds));
+    .where(and(inArray(tracks.id, missingTrackIds), eq(tracks.userId, userId)));
   const releaseIds = [...new Set(trackRows.map((row) => row.releaseId))];
   const releaseRows = releaseIds.length
     ? await db
         .select({ id: releases.id, labelId: releases.labelId })
         .from(releases)
-        .where(inArray(releases.id, releaseIds))
+        .where(and(inArray(releases.id, releaseIds), eq(releases.userId, userId)))
     : [];
   const labelIds = [...new Set(releaseRows.map((row) => row.labelId))];
   const labelRows = labelIds.length
     ? await db
         .select({ id: labels.id, active: labels.active })
         .from(labels)
-        .where(inArray(labels.id, labelIds))
+        .where(and(inArray(labels.id, labelIds), eq(labels.userId, userId)))
     : [];
 
   const releaseById = new Map(releaseRows.map((row) => [row.id, row]));
@@ -112,6 +114,7 @@ export async function POST(request: Request) {
 
   const now = new Date();
   const rowsToInsert: Array<{
+    userId: string;
     youtubeVideoId: string;
     trackId: number;
     releaseId: number;
@@ -141,6 +144,7 @@ export async function POST(request: Request) {
       continue;
     }
     rowsToInsert.push({
+      userId,
       youtubeVideoId,
       trackId,
       releaseId: track.releaseId,

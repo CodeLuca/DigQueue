@@ -23,7 +23,12 @@ function isDefined<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
 
-export async function captureReleaseSignals(release: DiscogsReleaseLike, fallbackArtist?: string | null, fallbackYear?: number | null) {
+export async function captureReleaseSignals(
+  release: DiscogsReleaseLike,
+  fallbackArtist?: string | null,
+  fallbackYear?: number | null,
+  userId?: string,
+) {
   const primaryArtist =
     clean(release.artists_sort) ??
     clean(release.artists?.[0]?.name) ??
@@ -51,5 +56,5 @@ export async function captureReleaseSignals(release: DiscogsReleaseLike, fallbac
     formats,
     country: clean(release.country),
     year: release.year ?? fallbackYear ?? null,
-  });
+  }, userId);
 }
