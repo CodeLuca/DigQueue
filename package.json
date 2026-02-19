@@ -3,20 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "yarn native:check && next dev",
-    "build": "yarn native:check && next build",
-    "start": "yarn native:check && next start",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "yarn native:check && tsx db/migrate.ts",
-    "db:studio": "yarn native:check && drizzle-kit studio",
+    "db:migrate": "supabase db push --dns-resolver https",
+    "db:studio": "drizzle-kit studio",
     "native:check": "node scripts/ensure-native-sqlite.mjs",
-    "native:fix": "yarn rebuild better-sqlite3"
+    "native:fix": "npm rebuild better-sqlite3",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:db:push": "supabase db push --dns-resolver https",
+    "supabase:migration:new": "supabase migration new",
+    "supabase:import:snapshot": "bash scripts/supabase-import-snapshot.sh \"$SUPABASE_DB_URL\" db/snapshots/2026-02-18-pre-supabase \"$SUPABASE_APP_USER_ID\"",
+    "supabase:import:sqlite": "node scripts/supabase-import-from-sqlite.mjs"
   },
   "engines": {
     "node": ">=20 <23"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.97.0",
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -24,6 +33,7 @@
     "drizzle-orm": "^0.45.1",
     "lucide-react": "^0.574.0",
     "next": "16.1.6",
+    "postgres": "^3.4.7",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
