@@ -6,6 +6,16 @@ const envSchema = z.object({
   BANDCAMP_WISHLIST_URL: z.string().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("DigQueue"),
   DATABASE_URL: z.string().default("./db/digqueue.db"),
+  SUPABASE_ENV: z.enum(["local", "production"]).optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_DB_URL: z.string().optional(),
+  SUPABASE_APP_USER_ID: z.string().uuid().optional(),
+  SUPABASE_APP_USER_EMAIL: z.string().email().optional(),
+  NEXT_PUBLIC_SUPABASE_URL_LOCAL: z.string().default("http://127.0.0.1:54321"),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY_LOCAL: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY_LOCAL: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -14,4 +24,14 @@ export const env = envSchema.parse({
   BANDCAMP_WISHLIST_URL: process.env.BANDCAMP_WISHLIST_URL,
   NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
   DATABASE_URL: process.env.DATABASE_URL,
+  SUPABASE_ENV: process.env.SUPABASE_ENV,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
+  SUPABASE_APP_USER_ID: process.env.SUPABASE_APP_USER_ID,
+  SUPABASE_APP_USER_EMAIL: process.env.SUPABASE_APP_USER_EMAIL,
+  NEXT_PUBLIC_SUPABASE_URL_LOCAL: process.env.NEXT_PUBLIC_SUPABASE_URL_LOCAL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY_LOCAL: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_LOCAL,
+  SUPABASE_SERVICE_ROLE_KEY_LOCAL: process.env.SUPABASE_SERVICE_ROLE_KEY_LOCAL,
 });
