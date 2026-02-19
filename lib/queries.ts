@@ -177,14 +177,19 @@ export async function getDashboardData() {
     playedQueueItems,
     limit: 24,
   });
-  const externalRecommendations = await buildExternalRecommendations({
-    candidateTracks,
-    listenedTracks,
-    activeLabels: labelRows.filter((label) => label.active).map((label) => ({ id: label.id, name: label.name })),
-    existingReleaseIds,
-    existingLabelNames: allLabelNameRows.map((label) => label.name),
-    limit: 18,
-  });
+  let externalRecommendations: Awaited<ReturnType<typeof buildExternalRecommendations>> = [];
+  try {
+    externalRecommendations = await buildExternalRecommendations({
+      candidateTracks,
+      listenedTracks,
+      activeLabels: labelRows.filter((label) => label.active).map((label) => ({ id: label.id, name: label.name })),
+      existingReleaseIds,
+      existingLabelNames: allLabelNameRows.map((label) => label.name),
+      limit: 18,
+    });
+  } catch {
+    externalRecommendations = [];
+  }
 
   return {
     labels: labelsWithMetadata,
