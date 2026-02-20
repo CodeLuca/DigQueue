@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Bookmark, Compass, Disc3, History, Inbox, Lightbulb, LogIn, Settings, UserPlus } from "lucide-react";
+import { Bookmark, Disc3, History, Inbox, Lightbulb, LogIn, Settings, UserPlus } from "lucide-react";
 
 function itemClass(active: boolean) {
   return active
@@ -25,7 +25,6 @@ export function AppNav() {
         <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-2 md:flex-row md:items-center md:justify-between md:gap-4 md:px-8">
           <Link href="/welcome" className="text-lg font-semibold tracking-tight">DigQueue</Link>
           <nav className="-mx-1 flex w-full items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:px-0 sm:pb-0 md:w-auto md:flex-nowrap md:justify-end md:pb-0">
-            <Link href="/welcome" className={itemClass(pathname === "/welcome")} title="Open product overview"><Compass className="h-3.5 w-3.5" />Overview</Link>
             <Link href="/login" className={itemClass(pathname === "/login")} title="Sign in to your account"><LogIn className="h-3.5 w-3.5" />Login</Link>
             <Link href="/register" className={itemClass(pathname === "/register")} title="Create a new account"><UserPlus className="h-3.5 w-3.5" />Register</Link>
           </nav>
@@ -49,7 +48,6 @@ export function AppNav() {
       <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-2 md:flex-row md:items-center md:justify-between md:gap-4 md:px-8">
         <Link href="/" className="text-lg font-semibold tracking-tight">DigQueue</Link>
         <nav className="-mx-1 flex w-full items-center gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:px-0 sm:pb-0 md:w-auto md:flex-nowrap md:justify-end md:pb-0">
-          <Link href="/welcome" className={itemClass(false)} title="Open welcome guide"><Compass className="h-3.5 w-3.5" />Welcome</Link>
           <Link href="/?tab=step-1" className={itemClass(pathname === "/" && activeTab === "step-1")} title="Manage label sources and ingestion"><Disc3 className="h-3.5 w-3.5" />Labels</Link>
           <Link href="/?tab=step-2" className={itemClass(pathname === "/" && activeTab === "step-2")} title="Browse and play tracks in your queue"><Inbox className="h-3.5 w-3.5" />Listening Station</Link>
           <Link href="/?tab=wishlist" className={itemClass(pathname === "/" && activeTab === "wishlist")} title="Saved tracks and Discogs wishlist records"><Bookmark className="h-3.5 w-3.5" />Library</Link>

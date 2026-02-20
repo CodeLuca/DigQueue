@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Disc3, KeyRound, ListMusic, Sparkles } from "lucide-react";
+import { getCurrentAppUserId } from "@/lib/app-user";
 
 const highlights = [
   {
@@ -21,10 +22,10 @@ const highlights = [
 ];
 
 export default async function WelcomePage() {
-  const cookieStore = await cookies();
-  const isLoggedIn = cookieStore
-    .getAll()
-    .some((cookie) => /^sb-.*-auth-token(?:\.\d+)?$/.test(cookie.name));
+  const userId = await getCurrentAppUserId();
+  if (userId) {
+    redirect("/?tab=step-2");
+  }
 
   return (
     <main className="mx-auto max-w-[1200px] px-4 py-8 md:px-8">
@@ -51,11 +52,6 @@ export default async function WelcomePage() {
             <Link href="/register" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
               Register
             </Link>
-            {isLoggedIn ? (
-              <Link href="/" className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
-                Open Current App
-              </Link>
-            ) : null}
           </div>
         </div>
       </section>
@@ -87,12 +83,6 @@ export default async function WelcomePage() {
               <p className="mt-1 text-[var(--color-muted)]">Go to Labels and run your first ingestion cycle.</p>
             </li>
           </ol>
-          {isLoggedIn ? (
-            <div className="mt-4 flex flex-wrap gap-2 text-sm">
-              <Link href="/settings" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Discogs Setup (Settings)</Link>
-              <Link href="/?tab=step-1" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Open Labels</Link>
-            </div>
-          ) : null}
         </div>
       </section>
     </main>
