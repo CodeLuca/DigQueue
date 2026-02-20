@@ -24,13 +24,19 @@ export async function getApiKeys(): Promise<ApiKeys> {
   const now = Date.now();
   if (cache && cache.userId === userId && cache.expiresAt > now) return cache.data;
 
-  const row = await db.query.appSecrets.findFirst({
-    where: sql`${appSecrets.userId}::text = ${userId}`,
-  });
-  const data = {
-    discogsToken: row?.discogsToken ?? null,
-    youtubeApiKey: row?.youtubeApiKey ?? null,
-  };
+  let data: ApiKeys;
+  try {
+    const row = await db.query.appSecrets.findFirst({
+      where: sql`${appSecrets.userId}::text = ${userId}`,
+    });
+    data = {
+      discogsToken: row?.discogsToken ?? null,
+      youtubeApiKey: row?.youtubeApiKey ?? null,
+    };
+  } catch {
+    // Keep app usable when DB connectivity is temporarily unavailable.
+    data = { discogsToken: null, youtubeApiKey: null };
+  }
 
   cache = { userId, data, expiresAt: now + 30_000 };
   return data;
