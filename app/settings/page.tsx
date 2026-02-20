@@ -1,15 +1,14 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import { clearSessionAction } from "@/app/auth-actions";
-import { clearApiKeysAction, clearDiscogsKeyAction, clearYoutubeKeyAction, saveApiKeysAction } from "@/app/settings/actions";
+import { clearApiKeysAction, clearDiscogsKeyAction, saveApiKeysAction } from "@/app/settings/actions";
 import { ApiKeyTester } from "@/components/api-key-tester";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlaybackModeSettings } from "@/components/playback-mode-settings";
 import { Button } from "@/components/ui/button";
-import { YoutubeKeyFixAssistant } from "@/components/youtube-key-fix-assistant";
+import { env } from "@/lib/env";
 import { getApiKeys, getEffectiveApiKeys, maskSecret } from "@/lib/api-keys";
 
 export default async function SettingsPage({
@@ -20,6 +19,7 @@ export default async function SettingsPage({
   await searchParams;
   const savedKeys = await getApiKeys();
   const effectiveKeys = await getEffectiveApiKeys();
+  const savedYoutubeKey = savedKeys.youtubeApiKey || env.YOUTUBE_API_KEY || null;
 
   return (
     <main className="mx-auto max-w-[900px] px-4 py-6 md:px-8">
@@ -29,12 +29,6 @@ export default async function SettingsPage({
           <p className="text-sm text-[var(--color-muted)]">Control keys, exports, and workspace behavior without breaking your digging flow.</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link href="/" className="rounded-md border border-[var(--color-border)] px-3 py-1.5 hover:bg-[var(--color-surface2)]">
-            Home
-          </Link>
-          <Link href="/listen" className="rounded-md border border-[var(--color-border)] px-3 py-1.5 hover:bg-[var(--color-surface2)]">
-            To Listen
-          </Link>
           <form action={clearSessionAction}>
             <Button type="submit" variant="outline" className="px-3 py-1.5 text-xs">Sign Out</Button>
           </form>
@@ -48,21 +42,16 @@ export default async function SettingsPage({
             <Badge>{effectiveKeys.youtubeApiKey ? "YouTube Active" : "YouTube Missing"}</Badge>
           </div>
           <p>Saved Discogs token: <span className="mono">{maskSecret(savedKeys.discogsToken)}</span></p>
-          <p>Saved YouTube key: <span className="mono">{maskSecret(savedKeys.youtubeApiKey)}</span></p>
           <p>Active Discogs token: <span className="mono">{maskSecret(effectiveKeys.discogsToken)}</span></p>
-          <p>Active YouTube key: <span className="mono">{maskSecret(effectiveKeys.youtubeApiKey)}</span></p>
+          <p>Backend YouTube key: <span className="mono">{maskSecret(savedYoutubeKey)}</span></p>
           <form action={saveApiKeysAction} className="space-y-2 rounded-md border border-[var(--color-border)] p-3">
             <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Set Keys</p>
             <Input name="discogsToken" placeholder="Discogs token or URL containing token=" />
-            <Input name="youtubeApiKey" placeholder="YouTube key or URL containing key=" />
             <Button type="submit">Save Keys</Button>
           </form>
           <div className="flex flex-wrap gap-2">
             <form action={clearDiscogsKeyAction}>
               <Button type="submit" variant="outline">Clear Discogs Key</Button>
-            </form>
-            <form action={clearYoutubeKeyAction}>
-              <Button type="submit" variant="outline">Clear YouTube Key</Button>
             </form>
             <form action={clearApiKeysAction}>
               <Button type="submit" variant="outline">Clear All Keys</Button>
@@ -78,14 +67,7 @@ export default async function SettingsPage({
             <a className="text-[var(--color-accent)] hover:underline" href="https://www.discogs.com/settings/developers" target="_blank" rel="noreferrer">
               Discogs developer settings
             </a>
-            <a className="text-[var(--color-accent)] hover:underline" href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noreferrer">
-              Enable YouTube Data API v3
-            </a>
-            <a className="text-[var(--color-accent)] hover:underline" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">
-              Google Cloud credentials
-            </a>
           </div>
-          <YoutubeKeyFixAssistant />
         </CardContent>
       </Card>
       <Card className="mb-4">
