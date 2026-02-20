@@ -17,7 +17,8 @@ function userScope(userId: string) {
 export async function getDashboardData() {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
-  const [labelRows, allLabelNameRows, releaseThumbRows, releaseLabelRows, queueCountRows, fetchedReleaseRows, trackCountRows] = await Promise.all([
+  try {
+    const [labelRows, allLabelNameRows, releaseThumbRows, releaseLabelRows, queueCountRows, fetchedReleaseRows, trackCountRows] = await Promise.all([
     db.query.labels.findMany({
       where: and(eq(labels.sourceType, "workspace"), scope.labels),
       orderBy: [asc(labels.addedAt)],
@@ -191,23 +192,42 @@ export async function getDashboardData() {
     externalRecommendations = [];
   }
 
-  return {
-    labels: labelsWithMetadata,
-    queueCount: queueCountRows[0]?.value ?? 0,
-    metrics: {
-      unplayedTracks: scopedTotals[0][0]?.value ?? 0,
-      playedItems: scopedTotals[1][0]?.value ?? 0,
-      doneTracks: scopedTotals[2][0]?.value ?? 0,
-      savedTracks: scopedTotals[3][0]?.value ?? 0,
-      wishlistedRecords: scopedTotals[4][0]?.value ?? 0,
-      labelsErrored: labelsErrorCount[0]?.value ?? 0,
-      releasesLowConfidence: lowConfidenceCount[0]?.value ?? 0,
-    },
-    erroredLabels,
-    recentlyPlayed,
-    recommendations,
-    externalRecommendations,
-  };
+    return {
+      labels: labelsWithMetadata,
+      queueCount: queueCountRows[0]?.value ?? 0,
+      metrics: {
+        unplayedTracks: scopedTotals[0][0]?.value ?? 0,
+        playedItems: scopedTotals[1][0]?.value ?? 0,
+        doneTracks: scopedTotals[2][0]?.value ?? 0,
+        savedTracks: scopedTotals[3][0]?.value ?? 0,
+        wishlistedRecords: scopedTotals[4][0]?.value ?? 0,
+        labelsErrored: labelsErrorCount[0]?.value ?? 0,
+        releasesLowConfidence: lowConfidenceCount[0]?.value ?? 0,
+      },
+      erroredLabels,
+      recentlyPlayed,
+      recommendations,
+      externalRecommendations,
+    };
+  } catch {
+    return {
+      labels: [],
+      queueCount: 0,
+      metrics: {
+        unplayedTracks: 0,
+        playedItems: 0,
+        doneTracks: 0,
+        savedTracks: 0,
+        wishlistedRecords: 0,
+        labelsErrored: 0,
+        releasesLowConfidence: 0,
+      },
+      erroredLabels: [],
+      recentlyPlayed: [],
+      recommendations: [],
+      externalRecommendations: [],
+    };
+  }
 }
 
 export async function getLabelDetail(labelId: number) {
@@ -275,11 +295,12 @@ export async function exportQueueRows() {
 export async function getToListenData(labelId?: number, onlyPlayable = true) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
-  const whereClause = labelId
+  try {
+    const whereClause = labelId
     ? and(or(eq(tracks.listened, false), eq(tracks.saved, true)), eq(releases.labelId, labelId), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)
     : and(or(eq(tracks.listened, false), eq(tracks.saved, true)), eq(labels.active, true), scope.tracks, scope.releases, scope.labels);
-  const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
-  const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
+    const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
+    const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
 
   const rows = await db
     .select({
@@ -348,21 +369,25 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
     };
   });
 
-  const allLabels = await db.query.labels.findMany({
-    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
-    orderBy: [asc(labels.name)],
-  });
-  return { rows: enrichedRows, labels: allLabels };
+    const allLabels = await db.query.labels.findMany({
+      where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
+      orderBy: [asc(labels.name)],
+    });
+    return { rows: enrichedRows, labels: allLabels };
+  } catch {
+    return { rows: [], labels: [] };
+  }
 }
 
 export async function getWishlistData(labelId?: number, onlyPlayable = false) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
-  const whereClause = labelId
+  try {
+    const whereClause = labelId
     ? and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), eq(releases.labelId, labelId), scope.tracks, scope.releases, scope.labels)
     : and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), scope.tracks, scope.releases, scope.labels);
-  const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
-  const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
+    const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
+    const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
 
   const rows = await db
     .select({
@@ -431,17 +456,21 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
     };
   });
 
-  const allLabels = await db.query.labels.findMany({
-    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
-    orderBy: [asc(labels.name)],
-  });
-  return { rows: enrichedRows, labels: allLabels };
+    const allLabels = await db.query.labels.findMany({
+      where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
+      orderBy: [asc(labels.name)],
+    });
+    return { rows: enrichedRows, labels: allLabels };
+  } catch {
+    return { rows: [], labels: [] };
+  }
 }
 
 export async function getPlayedReviewedData(labelId?: number, onlyPlayable = false) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
-  const playedTrackRows = await db
+  try {
+    const playedTrackRows = await db
     .select({ trackId: queueItems.trackId })
     .from(queueItems)
     .innerJoin(releases, eq(queueItems.releaseId, releases.id))
@@ -529,11 +558,14 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
     };
   });
 
-  const allLabels = await db.query.labels.findMany({
-    where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
-    orderBy: [asc(labels.name)],
-  });
-  return { rows: enrichedRows, labels: allLabels };
+    const allLabels = await db.query.labels.findMany({
+      where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
+      orderBy: [asc(labels.name)],
+    });
+    return { rows: enrichedRows, labels: allLabels };
+  } catch {
+    return { rows: [], labels: [] };
+  }
 }
 
 export async function getWishlistedRecordsData(labelId?: number) {
