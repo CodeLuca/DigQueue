@@ -3,12 +3,12 @@ import "server-only";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 export async function isGoogleOAuthAvailable() {
-  const { url, anonKey } = getSupabasePublicConfig();
-  const probe = new URL("/auth/v1/authorize", url);
-  probe.searchParams.set("provider", "google");
-  probe.searchParams.set("redirect_to", "https://example.com/auth/callback");
-
   try {
+    const { url, anonKey } = getSupabasePublicConfig();
+    const probe = new URL("/auth/v1/authorize", url);
+    probe.searchParams.set("provider", "google");
+    probe.searchParams.set("redirect_to", "https://example.com/auth/callback");
+
     const res = await fetch(probe.toString(), {
       method: "GET",
       headers: { apikey: anonKey },
@@ -27,4 +27,3 @@ export async function isGoogleOAuthAvailable() {
 
   return false;
 }
-
