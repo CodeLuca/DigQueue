@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Chrome, KeyRound } from "lucide-react";
-import { loginWithGoogleAction, loginWithPasswordAction } from "@/app/auth-actions";
+import { loginWithGoogleAction, loginWithPasswordAction, requestPasswordResetAction } from "@/app/auth-actions";
 import { isGoogleOAuthAvailable } from "@/lib/supabase/google-oauth";
 
 const tertiaryLinkClass =
@@ -56,6 +56,23 @@ export default async function LoginPage({
             >
               Login with Email
               <ArrowRight className="h-4 w-4" />
+            </button>
+          </form>
+          <form action={requestPasswordResetAction} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+            <p className="mb-2 text-xs font-medium text-[var(--color-muted)]">Forgot password?</p>
+            <input
+              name="email"
+              type="email"
+              required
+              defaultValue={sessionEmail}
+              placeholder="Email for reset link"
+              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
+            />
+            <button
+              type="submit"
+              className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-[var(--color-border)] px-4 py-2 text-sm font-medium hover:bg-[var(--color-surface)]"
+            >
+              Send reset link
             </button>
           </form>
           {googleAvailable ? (

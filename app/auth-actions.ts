@@ -127,3 +127,55 @@ export async function clearSessionAction() {
 
   redirect("/login");
 }
+
+export async function requestPasswordResetAction(formData: FormData) {
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+
+  if (!email) {
+    redirect(withAuthQuery("/login", { error: "Email is required for password reset." }));
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const headersStore = await headers();
+  const host = headersStore.get("x-forwarded-host") || headersStore.get("host") || "127.0.0.1:3000";
+  const proto = headersStore.get("x-forwarded-proto") || (host.startsWith("127.0.0.1") || host.startsWith("localhost") ? "http" : "https");
+  const confirmUrl = new URL("/auth/confirm", `${proto}://${host}`);
+  confirmUrl.searchParams.set("next", "/reset-password");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: confirmUrl.toString(),
+  });
+
+  if (error) {
+    redirect(withAuthQuery("/login", { email, error: friendlyAuthError(error.message || "", "Password reset request failed.") }));
+  }
+
+  redirect(withAuthQuery("/login", {
+    email,
+    notice: "Password reset email sent. Open the link in that email to continue.",
+  }));
+}
+
+export async function completePasswordResetAction(formData: FormData) {
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  if (!password || !confirmPassword) {
+    redirect(withAuthQuery("/reset-password", { error: "Both password fields are required." }));
+  }
+  if (password.length < 8) {
+    redirect(withAuthQuery("/reset-password", { error: "Password must be at least 8 characters." }));
+  }
+  if (password !== confirmPassword) {
+    redirect(withAuthQuery("/reset-password", { error: "Passwords do not match." }));
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.auth.updateUser({ password });
+  if (error || !data.user) {
+    redirect(withAuthQuery("/reset-password", { error: friendlyAuthError(error?.message || "", "Password update failed.") }));
+  }
+
+  await supabase.auth.signOut();
+  redirect(withAuthQuery("/login", { notice: "Password updated. Login with your new password." }));
+}

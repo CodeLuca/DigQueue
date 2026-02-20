@@ -21,3 +21,7 @@
 - `yarn db:migrate`
 - `yarn lint`
 - `yarn build`
+
+## Git Discipline
+- After every major change or completed feature: run `yarn lint` (and `yarn build` when relevant), commit, then push immediately.
+- Do not leave multiple completed major features unpushed in the local branch.
