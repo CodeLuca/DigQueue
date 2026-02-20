@@ -10,7 +10,8 @@ export default async function ConnectDiscogsPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const userId = await getCurrentAppUserId();
-  await searchParams;
+  const params = await searchParams;
+  const nextPath = params.next && params.next.startsWith("/") && !params.next.startsWith("//") ? params.next : "/";
 
   return (
     <main className="mx-auto max-w-[900px] px-4 py-8 md:px-8">
@@ -20,7 +21,7 @@ export default async function ConnectDiscogsPage({
           Step 2 · Connect Discogs
         </p>
         <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">Connect your Discogs account</h1>
-        <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)]">This is step 2 after account login/register.</p>
+        <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)]">Authenticate once, then DigQueue can pull wants and sync wishlist actions for your Discogs account.</p>
         {!userId ? (
           <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             Login is required before connecting Discogs.
@@ -29,18 +30,28 @@ export default async function ConnectDiscogsPage({
 
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
           <p className="text-sm">
-            Configure your Discogs token in Settings, then continue into DigQueue.
+            Use one click to authorize Discogs.
           </p>
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Link
-            href={userId ? "/settings" : "/login"}
-            className="inline-flex items-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
-          >
-            {userId ? "Open Settings (Discogs)" : "Login First"}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {userId ? (
+            <a
+              href={`/api/discogs/oauth/start?next=${encodeURIComponent(nextPath)}`}
+              className="inline-flex items-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
+            >
+              Connect Discogs
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
+            >
+              Login First
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
           <Link href="/login" className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
             Back: Account step
           </Link>

@@ -36,7 +36,8 @@ No Soulseek, ripping, or copyrighted audio download features are implemented.
 Create `.env.local`:
 
 ```bash
-DISCOGS_TOKEN=...
+DISCOGS_CONSUMER_KEY=...
+DISCOGS_CONSUMER_SECRET=...
 YOUTUBE_API_KEY=...
 BANDCAMP_WISHLIST_URL=...
 NEXT_PUBLIC_APP_NAME=DigQueue
@@ -44,10 +45,12 @@ DATABASE_URL=./db/digqueue.db
 ```
 
 Optional:
+- `DISCOGS_TOKEN` can be set as a backend fallback for non-user-specific Discogs access.
 - `BANDCAMP_WISHLIST_URL` can point to a public fan wishlist page (for example `https://bandcamp.com/yourname/wishlist`).
 - Wishlist imports are cached and paged slowly to avoid hitting Bandcamp rate limits.
+- In Discogs app settings, add OAuth callback URL: `http://localhost:3000/api/discogs/oauth/callback` (and your production callback URL for deploys).
 
-You can also set Discogs/YouTube keys directly from `/settings` (stored locally in SQLite), then validate with the built-in key test button.
+Users connect Discogs from `/connect-discogs` with one-click OAuth. `/settings` shows integration status and test results.
 
 ## Run
 
@@ -79,7 +82,7 @@ Pages:
 - `/listen` unlistened track inbox with bulk todo actions
 - `/labels/[id]` label progress + releases
 - `/releases/[id]` tracklist, YouTube candidates, overrides, todo/wishlist
-- `/settings` token previews, legal note, shortcut reference
+- `/settings` integrations, legal note, shortcut reference
 
 API:
 - `/api/discogs/label/[id]/releases`
@@ -118,7 +121,7 @@ You can also run the whole label queue from the dashboard.
 
 Seed lists are included in `lib/seed-data.ts` and can be loaded with the **Load Seed Labels** button on the dashboard.
 - Direct Discogs URL/ID seeds load without API token.
-- Search-name seeds require `DISCOGS_TOKEN`; without token they are skipped (best-effort behavior).
+- Search-name seeds require a Discogs connection (or `DISCOGS_TOKEN` backend fallback); otherwise they are skipped (best-effort behavior).
 
 ## Limitations (MVP)
 

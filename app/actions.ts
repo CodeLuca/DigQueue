@@ -184,10 +184,17 @@ export async function retryLabelAction(formData: FormData) {
   const scope = userScope(userId);
   const labelId = Number(formData.get("labelId"));
   if (!labelId) return;
+  const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), scope.labels) });
+  if (!label?.active) return;
+
   await db
     .update(labels)
-    .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: new Date() })
+    .set({ status: "processing", lastError: null, updatedAt: new Date() })
     .where(and(eq(labels.id, labelId), scope.labels));
+
+  // Kick one processing step immediately so "Reload tracks" has visible progress without requiring queue runner.
+  await processSingleReleaseForLabel(labelId, userId);
+
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);
 }

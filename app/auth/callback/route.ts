@@ -18,12 +18,16 @@ export async function GET(request: Request) {
   }
 
   const supabase = await getSupabaseServerClient();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin));
   }
 
-  const user = data?.user ?? data?.session?.user;
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) {
+    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(userError.message)}`, requestUrl.origin));
+  }
+  const user = userData.user;
   if (!user?.id || !user?.email) {
     return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent("Unable to resolve user session.")}`, requestUrl.origin));
   }

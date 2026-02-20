@@ -9,7 +9,17 @@ import { getBandcampTrackVideosForRelease, getDiscogsTrackVideos } from "@/lib/t
 import { isYoutubeFatalConfigError, searchYoutube } from "@/lib/youtube";
 
 function safeErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message.slice(0, 1200);
+  if (error instanceof Error) {
+    const raw = error.message || "";
+    const normalized = raw.toLowerCase();
+    if (normalized.includes("maxclientsinsessionmode")) {
+      return "Database is temporarily overloaded. Retry in a few seconds.";
+    }
+    if (normalized.includes("failed query:")) {
+      return "Temporary database write failure. Retry in a few seconds.";
+    }
+    return raw.slice(0, 1200);
+  }
   return String(error).slice(0, 1200);
 }
 

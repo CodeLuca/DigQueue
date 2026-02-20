@@ -2,28 +2,22 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
+import { fetchDiscogsIdentity } from "@/lib/discogs";
 
 export async function GET() {
   const keys = await getEffectiveApiKeys();
 
   const result = {
-    discogs: { ok: false, message: "Not set" },
+    discogs: { ok: false, message: "Not connected" },
     youtube: { ok: false, message: "Not set" },
   };
 
   if (keys.discogsToken) {
     try {
-      const response = await fetch("https://api.discogs.com/oauth/identity", {
-        headers: {
-          Authorization: `Discogs token=${keys.discogsToken}`,
-          "User-Agent": "DigQueue/0.1 (+local app)",
-        },
-      });
-      result.discogs = response.ok
-        ? { ok: true, message: "Discogs token valid" }
-        : { ok: false, message: `Discogs test failed (${response.status})` };
+      await fetchDiscogsIdentity();
+      result.discogs = { ok: true, message: "Discogs connected" };
     } catch {
-      result.discogs = { ok: false, message: "Discogs test request failed" };
+      result.discogs = { ok: false, message: "Discogs auth test failed" };
     }
   }
 

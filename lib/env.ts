@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const envSchema = z.object({
   DISCOGS_TOKEN: z.string().optional(),
+  DISCOGS_CONSUMER_KEY: z.string().optional(),
+  DISCOGS_CONSUMER_SECRET: z.string().optional(),
   YOUTUBE_API_KEY: z.string().optional(),
   BANDCAMP_WISHLIST_URL: z.string().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("DigQueue"),
@@ -21,6 +23,8 @@ const envSchema = z.object({
 
 export const env = envSchema.parse({
   DISCOGS_TOKEN: process.env.DISCOGS_TOKEN,
+  DISCOGS_CONSUMER_KEY: process.env.DISCOGS_CONSUMER_KEY,
+  DISCOGS_CONSUMER_SECRET: process.env.DISCOGS_CONSUMER_SECRET,
   YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
   BANDCAMP_WISHLIST_URL: process.env.BANDCAMP_WISHLIST_URL,
   NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,

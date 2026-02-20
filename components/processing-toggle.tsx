@@ -15,21 +15,13 @@ export function ProcessingToggle({
   initialStatus: string;
   disabled?: boolean;
 }) {
-  const [active, setActive] = useState(initialActive);
-  const [status, setStatus] = useState(initialStatus);
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const runningRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
-    setActive(initialActive);
-    setStatus(initialStatus);
-    setErrorMessage(null);
-  }, [initialActive, initialStatus]);
-
-  useEffect(() => {
-    runningRef.current = active && status !== "complete";
+    runningRef.current = initialActive && (initialStatus === "queued" || initialStatus === "processing");
     if (!runningRef.current) return;
 
     const loop = async () => {
@@ -43,7 +35,8 @@ export function ProcessingToggle({
       if (response.ok) {
         const data = (await response.json()) as { done?: boolean; message?: string };
         if (data.done) {
-          setStatus("complete");
+          runningRef.current = false;
+        } else if (typeof data.message === "string" && data.message.startsWith("Error:")) {
           runningRef.current = false;
         } else if (data.message === "Inactive" || data.message === "Paused") {
           runningRef.current = false;
@@ -58,7 +51,7 @@ export function ProcessingToggle({
     return () => {
       runningRef.current = false;
     };
-  }, [active, labelId, status, router]);
+  }, [initialActive, initialStatus, labelId, router]);
 
   const setRemoteActive = async (nextActive: boolean) => {
     setPending(true);
@@ -74,11 +67,6 @@ export function ProcessingToggle({
         setErrorMessage(body?.error || "Activation update failed.");
         return;
       }
-      const data = body as { active?: boolean; status?: string } | null;
-      if (typeof data?.active === "boolean" && typeof data?.status === "string") {
-        setActive(data.active);
-        setStatus(data.status);
-      }
     } finally {
       setPending(false);
       router.refresh();
@@ -89,11 +77,11 @@ export function ProcessingToggle({
     <div className="flex flex-col items-start gap-1 sm:items-end">
       <Button
         size="sm"
-        variant={active ? "secondary" : "outline"}
-        onClick={() => void setRemoteActive(!active)}
+        variant={initialActive ? "secondary" : "outline"}
+        onClick={() => void setRemoteActive(!initialActive)}
         disabled={disabled || pending}
       >
-        {pending ? "..." : active ? "Deactivate" : "Activate"}
+        {pending ? "..." : initialActive ? "Deactivate" : "Activate"}
       </Button>
       {errorMessage ? <p className="text-[11px] text-red-300">{errorMessage}</p> : null}
     </div>

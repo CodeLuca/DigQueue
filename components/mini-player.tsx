@@ -182,7 +182,6 @@ export function MiniPlayer() {
     setQueueLoading(true);
     setQueueError(null);
     try {
-      await syncQueueToListeningScope();
       const response = await fetch("/api/queue/list?limit=30");
       if (!response.ok) throw new Error("Unable to load queue.");
       const body = (await response.json()) as { items?: QueueApiItem[] };
@@ -198,7 +197,7 @@ export function MiniPlayer() {
     } finally {
       setQueueLoading(false);
     }
-  }, [isListeningStationTab, syncQueueToListeningScope]);
+  }, [isListeningStationTab]);
 
   const updateTrackTodo = useCallback(async (payload: {
     trackIds: number[];
@@ -767,7 +766,7 @@ export function MiniPlayer() {
   useEffect(() => {
     if (!queueOpen) return;
     void fetchQueueItems();
-    const interval = window.setInterval(() => void fetchQueueItems(), 5000);
+    const interval = window.setInterval(() => void fetchQueueItems(), 10000);
     return () => window.clearInterval(interval);
   }, [fetchQueueItems, queueOpen]);
 
@@ -1043,7 +1042,7 @@ export function MiniPlayer() {
             <span className="w-8 text-[11px] text-[var(--color-muted)] sm:w-10">{formatTime(sliderMax)}</span>
           </div>
         </div>
-        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 md:w-auto md:overflow-visible md:pb-0">
+        <div className="flex w-full flex-wrap items-center gap-2 pb-1 md:w-auto md:pb-0">
           <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
             <span className="group relative inline-flex">
               <Button

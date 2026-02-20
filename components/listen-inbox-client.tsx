@@ -431,7 +431,7 @@ export function ListenInboxClient({
 
   const syncUpNextFromQueue = useCallback(async () => {
     try {
-      const response = await fetch("/api/queue/list?limit=120");
+      const response = await fetch("/api/queue/list?limit=40");
       if (!response.ok) return;
       const body = (await response.json().catch(() => null)) as { items?: QueueApiItem[] } | null;
       const queuedTrackIds = new Set(
@@ -788,7 +788,7 @@ export function ListenInboxClient({
 
   useEffect(() => {
     const initial = window.setTimeout(() => void syncUpNextFromQueue(), 0);
-    const interval = window.setInterval(() => void syncUpNextFromQueue(), 8000);
+    const interval = window.setInterval(() => void syncUpNextFromQueue(), 15000);
     window.dispatchEvent(new CustomEvent("digqueue:request-player-current"));
     return () => {
       window.clearTimeout(initial);
@@ -823,34 +823,74 @@ export function ListenInboxClient({
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={() => moveLabel(-1)} disabled={effectiveLabelOptions.length === 0} title="Select previous label">
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Prev label
-          </Button>
-          <select
-            value={activeLabelId === null ? "" : String(activeLabelId)}
-            onChange={(event) => {
-              setLabelFilterTouched(true);
-              setSelectedLabelId(event.target.value ? Number(event.target.value) : null);
-              setCursor(0);
-            }}
-            className="h-9 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm sm:w-auto sm:min-w-[220px]"
-            title="Filter tracks by label"
-            aria-label="Filter tracks by label"
-          >
-            <option value="">All labels</option>
-            {effectiveLabelOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <Button type="button" size="sm" variant="outline" onClick={() => moveLabel(1)} disabled={effectiveLabelOptions.length === 0} title="Select next label">
-            <ChevronRight className="h-3.5 w-3.5" />
-            Next label
-          </Button>
-          <div className="inline-flex w-full items-center gap-1 overflow-x-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs sm:ml-1 sm:w-auto sm:overflow-visible">
+        <div className="space-y-2">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+            <div className="grid w-full gap-2 sm:grid-cols-[auto,minmax(220px,1fr),auto] lg:flex-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => moveLabel(-1)}
+                disabled={effectiveLabelOptions.length === 0}
+                title="Select previous label"
+                className="justify-center"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                Prev label
+              </Button>
+              <select
+                value={activeLabelId === null ? "" : String(activeLabelId)}
+                onChange={(event) => {
+                  setLabelFilterTouched(true);
+                  setSelectedLabelId(event.target.value ? Number(event.target.value) : null);
+                  setCursor(0);
+                }}
+                className="h-9 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm"
+                title="Filter tracks by label"
+                aria-label="Filter tracks by label"
+              >
+                <option value="">All labels</option>
+                {effectiveLabelOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => moveLabel(1)}
+                disabled={effectiveLabelOptions.length === 0}
+                title="Select next label"
+                className="justify-center"
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+                Next label
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 lg:shrink-0">
+              {activeLabel?.discogsUrl ? (
+                <a
+                  href={toDiscogsWebUrl(activeLabel.discogsUrl, `/label/${activeLabel.id}`)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-md border border-[var(--color-border)] p-2 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                  title="Open selected label on Discogs"
+                  aria-label="Open selected label on Discogs"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
+              {activeLabelIndex >= 0 ? (
+                <span className="text-xs text-[var(--color-muted)]">
+                  {activeLabelIndex + 1}/{effectiveLabelOptions.length}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="inline-flex w-full flex-wrap items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs">
             <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
             <button
               type="button"
@@ -875,177 +915,179 @@ export function ListenInboxClient({
               Shuffle
             </button>
           </div>
-          {activeLabel?.discogsUrl ? (
-            <a
-              href={toDiscogsWebUrl(activeLabel.discogsUrl, `/label/${activeLabel.id}`)}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-md border border-[var(--color-border)] p-2 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-              title="Open selected label on Discogs"
-              aria-label="Open selected label on Discogs"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          ) : null}
-          {activeLabelIndex >= 0 ? (
-            <span className="text-xs text-[var(--color-muted)]">
-              {activeLabelIndex + 1}/{effectiveLabelOptions.length}
-            </span>
-          ) : null}
+
           {showWishlistSourceFilter ? (
-            <div className="flex w-full items-center gap-1 overflow-x-auto text-xs sm:ml-2 sm:w-auto sm:overflow-visible">
-              <button
-                type="button"
-                onClick={() => {
-                  setWishlistSourceFilter("all");
-                  setCursor(0);
-                }}
-                className={filterButtonClass(wishlistSourceFilter === "all")}
-                aria-pressed={wishlistSourceFilter === "all"}
-                title="Show all library items (saved tracks + wishlisted records)"
-                aria-label="Show all library items"
-              >
-                <CheckSquare className="mr-1 inline h-3 w-3" />
-                All ({wishlistSourceCounts.all})
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setWishlistSourceFilter("saved_tracks");
-                  setCursor(0);
-                }}
-                className={filterButtonClass(wishlistSourceFilter === "saved_tracks")}
-                aria-pressed={wishlistSourceFilter === "saved_tracks"}
-                title="Show only tracks saved locally"
-                aria-label="Show saved tracks only"
-              >
-                <Disc3 className="mr-1 inline h-3 w-3" />
-                Saved Tracks ({wishlistSourceCounts.savedTracks})
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setWishlistSourceFilter("wishlisted_records");
-                  setCursor(0);
-                }}
-                className={filterButtonClass(wishlistSourceFilter === "wishlisted_records")}
-                aria-pressed={wishlistSourceFilter === "wishlisted_records"}
-                title="Show tracks that belong to records in your Discogs wishlist"
-                aria-label="Show wishlisted records only"
-              >
-                <BookmarkCheck className="mr-1 inline h-3 w-3" />
-                Wishlisted Records ({wishlistSourceCounts.wishlistedRecords})
-              </button>
-            </div>
-          ) : null}
-          {showQueueFilters ? (
-            <div className="flex w-full flex-wrap items-center gap-1 text-xs sm:ml-2 sm:w-auto">
-              <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
-              <button
-                type="button"
-                onClick={() => setSourceFilter("all")}
-                className={filterButtonClass(sourceFilter === "all")}
-                aria-pressed={sourceFilter === "all"}
-                title="Show all tracks regardless of saved/wishlist status"
-                aria-label="Source filter all tracks"
-              >
-                All ({sourceFilterCounts.all})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSourceFilter("saved")}
-                className={filterButtonClass(sourceFilter === "saved")}
-                aria-pressed={sourceFilter === "saved"}
-                title="Show only tracks saved locally"
-                aria-label="Source filter saved tracks"
-              >
-                Saved ({sourceFilterCounts.saved})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSourceFilter("wishlisted")}
-                className={filterButtonClass(sourceFilter === "wishlisted")}
-                aria-pressed={sourceFilter === "wishlisted"}
-                title="Show only tracks from Discogs wishlisted records"
-                aria-label="Source filter wishlisted tracks"
-              >
-                Wishlisted ({sourceFilterCounts.wishlisted})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSourceFilter("saved_or_wishlisted")}
-                className={filterButtonClass(sourceFilter === "saved_or_wishlisted")}
-                aria-pressed={sourceFilter === "saved_or_wishlisted"}
-                title="Show tracks that are either saved or from wishlisted records"
-                aria-label="Source filter saved or wishlisted"
-              >
-                Saved or Wishlisted ({sourceFilterCounts.savedOrWishlisted})
-              </button>
-              {sourceFilter !== "all" ? (
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+              <div className="flex flex-wrap items-center gap-1 text-xs">
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
                 <button
                   type="button"
-                  onClick={() => setSourceFilter("all")}
-                  className="ml-1 text-[11px] text-[var(--color-accent)] hover:underline"
-                  title="Reset source filter"
-                  aria-label="Reset source filter"
+                  onClick={() => {
+                    setWishlistSourceFilter("all");
+                    setCursor(0);
+                  }}
+                  className={filterButtonClass(wishlistSourceFilter === "all")}
+                  aria-pressed={wishlistSourceFilter === "all"}
+                  title="Show all library items (saved tracks + wishlisted records)"
+                  aria-label="Show all library items"
                 >
-                  Source filter active: {sourceFilter.replaceAll("_", " ")} (reset)
+                  <CheckSquare className="mr-1 inline h-3 w-3" />
+                  All ({wishlistSourceCounts.all})
                 </button>
-              ) : (
-                <span className="ml-1 text-[11px] text-[var(--color-muted)]">Source filter: all</span>
-              )}
-              <span className="ml-2 mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
-              <button
-                type="button"
-                onClick={() => setVideoFilter("all")}
-                className={filterButtonClass(videoFilter === "all")}
-                aria-pressed={videoFilter === "all"}
-                title="Show tracks with and without playable videos"
-                aria-label="Video filter all tracks"
-              >
-                Any ({videoFilterCounts.all})
-              </button>
-              <button
-                type="button"
-                onClick={() => setVideoFilter("playable")}
-                className={filterButtonClass(videoFilter === "playable")}
-                aria-pressed={videoFilter === "playable"}
-                title="Show only tracks with playable videos"
-                aria-label="Video filter playable only"
-              >
-                Playable ({videoFilterCounts.playable})
-              </button>
-              <button
-                type="button"
-                onClick={() => setVideoFilter("no_video_or_private")}
-                className={filterButtonClass(videoFilter === "no_video_or_private")}
-                aria-pressed={videoFilter === "no_video_or_private"}
-                title="Show only tracks missing a playable video"
-                aria-label="Video filter no video or private"
-              >
-                No video/private ({videoFilterCounts.noVideoOrPrivate})
-              </button>
-              <span className="ml-2 mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">State</span>
-              <button
-                type="button"
-                onClick={() => setHideReviewed((prev) => !prev)}
-                className={filterButtonClass(hideReviewed)}
-                aria-pressed={hideReviewed}
-                title="Hide tracks already reviewed or from wishlisted records"
-                aria-label="Toggle hide reviewed tracks"
-              >
-                Hide reviewed ({queueFilterCounts.reviewed})
-              </button>
-              <button
-                type="button"
-                onClick={() => setHideAlreadyPlayed((prev) => !prev)}
-                className={filterButtonClass(hideAlreadyPlayed)}
-                aria-pressed={hideAlreadyPlayed}
-                title="Hide tracks that already played"
-                aria-label="Toggle hide played tracks"
-              >
-                Hide played ({queueFilterCounts.played})
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWishlistSourceFilter("saved_tracks");
+                    setCursor(0);
+                  }}
+                  className={filterButtonClass(wishlistSourceFilter === "saved_tracks")}
+                  aria-pressed={wishlistSourceFilter === "saved_tracks"}
+                  title="Show only tracks saved locally"
+                  aria-label="Show saved tracks only"
+                >
+                  <Disc3 className="mr-1 inline h-3 w-3" />
+                  Saved Tracks ({wishlistSourceCounts.savedTracks})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWishlistSourceFilter("wishlisted_records");
+                    setCursor(0);
+                  }}
+                  className={filterButtonClass(wishlistSourceFilter === "wishlisted_records")}
+                  aria-pressed={wishlistSourceFilter === "wishlisted_records"}
+                  title="Show tracks that belong to records in your Discogs wishlist"
+                  aria-label="Show wishlisted records only"
+                >
+                  <BookmarkCheck className="mr-1 inline h-3 w-3" />
+                  Wishlisted Records ({wishlistSourceCounts.wishlistedRecords})
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {showQueueFilters ? (
+            <div className="grid gap-2 xl:grid-cols-3">
+              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+                <div className="flex flex-wrap items-center gap-1 text-xs">
+                  <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
+                  <button
+                    type="button"
+                    onClick={() => setSourceFilter("all")}
+                    className={filterButtonClass(sourceFilter === "all")}
+                    aria-pressed={sourceFilter === "all"}
+                    title="Show all tracks regardless of saved/wishlist status"
+                    aria-label="Source filter all tracks"
+                  >
+                    All ({sourceFilterCounts.all})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSourceFilter("saved")}
+                    className={filterButtonClass(sourceFilter === "saved")}
+                    aria-pressed={sourceFilter === "saved"}
+                    title="Show only tracks saved locally"
+                    aria-label="Source filter saved tracks"
+                  >
+                    Saved ({sourceFilterCounts.saved})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSourceFilter("wishlisted")}
+                    className={filterButtonClass(sourceFilter === "wishlisted")}
+                    aria-pressed={sourceFilter === "wishlisted"}
+                    title="Show only tracks from Discogs wishlisted records"
+                    aria-label="Source filter wishlisted tracks"
+                  >
+                    Wishlisted ({sourceFilterCounts.wishlisted})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSourceFilter("saved_or_wishlisted")}
+                    className={filterButtonClass(sourceFilter === "saved_or_wishlisted")}
+                    aria-pressed={sourceFilter === "saved_or_wishlisted"}
+                    title="Show tracks that are either saved or from wishlisted records"
+                    aria-label="Source filter saved or wishlisted"
+                  >
+                    Saved or Wishlisted ({sourceFilterCounts.savedOrWishlisted})
+                  </button>
+                  {sourceFilter !== "all" ? (
+                    <button
+                      type="button"
+                      onClick={() => setSourceFilter("all")}
+                      className="pt-1 text-[11px] text-[var(--color-accent)] hover:underline"
+                      title="Reset source filter"
+                      aria-label="Reset source filter"
+                    >
+                      Source filter active: {sourceFilter.replaceAll("_", " ")} (reset)
+                    </button>
+                  ) : (
+                    <span className="pt-1 text-[11px] text-[var(--color-muted)]">Source filter: all</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+                <div className="flex flex-wrap items-center gap-1 text-xs">
+                  <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
+                  <button
+                    type="button"
+                    onClick={() => setVideoFilter("all")}
+                    className={filterButtonClass(videoFilter === "all")}
+                    aria-pressed={videoFilter === "all"}
+                    title="Show tracks with and without playable videos"
+                    aria-label="Video filter all tracks"
+                  >
+                    Any ({videoFilterCounts.all})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoFilter("playable")}
+                    className={filterButtonClass(videoFilter === "playable")}
+                    aria-pressed={videoFilter === "playable"}
+                    title="Show only tracks with playable videos"
+                    aria-label="Video filter playable only"
+                  >
+                    Playable ({videoFilterCounts.playable})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoFilter("no_video_or_private")}
+                    className={filterButtonClass(videoFilter === "no_video_or_private")}
+                    aria-pressed={videoFilter === "no_video_or_private"}
+                    title="Show only tracks missing a playable video"
+                    aria-label="Video filter no video or private"
+                  >
+                    No video/private ({videoFilterCounts.noVideoOrPrivate})
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+                <div className="flex flex-wrap items-center gap-1 text-xs">
+                  <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">State</span>
+                  <button
+                    type="button"
+                    onClick={() => setHideReviewed((prev) => !prev)}
+                    className={filterButtonClass(hideReviewed)}
+                    aria-pressed={hideReviewed}
+                    title="Hide tracks already reviewed or from wishlisted records"
+                    aria-label="Toggle hide reviewed tracks"
+                  >
+                    Hide reviewed ({queueFilterCounts.reviewed})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHideAlreadyPlayed((prev) => !prev)}
+                    className={filterButtonClass(hideAlreadyPlayed)}
+                    aria-pressed={hideAlreadyPlayed}
+                    title="Hide tracks that already played"
+                    aria-label="Toggle hide played tracks"
+                  >
+                    Hide played ({queueFilterCounts.played})
+                  </button>
+                </div>
+              </div>
             </div>
           ) : null}
         </div>

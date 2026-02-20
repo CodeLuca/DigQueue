@@ -3,8 +3,10 @@ import { apiCache } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
+import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
 import { toExternalDiscogsId } from "@/lib/discogs-id";
 import { env } from "@/lib/env";
+import { buildDiscogsOAuthApiAuthorizationHeader, discogsUserAgent } from "@/lib/discogs-oauth";
 
 let lastDiscogsCall = 0;
 let discogsQueue: Promise<void> = Promise.resolve();
@@ -62,11 +64,34 @@ async function setCache(key: string, data: unknown, ttlSeconds: number, userId: 
     });
 }
 
-async function getDiscogsToken() {
+async function getDiscogsAuth() {
   const keys = await getApiKeys();
-  const token = keys.discogsToken || env.DISCOGS_TOKEN;
-  if (!token) throw new Error("Missing DISCOGS_TOKEN.");
-  return token;
+  const stored = parseDiscogsStoredAuth(keys.discogsToken);
+  if (stored) return stored;
+  if (env.DISCOGS_TOKEN) return { kind: "personal" as const, token: env.DISCOGS_TOKEN };
+  throw new Error("Discogs is not connected.");
+}
+
+function getDiscogsAuthHeaders(
+  auth: Awaited<ReturnType<typeof getDiscogsAuth>>,
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  url: string,
+) {
+  if (auth.kind === "oauth") {
+    return {
+      Authorization: buildDiscogsOAuthApiAuthorizationHeader({
+        method,
+        url,
+        token: auth.token,
+        tokenSecret: auth.tokenSecret,
+      }),
+      "User-Agent": discogsUserAgent,
+    };
+  }
+  return {
+    Authorization: `Discogs token=${auth.token}`,
+    "User-Agent": discogsUserAgent,
+  };
 }
 
 export async function discogsRequest<T>(path: string, cacheTtl = 60 * 60 * 24): Promise<T> {
@@ -77,14 +102,13 @@ export async function discogsRequest<T>(path: string, cacheTtl = 60 * 60 * 24): 
     if (cached) return cached;
   }
 
-  const discogsToken = await getDiscogsToken();
+  const discogsAuth = await getDiscogsAuth();
 
   let attempt = 0;
   while (attempt < DISCOGS_MAX_RETRIES) {
     const response = await scheduleDiscogsCall(() => fetch(`${DISCOGS_API}${path}`, {
       headers: {
-        Authorization: `Discogs token=${discogsToken}`,
-        "User-Agent": "DigQueue/0.1 (+local app)",
+        ...getDiscogsAuthHeaders(discogsAuth, "GET", `${DISCOGS_API}${path}`),
       },
       next: { revalidate: 0 },
     }));
@@ -118,7 +142,7 @@ export async function fetchDiscogsIdentity() {
 
 export async function setDiscogsReleaseWishlist(releaseId: number, enabled: boolean) {
   const externalReleaseId = toExternalDiscogsId(releaseId);
-  const discogsToken = await getDiscogsToken();
+  const discogsAuth = await getDiscogsAuth();
   const identity = await fetchDiscogsIdentity();
   const method = enabled ? "PUT" : "DELETE";
   let attempt = 0;
@@ -127,8 +151,11 @@ export async function setDiscogsReleaseWishlist(releaseId: number, enabled: bool
       fetch(`${DISCOGS_API}/users/${encodeURIComponent(identity.username)}/wants/${externalReleaseId}`, {
         method,
         headers: {
-          Authorization: `Discogs token=${discogsToken}`,
-          "User-Agent": "DigQueue/0.1 (+local app)",
+          ...getDiscogsAuthHeaders(
+            discogsAuth,
+            method,
+            `${DISCOGS_API}/users/${encodeURIComponent(identity.username)}/wants/${externalReleaseId}`,
+          ),
         },
         next: { revalidate: 0 },
       }),

@@ -72,27 +72,36 @@ export default async function HomePage({
 
   const keys = await getEffectiveApiKeys();
   const hasDiscogs = Boolean(keys.discogsToken);
-  if (hasDiscogs) {
+  if (hasDiscogs && activeTab === "wishlist") {
     try {
-      await withTimeout(syncDiscogsWantsToLocal(), 4000);
+      await withTimeout(syncDiscogsWantsToLocal(), 1500);
     } catch {
       // Non-blocking on page load: keep rendering even if Discogs is unavailable.
     }
   }
 
   const [data, listenData, wishlistData, playedReviewedData, bandcampWishlist] = await Promise.all([
-    getDashboardData(),
-    getToListenData(undefined, false),
-    getWishlistData(undefined, false),
-    getPlayedReviewedData(undefined, false),
-    withTimeout(getBandcampWishlistData(), 4000).catch(() => ({
-      enabled: false,
-      sourceUrl: null,
-      totalCount: 0,
-      items: [],
-      fetchedAt: null,
-      partial: false,
-    })),
+    getDashboardData({ includeRecommendations: activeTab === "recommendations" }),
+    activeTab === "step-2" ? getToListenData(undefined, false) : Promise.resolve(null),
+    activeTab === "wishlist" ? getWishlistData(undefined, false) : Promise.resolve(null),
+    activeTab === "played-reviewed" ? getPlayedReviewedData(undefined, false) : Promise.resolve(null),
+    activeTab === "wishlist"
+      ? withTimeout(getBandcampWishlistData(), 3000).catch(() => ({
+          enabled: false,
+          sourceUrl: null,
+          totalCount: 0,
+          items: [],
+          fetchedAt: null,
+          partial: false,
+        }))
+      : Promise.resolve({
+          enabled: false,
+          sourceUrl: null,
+          totalCount: 0,
+          items: [],
+          fetchedAt: null,
+          partial: false,
+        }),
   ]);
 
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
@@ -134,7 +143,7 @@ export default async function HomePage({
     if (selectedLabelState !== "all") params.set("labelState", selectedLabelState);
     return `/?${params.toString()}`;
   })();
-  const totalSavedCount = wishlistData.rows.length;
+  const totalSavedCount = wishlistData?.rows.length ?? 0;
   const totalWishlistedRecords = data.metrics.wishlistedRecords;
   const tabMeta: Record<TabId, { title: string; subtitle: string; icon: typeof Disc3 }> = {
     "step-1": {
@@ -178,7 +187,7 @@ export default async function HomePage({
           <p className="text-sm text-[var(--color-muted)]">{activeMeta.subtitle}</p>
           {showIntegrationAlerts ? (
             <div className="mt-2 flex flex-wrap gap-2">
-              {!hasDiscogs ? <Badge className="border-amber-600/50 text-amber-300">Discogs Missing Key</Badge> : null}
+              {!hasDiscogs ? <Badge className="border-amber-600/50 text-amber-300">Discogs Not Connected</Badge> : null}
               {hasYoutubeBlockedError ? (
                 <Badge className="border-red-600/50 text-red-300">YouTube Blocked</Badge>
               ) : !hasYoutubeKey ? (
@@ -260,9 +269,9 @@ export default async function HomePage({
                   <p className="text-amber-200">
                     {hasYoutubeBlockedError
                       ? "YouTube key is blocked. Processing still works via Discogs release videos where available."
-                      : "Add Discogs key to enable ingestion. YouTube key is optional fallback for releases without Discogs videos."}
+                      : "Connect Discogs to enable ingestion. YouTube is an optional fallback for releases without Discogs videos."}
                   </p>
-                  <Link href="/settings" className="mt-2 inline-block text-xs text-[var(--color-accent)] hover:underline">Open key setup</Link>
+                  <Link href="/connect-discogs?next=/" className="mt-2 inline-block text-xs text-[var(--color-accent)] hover:underline">Connect Discogs</Link>
                 </div>
               ) : null}
 
@@ -326,6 +335,24 @@ export default async function HomePage({
               <div className="space-y-2">
                 {filteredLabels.map((label) => {
                   const visibleLastError = getVisibleLabelError(label.lastError);
+                  const normalizedStatus = !label.active && label.status === "processing" ? "paused" : label.status;
+                  const totalLoadedReleases = Math.max(0, label.loadedReleaseCount);
+                  const fetchedReleases = Math.max(0, label.fetchedReleaseCount);
+                  const progressPct = totalLoadedReleases > 0
+                    ? Math.min(100, Math.round((fetchedReleases / totalLoadedReleases) * 100))
+                    : 0;
+                  const statusLabel =
+                    normalizedStatus === "processing"
+                      ? "Processing"
+                      : normalizedStatus === "queued"
+                        ? "Queued"
+                        : normalizedStatus === "error"
+                          ? "Error"
+                          : normalizedStatus === "paused"
+                            ? "Paused"
+                            : normalizedStatus === "complete"
+                            ? "Complete"
+                            : normalizedStatus;
                   return (
                     <div
                     key={label.id}
@@ -354,8 +381,14 @@ export default async function HomePage({
                           <Link href={`/labels/${label.id}`} className="line-clamp-1 text-sm font-medium hover:text-[var(--color-accent)]">{label.name}</Link>
                           <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{label.summaryText}</p>
                           <p className="mt-1 text-xs text-[var(--color-muted)]">
-                            Tracks loaded {label.loadedTrackCount} • Releases fetched {label.fetchedReleaseCount}/{label.loadedReleaseCount}
+                            Tracks loaded {label.loadedTrackCount} • Releases fetched {fetchedReleases}/{totalLoadedReleases} ({progressPct}%)
                           </p>
+                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface)]">
+                            <div
+                              className={`h-full transition-all ${normalizedStatus === "error" ? "bg-rose-400/80" : "bg-emerald-400/80"}`}
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
                           {label.notableReleasesJson !== "[]" ? (
                             <div className="mt-2 flex flex-wrap gap-1">
                               {(() => {
@@ -376,6 +409,7 @@ export default async function HomePage({
                         ) : (
                           <Badge className="border-zinc-600/40 text-zinc-400">inactive</Badge>
                         )}
+                        <Badge className={normalizedStatus === "error" ? "border-rose-500/60 text-rose-200" : ""}>{statusLabel}</Badge>
                       </div>
                     </div>
                     {visibleLastError ? <p className="mt-2 line-clamp-2 text-xs text-red-300">Error: {visibleLastError}</p> : null}
@@ -401,8 +435,14 @@ export default async function HomePage({
                         {!label.tracksFullyLoaded ? (
                           <form action={retryLabelAction}>
                             <input type="hidden" name="labelId" value={label.id} />
-                            <Button type="submit" size="sm" variant="outline" disabled={!canProcess} title="Retry release/track ingestion for this label">
-                              Reload tracks
+                            <Button
+                              type="submit"
+                              size="sm"
+                              variant="outline"
+                              disabled={!canProcess || normalizedStatus === "processing"}
+                              title="Retry release/track ingestion for this label"
+                            >
+                              {normalizedStatus === "processing" ? "Processing..." : normalizedStatus === "queued" ? "Queued..." : "Reload tracks"}
                             </Button>
                           </form>
                         ) : null}
@@ -440,7 +480,7 @@ export default async function HomePage({
                         <Button type="submit" size="sm" variant="secondary">Pull From Wishlist</Button>
                       </form>
                     ) : (
-                      <Link href="/settings" className="text-xs text-[var(--color-accent)] hover:underline">Add Discogs key to enable this</Link>
+                      <Link href="/connect-discogs?next=/" className="text-xs text-[var(--color-accent)] hover:underline">Connect Discogs to enable this</Link>
                     )}
                   </div>
                 </div>
@@ -522,7 +562,7 @@ export default async function HomePage({
               ) : null}
 
               <ListenInboxClient
-                initialRows={listenData.rows}
+                initialRows={listenData?.rows ?? []}
                 initialSelectedLabelId={Number.isFinite(selectedListenLabelId) ? selectedListenLabelId : undefined}
                 labelOptions={activeLabels.map((label) => ({
                   id: label.id,
@@ -551,7 +591,7 @@ export default async function HomePage({
                   <SyncSavedToDiscogsButton enabled={hasDiscogs} />
                 </div>
               ) : (
-                <p className="text-xs text-[var(--color-muted)]">Add Discogs token in Settings to sync wants.</p>
+                <p className="text-xs text-[var(--color-muted)]">Connect Discogs to sync wants.</p>
               )}
             </div>
           </div>
@@ -563,7 +603,7 @@ export default async function HomePage({
             </CardHeader>
             <CardContent className="space-y-3">
               <ListenInboxClient
-                initialRows={wishlistData.rows}
+                initialRows={wishlistData?.rows ?? []}
                 initialSelectedLabelId={Number.isFinite(selectedListenLabelId) ? selectedListenLabelId : undefined}
                 labelOptions={activeLabels.map((label) => ({
                   id: label.id,
@@ -653,7 +693,7 @@ export default async function HomePage({
               </div>
 
               <ListenInboxClient
-                initialRows={playedReviewedData.rows}
+                initialRows={playedReviewedData?.rows ?? []}
                 initialSelectedLabelId={Number.isFinite(selectedListenLabelId) ? selectedListenLabelId : undefined}
                 labelOptions={activeLabels.map((label) => ({
                   id: label.id,
