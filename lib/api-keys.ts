@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { appSecrets } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
@@ -24,7 +24,9 @@ export async function getApiKeys(): Promise<ApiKeys> {
   const now = Date.now();
   if (cache && cache.userId === userId && cache.expiresAt > now) return cache.data;
 
-  const row = await db.query.appSecrets.findFirst({ where: eq(appSecrets.userId, userId) });
+  const row = await db.query.appSecrets.findFirst({
+    where: sql`${appSecrets.userId}::text = ${userId}`,
+  });
   const data = {
     discogsToken: row?.discogsToken ?? null,
     youtubeApiKey: row?.youtubeApiKey ?? null,
@@ -40,7 +42,9 @@ export async function setApiKeys(input: { discogsToken?: string; youtubeApiKey?:
   const discogsToken = input.discogsToken?.trim() || null;
   const youtubeApiKey = input.youtubeApiKey?.trim() || null;
 
-  const existing = await db.query.appSecrets.findFirst({ where: eq(appSecrets.userId, userId) });
+  const existing = await db.query.appSecrets.findFirst({
+    where: sql`${appSecrets.userId}::text = ${userId}`,
+  });
   if (existing) {
     await db
       .update(appSecrets)
@@ -49,7 +53,7 @@ export async function setApiKeys(input: { discogsToken?: string; youtubeApiKey?:
         youtubeApiKey,
         updatedAt: now,
       })
-      .where(eq(appSecrets.userId, userId));
+      .where(sql`${appSecrets.userId}::text = ${userId}`);
     cache = null;
     return;
   }
