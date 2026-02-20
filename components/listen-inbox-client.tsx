@@ -43,6 +43,7 @@ type ListenRow = {
   labelId: number;
   labelName: string;
   hasChosenVideo?: boolean;
+  youtubeVideoId?: string | null;
   videoEmbeddable?: boolean | null;
   playbackSource?: "discogs" | "youtube" | null;
   playedCount?: number;
@@ -61,7 +62,15 @@ type QueueApiItem = {
   id: number;
   youtubeVideoId: string;
   track?: { id: number; title: string } | null;
-  release?: { title: string } | null;
+  release?: {
+    id?: number;
+    title: string;
+    artist?: string | null;
+    catno?: string | null;
+    discogsUrl?: string | null;
+    thumbUrl?: string | null;
+    wishlist?: boolean;
+  } | null;
   label?: { name: string } | null;
 };
 
@@ -73,6 +82,7 @@ const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
 const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
 const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
+const ENQUEUE_TIMEOUT_MS = 6000;
 type PlaybackMode = "in_order" | "shuffle";
 
 type ReleaseWishlistApiResponse = {
@@ -83,6 +93,11 @@ type ReleaseWishlistApiResponse = {
   affectedTrackCount?: number;
   localConfirmedAll?: boolean;
   discogsSynced?: boolean;
+};
+type ReleaseReviewedApiResponse = {
+  ok?: boolean;
+  tracks?: Array<{ trackId: number; listened: boolean; saved: boolean }>;
+  error?: string;
 };
 
 async function updateTracks(payload: {
@@ -122,26 +137,72 @@ async function updateTracks(payload: {
   return body.tracks ?? [];
 }
 
-async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "normal") {
-  const response = await fetch("/api/queue/enqueue", {
+async function markReleaseReviewed(releaseId: number) {
+  const response = await fetch("/api/releases/reviewed", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ trackId, queueMode }),
+    body: JSON.stringify({ releaseId }),
   });
-  const body = (await response.json().catch(() => null)) as
-    | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
-    | null;
-  if (body?.reason === "no_match") {
-    throw new Error("NO_MATCH");
-  }
-  if (body?.reason === "youtube_quota_exceeded") {
-    throw new Error("YOUTUBE_QUOTA_EXCEEDED");
-  }
+  const body = (await response.json().catch(() => null)) as ReleaseReviewedApiResponse | null;
   if (!response.ok || !body?.ok) {
-    throw new Error(body?.error || "Unable to queue track.");
+    throw new Error(body?.error || "Unable to mark release reviewed.");
   }
-  if (!body.item) throw new Error("Queued track not found.");
-  return body.item;
+
+  for (const track of body.tracks ?? []) {
+    window.dispatchEvent(
+      new CustomEvent(TRACK_TODO_UPDATED_EVENT, {
+        detail: { trackId: track.trackId, field: "listened", value: Boolean(track.listened) },
+      }),
+    );
+  }
+
+  return body.tracks ?? [];
+}
+
+async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "normal") {
+  const tryEnqueue = async () => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), ENQUEUE_TIMEOUT_MS);
+    try {
+      const response = await fetch("/api/queue/enqueue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackId, queueMode }),
+        signal: controller.signal,
+      });
+      const body = (await response.json().catch(() => null)) as
+        | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
+        | null;
+      if (body?.reason === "no_match") {
+        throw new Error("NO_MATCH");
+      }
+      if (body?.reason === "youtube_quota_exceeded") {
+        throw new Error("YOUTUBE_QUOTA_EXCEEDED");
+      }
+      if (!response.ok || !body?.ok) {
+        throw new Error(body?.error || "Unable to queue track.");
+      }
+      if (!body.item) throw new Error("Queued track not found.");
+      return body.item;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("QUEUE_TIMEOUT");
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  };
+
+  try {
+    return await tryEnqueue();
+  } catch (error) {
+    // One quick retry smooths over transient API stalls.
+    if (error instanceof Error && error.message === "QUEUE_TIMEOUT") {
+      return tryEnqueue();
+    }
+    throw error;
+  }
 }
 
 async function addLabelFromRelease(releaseId: number) {
@@ -201,6 +262,25 @@ function ReleaseArtwork({
   );
 }
 
+function createOptimisticPlayItem(row: ListenRow): QueueApiItem | null {
+  if (!row.youtubeVideoId) return null;
+  return {
+    id: -row.trackId,
+    youtubeVideoId: row.youtubeVideoId,
+    track: { id: row.trackId, title: row.trackTitle },
+    release: {
+      id: row.releaseId,
+      title: row.releaseTitle,
+      artist: row.releaseArtist ?? null,
+      catno: row.releaseCatno ?? null,
+      discogsUrl: row.releaseDiscogsUrl,
+      thumbUrl: row.releaseThumbUrl ?? null,
+      wishlist: row.releaseWishlist,
+    },
+    label: { name: row.labelName },
+  };
+}
+
 export function ListenInboxClient({
   initialRows,
   initialSelectedLabelId,
@@ -240,6 +320,7 @@ export function ListenInboxClient({
   const [addingLabelReleaseId, setAddingLabelReleaseId] = useState<number | null>(null);
   const [togglingLabelId, setTogglingLabelId] = useState<number | null>(null);
   const [wishlistReleaseIdLoading, setWishlistReleaseIdLoading] = useState<number | null>(null);
+  const [reviewingReleaseId, setReviewingReleaseId] = useState<number | null>(null);
   const [addedLabelReleaseIds, setAddedLabelReleaseIds] = useState<number[]>([]);
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -349,10 +430,10 @@ export function ListenInboxClient({
   const activeCursor = Math.max(0, Math.min(cursor, Math.max(0, visibleRows.length - 1)));
   const current = visibleRows[activeCursor] ?? null;
   const filterButtonClass = (active: boolean) =>
-    `rounded-md border px-2 py-1 font-medium transition ${
+    `inline-flex min-h-8 items-center rounded-md border px-2 py-1 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 ${
       active
         ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_24%,var(--color-surface2)_76%)] text-[var(--color-text)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]"
-        : "border-[var(--color-border)] text-[var(--color-muted)] opacity-70 hover:opacity-100 hover:bg-[var(--color-surface)]"
+        : "border-[var(--color-border)] bg-[var(--color-surface)]/55 text-[var(--color-muted)] opacity-90 hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]"
     }`;
   const setGlobalPlaybackMode = useCallback((nextMode: PlaybackMode) => {
     setPlaybackMode(nextMode);
@@ -387,48 +468,6 @@ export function ListenInboxClient({
     setCursor(0);
   }, [effectiveLabelOptions]);
 
-  const playRow = useCallback(async (trackId: number) => {
-    if (youtubeQuotaExceeded) return;
-    try {
-      const item = await enqueueTrack(trackId, "next");
-      window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: item }));
-      setPlayingTrackId(trackId);
-      setPlayerIsPlaying(true);
-      setRows((prev) =>
-        prev.map((row) =>
-          row.trackId === trackId
-            ? { ...row, isUpNext: true }
-            : row,
-        ),
-      );
-      setFeedback("Playing.");
-      router.refresh();
-    } catch (error) {
-      if (error instanceof Error && error.message === "NO_MATCH") {
-        setRows((prev) => prev.filter((row) => row.trackId !== trackId));
-        setFeedback(null);
-        router.refresh();
-        return;
-      }
-      if (error instanceof Error && error.message === "YOUTUBE_QUOTA_EXCEEDED") {
-        setYoutubeQuotaExceeded(true);
-        setFeedback("YouTube quota reached. Queue/play is temporarily disabled. You can still mark tracks listened.");
-        window.sessionStorage.setItem(YOUTUBE_QUOTA_STORAGE_KEY, "1");
-        window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_EVENT));
-        return;
-      }
-      const message = error instanceof Error ? error.message : "Unable to queue track.";
-      setFeedback(message);
-    }
-  }, [router, youtubeQuotaExceeded]);
-
-  const clearYoutubeQuotaExceeded = useCallback(() => {
-    setYoutubeQuotaExceeded(false);
-    setFeedback(null);
-    window.sessionStorage.removeItem(YOUTUBE_QUOTA_STORAGE_KEY);
-    window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_CLEAR_EVENT));
-  }, []);
-
   const syncUpNextFromQueue = useCallback(async () => {
     try {
       const response = await fetch("/api/queue/list?limit=40");
@@ -452,6 +491,60 @@ export function ListenInboxClient({
     } catch {
       // Non-blocking: keep current UI state if queue endpoint is temporarily unavailable.
     }
+  }, []);
+
+  const playRow = useCallback(async (trackId: number) => {
+    if (youtubeQuotaExceeded) return;
+    const row = rows.find((item) => item.trackId === trackId);
+    const optimisticItem = row ? createOptimisticPlayItem(row) : null;
+    try {
+      if (optimisticItem) {
+        window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: optimisticItem }));
+      }
+
+      const item = await enqueueTrack(trackId, "next");
+      if (!optimisticItem || optimisticItem.youtubeVideoId !== item.youtubeVideoId) {
+        window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: item }));
+      }
+      setPlayingTrackId(trackId);
+      setPlayerIsPlaying(true);
+      setRows((prev) =>
+        prev.map((row) =>
+          row.trackId === trackId
+            ? { ...row, isUpNext: false }
+            : row,
+        ),
+      );
+      setFeedback(optimisticItem ? "Loading in mini-player…" : "Playing.");
+      void syncUpNextFromQueue();
+    } catch (error) {
+      if (error instanceof Error && error.message === "NO_MATCH") {
+        setRows((prev) => prev.filter((row) => row.trackId !== trackId));
+        setFeedback(null);
+        router.refresh();
+        return;
+      }
+      if (error instanceof Error && error.message === "YOUTUBE_QUOTA_EXCEEDED") {
+        setYoutubeQuotaExceeded(true);
+        setFeedback("YouTube quota reached. Queue/play is temporarily disabled. You can still mark tracks listened.");
+        window.sessionStorage.setItem(YOUTUBE_QUOTA_STORAGE_KEY, "1");
+        window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_EVENT));
+        return;
+      }
+      if (error instanceof Error && error.message === "QUEUE_TIMEOUT") {
+        setFeedback("Play request timed out. Retrying often fixes this.");
+        return;
+      }
+      const message = error instanceof Error ? error.message : "Unable to queue track.";
+      setFeedback(message);
+    }
+  }, [router, rows, syncUpNextFromQueue, youtubeQuotaExceeded]);
+
+  const clearYoutubeQuotaExceeded = useCallback(() => {
+    setYoutubeQuotaExceeded(false);
+    setFeedback(null);
+    window.sessionStorage.removeItem(YOUTUBE_QUOTA_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_CLEAR_EVENT));
   }, []);
 
   const markCurrentListened = useCallback(async () => {
@@ -520,6 +613,25 @@ export function ListenInboxClient({
     }
     router.refresh();
   }, [playRow, playingTrackId, router, visibleRows]);
+
+  const markRowReleaseListened = useCallback(async (releaseId: number) => {
+    if (reviewingReleaseId === releaseId) return;
+    const wasPlayingRelease = rows.some((row) => row.releaseId === releaseId && row.trackId === playingTrackId);
+    setReviewingReleaseId(releaseId);
+    try {
+      await markReleaseReviewed(releaseId);
+      setRows((prev) => {
+        const next = prev.map((row) => (row.releaseId === releaseId ? { ...row, listened: true, isUpNext: false } : row));
+        return showQueueFilters ? next : next.filter((row) => row.saved);
+      });
+      if (wasPlayingRelease) {
+        window.dispatchEvent(new CustomEvent("digqueue:next"));
+      }
+      router.refresh();
+    } finally {
+      setReviewingReleaseId(null);
+    }
+  }, [playingTrackId, reviewingReleaseId, router, rows, showQueueFilters]);
 
   const toggleRowSaved = useCallback(async (trackId: number) => {
     const updated = await updateTracks({ trackIds: [trackId], field: "saved", mode: "toggle" });
@@ -822,76 +934,72 @@ export function ListenInboxClient({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-        <div className="space-y-2">
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-            <div className="grid w-full gap-2 sm:grid-cols-[auto,minmax(220px,1fr),auto] lg:flex-1">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => moveLabel(-1)}
-                disabled={effectiveLabelOptions.length === 0}
-                title="Select previous label"
-                className="justify-center"
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-2.5">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-[color-mix(in_oklab,var(--color-accent)_35%,var(--color-border))] bg-[color-mix(in_oklab,var(--color-surface)_70%,var(--color-surface2)_30%)] p-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => moveLabel(-1)}
+              disabled={effectiveLabelOptions.length === 0}
+              title="Select previous label"
+              className="h-10 shrink-0 border-[color-mix(in_oklab,var(--color-accent)_38%,var(--color-border-soft))] bg-[var(--color-surface)] px-4 text-sm font-semibold"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Prev label
+            </Button>
+            <select
+              value={activeLabelId === null ? "" : String(activeLabelId)}
+              onChange={(event) => {
+                setLabelFilterTouched(true);
+                setSelectedLabelId(event.target.value ? Number(event.target.value) : null);
+                setCursor(0);
+              }}
+              className="h-10 min-w-[220px] flex-1 rounded-md border border-[color-mix(in_oklab,var(--color-accent)_35%,var(--color-border))] bg-[var(--color-surface)] px-4 text-base font-medium"
+              title="Filter tracks by label"
+              aria-label="Filter tracks by label"
+            >
+              <option value="">All labels</option>
+              {effectiveLabelOptions.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => moveLabel(1)}
+              disabled={effectiveLabelOptions.length === 0}
+              title="Select next label"
+              className="h-10 shrink-0 border-[color-mix(in_oklab,var(--color-accent)_38%,var(--color-border-soft))] bg-[var(--color-surface)] px-4 text-sm font-semibold"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+              Next label
+            </Button>
+            {activeLabel?.discogsUrl ? (
+              <a
+                href={toDiscogsWebUrl(activeLabel.discogsUrl, `/label/${activeLabel.id}`)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md border border-[var(--color-border)] p-2 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                title="Open selected label on Discogs"
+                aria-label="Open selected label on Discogs"
               >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                Prev label
-              </Button>
-              <select
-                value={activeLabelId === null ? "" : String(activeLabelId)}
-                onChange={(event) => {
-                  setLabelFilterTouched(true);
-                  setSelectedLabelId(event.target.value ? Number(event.target.value) : null);
-                  setCursor(0);
-                }}
-                className="h-9 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm"
-                title="Filter tracks by label"
-                aria-label="Filter tracks by label"
-              >
-                <option value="">All labels</option>
-                {effectiveLabelOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => moveLabel(1)}
-                disabled={effectiveLabelOptions.length === 0}
-                title="Select next label"
-                className="justify-center"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-                Next label
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 lg:shrink-0">
-              {activeLabel?.discogsUrl ? (
-                <a
-                  href={toDiscogsWebUrl(activeLabel.discogsUrl, `/label/${activeLabel.id}`)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-md border border-[var(--color-border)] p-2 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                  title="Open selected label on Discogs"
-                  aria-label="Open selected label on Discogs"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              ) : null}
-              {activeLabelIndex >= 0 ? (
-                <span className="text-xs text-[var(--color-muted)]">
-                  {activeLabelIndex + 1}/{effectiveLabelOptions.length}
-                </span>
-              ) : null}
-            </div>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            ) : null}
+            {activeLabelIndex >= 0 ? (
+              <span className="rounded px-1.5 py-0.5 text-xs font-medium text-[var(--color-text)]">
+                {activeLabelIndex + 1}/{effectiveLabelOptions.length}
+              </span>
+            ) : null}
           </div>
 
-          <div className="inline-flex w-full flex-wrap items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs">
-            <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
+          <div className="flex flex-wrap items-center gap-1 text-xs">
+            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
             <button
               type="button"
               onClick={() => setGlobalPlaybackMode("in_order")}
@@ -917,8 +1025,7 @@ export function ListenInboxClient({
           </div>
 
           {showWishlistSourceFilter ? (
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-              <div className="flex flex-wrap items-center gap-1 text-xs">
+            <div className="flex flex-wrap items-center gap-1 text-xs">
                 <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
                 <button
                   type="button"
@@ -962,131 +1069,124 @@ export function ListenInboxClient({
                   <BookmarkCheck className="mr-1 inline h-3 w-3" />
                   Wishlisted Records ({wishlistSourceCounts.wishlistedRecords})
                 </button>
-              </div>
             </div>
           ) : null}
 
           {showQueueFilters ? (
-            <div className="grid gap-2 xl:grid-cols-3">
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-                <div className="flex flex-wrap items-center gap-1 text-xs">
-                  <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="inline-flex flex-wrap items-center gap-1">
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("all")}
+                  className={filterButtonClass(sourceFilter === "all")}
+                  aria-pressed={sourceFilter === "all"}
+                  title="Show all tracks regardless of saved/wishlist status"
+                  aria-label="Source filter all tracks"
+                >
+                  All ({sourceFilterCounts.all})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("saved")}
+                  className={filterButtonClass(sourceFilter === "saved")}
+                  aria-pressed={sourceFilter === "saved"}
+                  title="Show only tracks saved locally"
+                  aria-label="Source filter saved tracks"
+                >
+                  Saved ({sourceFilterCounts.saved})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("wishlisted")}
+                  className={filterButtonClass(sourceFilter === "wishlisted")}
+                  aria-pressed={sourceFilter === "wishlisted"}
+                  title="Show only tracks from Discogs wishlisted records"
+                  aria-label="Source filter wishlisted tracks"
+                >
+                  Wishlisted ({sourceFilterCounts.wishlisted})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceFilter("saved_or_wishlisted")}
+                  className={filterButtonClass(sourceFilter === "saved_or_wishlisted")}
+                  aria-pressed={sourceFilter === "saved_or_wishlisted"}
+                  title="Show tracks that are either saved or from wishlisted records"
+                  aria-label="Source filter saved or wishlisted"
+                >
+                  Saved or Wishlisted ({sourceFilterCounts.savedOrWishlisted})
+                </button>
+                {sourceFilter !== "all" ? (
                   <button
                     type="button"
                     onClick={() => setSourceFilter("all")}
-                    className={filterButtonClass(sourceFilter === "all")}
-                    aria-pressed={sourceFilter === "all"}
-                    title="Show all tracks regardless of saved/wishlist status"
-                    aria-label="Source filter all tracks"
+                    className="text-[11px] text-[var(--color-accent)] hover:underline"
+                    title="Reset source filter"
+                    aria-label="Reset source filter"
                   >
-                    All ({sourceFilterCounts.all})
+                    Source filter active: {sourceFilter.replaceAll("_", " ")} (reset)
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setSourceFilter("saved")}
-                    className={filterButtonClass(sourceFilter === "saved")}
-                    aria-pressed={sourceFilter === "saved"}
-                    title="Show only tracks saved locally"
-                    aria-label="Source filter saved tracks"
-                  >
-                    Saved ({sourceFilterCounts.saved})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSourceFilter("wishlisted")}
-                    className={filterButtonClass(sourceFilter === "wishlisted")}
-                    aria-pressed={sourceFilter === "wishlisted"}
-                    title="Show only tracks from Discogs wishlisted records"
-                    aria-label="Source filter wishlisted tracks"
-                  >
-                    Wishlisted ({sourceFilterCounts.wishlisted})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSourceFilter("saved_or_wishlisted")}
-                    className={filterButtonClass(sourceFilter === "saved_or_wishlisted")}
-                    aria-pressed={sourceFilter === "saved_or_wishlisted"}
-                    title="Show tracks that are either saved or from wishlisted records"
-                    aria-label="Source filter saved or wishlisted"
-                  >
-                    Saved or Wishlisted ({sourceFilterCounts.savedOrWishlisted})
-                  </button>
-                  {sourceFilter !== "all" ? (
-                    <button
-                      type="button"
-                      onClick={() => setSourceFilter("all")}
-                      className="pt-1 text-[11px] text-[var(--color-accent)] hover:underline"
-                      title="Reset source filter"
-                      aria-label="Reset source filter"
-                    >
-                      Source filter active: {sourceFilter.replaceAll("_", " ")} (reset)
-                    </button>
-                  ) : (
-                    <span className="pt-1 text-[11px] text-[var(--color-muted)]">Source filter: all</span>
-                  )}
-                </div>
+                ) : (
+                  <span className="text-[11px] text-[var(--color-muted)]">Source filter: all</span>
+                )}
               </div>
 
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-                <div className="flex flex-wrap items-center gap-1 text-xs">
-                  <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
-                  <button
-                    type="button"
-                    onClick={() => setVideoFilter("all")}
-                    className={filterButtonClass(videoFilter === "all")}
-                    aria-pressed={videoFilter === "all"}
-                    title="Show tracks with and without playable videos"
-                    aria-label="Video filter all tracks"
-                  >
-                    Any ({videoFilterCounts.all})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVideoFilter("playable")}
-                    className={filterButtonClass(videoFilter === "playable")}
-                    aria-pressed={videoFilter === "playable"}
-                    title="Show only tracks with playable videos"
-                    aria-label="Video filter playable only"
-                  >
-                    Playable ({videoFilterCounts.playable})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVideoFilter("no_video_or_private")}
-                    className={filterButtonClass(videoFilter === "no_video_or_private")}
-                    aria-pressed={videoFilter === "no_video_or_private"}
-                    title="Show only tracks missing a playable video"
-                    aria-label="Video filter no video or private"
-                  >
-                    No video/private ({videoFilterCounts.noVideoOrPrivate})
-                  </button>
-                </div>
+              <div className="inline-flex flex-wrap items-center gap-1">
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
+                <button
+                  type="button"
+                  onClick={() => setVideoFilter("all")}
+                  className={filterButtonClass(videoFilter === "all")}
+                  aria-pressed={videoFilter === "all"}
+                  title="Show tracks with and without playable videos"
+                  aria-label="Video filter all tracks"
+                >
+                  Any ({videoFilterCounts.all})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoFilter("playable")}
+                  className={filterButtonClass(videoFilter === "playable")}
+                  aria-pressed={videoFilter === "playable"}
+                  title="Show only tracks with playable videos"
+                  aria-label="Video filter playable only"
+                >
+                  Playable ({videoFilterCounts.playable})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVideoFilter("no_video_or_private")}
+                  className={filterButtonClass(videoFilter === "no_video_or_private")}
+                  aria-pressed={videoFilter === "no_video_or_private"}
+                  title="Show only tracks missing a playable video"
+                  aria-label="Video filter no video or private"
+                >
+                  No video/private ({videoFilterCounts.noVideoOrPrivate})
+                </button>
               </div>
 
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-                <div className="flex flex-wrap items-center gap-1 text-xs">
-                  <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">State</span>
-                  <button
-                    type="button"
-                    onClick={() => setHideReviewed((prev) => !prev)}
-                    className={filterButtonClass(hideReviewed)}
-                    aria-pressed={hideReviewed}
-                    title="Hide tracks already reviewed or from wishlisted records"
-                    aria-label="Toggle hide reviewed tracks"
-                  >
-                    Hide reviewed ({queueFilterCounts.reviewed})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setHideAlreadyPlayed((prev) => !prev)}
-                    className={filterButtonClass(hideAlreadyPlayed)}
-                    aria-pressed={hideAlreadyPlayed}
-                    title="Hide tracks that already played"
-                    aria-label="Toggle hide played tracks"
-                  >
-                    Hide played ({queueFilterCounts.played})
-                  </button>
-                </div>
+              <div className="inline-flex flex-wrap items-center gap-1">
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">State</span>
+                <button
+                  type="button"
+                  onClick={() => setHideReviewed((prev) => !prev)}
+                  className={filterButtonClass(hideReviewed)}
+                  aria-pressed={hideReviewed}
+                  title="Hide tracks already reviewed or from wishlisted records"
+                  aria-label="Toggle hide reviewed tracks"
+                >
+                  Hide reviewed ({queueFilterCounts.reviewed})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHideAlreadyPlayed((prev) => !prev)}
+                  className={filterButtonClass(hideAlreadyPlayed)}
+                  aria-pressed={hideAlreadyPlayed}
+                  title="Hide tracks that already played"
+                  aria-label="Toggle hide played tracks"
+                >
+                  Hide played ({queueFilterCounts.played})
+                </button>
               </div>
             </div>
           ) : null}
@@ -1102,38 +1202,75 @@ export function ListenInboxClient({
             <p className="text-xs text-[var(--color-muted)]">{activeWishlistSourceMeta.description}</p>
           </div>
         ) : null}
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <Button type="button" size="sm" variant="outline" onClick={selectVisibleTracks} disabled={visibleRows.length === 0} title="Select every track currently visible">
+        <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-xs sm:flex sm:flex-wrap sm:items-center">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full justify-center sm:w-auto sm:justify-start"
+            onClick={selectVisibleTracks}
+            disabled={visibleRows.length === 0}
+            title="Select every track currently visible"
+          >
             <CheckSquare className="h-3.5 w-3.5" />
             Select all
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={clearSelectedTracks} disabled={selectedTrackIds.length === 0} title="Clear all selected tracks">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full justify-center sm:w-auto sm:justify-start"
+            onClick={clearSelectedTracks}
+            disabled={selectedTrackIds.length === 0}
+            title="Clear all selected tracks"
+          >
             <X className="h-3.5 w-3.5" />
             Clear selection
           </Button>
-          <span className="text-[var(--color-muted)]">{selectedVisibleRows.length} selected</span>
-          {showQueueFilters ? (
-            <Button type="button" size="sm" variant="secondary" onClick={() => void bulkSetSelectedListened()} disabled={selectedVisibleRows.length === 0} title="Mark selected tracks as reviewed">
+          <span className="col-span-2 text-[var(--color-muted)] sm:col-auto">{selectedVisibleRows.length} selected</span>
+          {showQueueFilters && selectedVisibleRows.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+              onClick={() => void bulkSetSelectedListened()}
+              disabled={selectedVisibleRows.length === 0}
+              title="Mark selected tracks as reviewed"
+            >
               <CheckCircle2 className="h-3.5 w-3.5" />
               Mark selected reviewed
             </Button>
           ) : null}
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => void bulkSetSelectedSaved(true)}
-            disabled={selectedVisibleRows.length === 0}
-            title="Track save is local only and does not add to your Discogs wantlist."
-            aria-label="Save selected tracks. Does not add to your Discogs wantlist."
-          >
-            <Heart className="h-3.5 w-3.5" />
-            Save selected
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => void bulkSetSelectedSaved(false)} disabled={selectedVisibleRows.length === 0} title="Remove selected tracks from local saved list">
-            <HeartOff className="h-3.5 w-3.5" />
-            Unsave selected
-          </Button>
+          {selectedVisibleRows.length > 0 ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="w-full justify-center sm:w-auto sm:justify-start"
+                onClick={() => void bulkSetSelectedSaved(true)}
+                disabled={selectedVisibleRows.length === 0}
+                title="Track save is local only and does not add to your Discogs wantlist."
+                aria-label="Save selected tracks. Does not add to your Discogs wantlist."
+              >
+                <Heart className="h-3.5 w-3.5" />
+                Save selected
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="w-full justify-center sm:w-auto sm:justify-start"
+                onClick={() => void bulkSetSelectedSaved(false)}
+                disabled={selectedVisibleRows.length === 0}
+                title="Remove selected tracks from local saved list"
+              >
+                <HeartOff className="h-3.5 w-3.5" />
+                Unsave selected
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -1227,16 +1364,20 @@ export function ListenInboxClient({
                           size="sm"
                           variant={item.releaseWishlist ? "secondary" : "ghost"}
                           disabled={wishlistReleaseIdLoading === item.releaseId}
-                          className={`h-6 w-6 p-0 ${
+                          className={`h-9 w-9 p-0 ${
                             item.releaseWishlist
-                              ? "border border-amber-500/60 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 hover:text-amber-100"
-                              : "border border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)]"
+                              ? "border border-amber-500/70 bg-amber-500/18 text-amber-200 hover:bg-amber-500/28 hover:text-amber-50"
+                              : "border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface2)] hover:text-white"
                           }`}
                           onClick={() => void toggleRowRecordWishlist(item.releaseId)}
                           title={item.releaseWishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
                           aria-label={item.releaseWishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
                         >
-                          {item.releaseWishlist ? <BookmarkCheck className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+                          {item.releaseWishlist ? (
+                            <BookmarkCheck className="h-5 w-5 stroke-[2.35]" />
+                          ) : (
+                            <BookmarkPlus className="h-5 w-5 stroke-[2.35]" />
+                          )}
                         </Button>
                         <span
                           role="tooltip"
@@ -1272,7 +1413,7 @@ export function ListenInboxClient({
                     </div>
                   </div>
                 </div>
-                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
                   <a
                     href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
                     target="_blank"
@@ -1284,13 +1425,14 @@ export function ListenInboxClient({
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                   <span
-                    className={`group relative inline-flex ${canPlay ? "" : "cursor-not-allowed"}`}
+                    className={`group relative inline-flex min-w-0 ${canPlay ? "" : "cursor-not-allowed"}`}
                     aria-label={playUnavailableReason ?? "Play"}
                   >
                     <Button
                       type="button"
                       size="sm"
                       variant="secondary"
+                      className="w-full justify-center sm:w-auto sm:justify-start"
                       onClick={() => void playRow(item.trackId)}
                       disabled={!canPlay}
                       title="Play now in the mini-player"
@@ -1309,10 +1451,47 @@ export function ListenInboxClient({
                     ) : null}
                   </span>
                   {!isLegacyWant && showQueueFilters ? (
-                    <Button type="button" size="sm" variant="ghost" onClick={() => void markRowListened(item.trackId)}>
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Mark Reviewed
-                    </Button>
+                    <>
+                      <span className="group relative inline-flex">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="h-9 w-9 rounded-full border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38"
+                          onClick={() => void markRowListened(item.trackId)}
+                          title="Mark current track reviewed and move to next track"
+                          aria-label="Mark current track reviewed and move to next track"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </Button>
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-64 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                        >
+                          Mark current track reviewed and move to next track
+                        </span>
+                      </span>
+                      <span className="group relative inline-flex">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => void markRowReleaseListened(item.releaseId)}
+                          disabled={reviewingReleaseId === item.releaseId}
+                          className="h-9 w-9 rounded-full p-0"
+                          title="Mark all tracks on this release reviewed and skip to the next release"
+                          aria-label="Mark all tracks on this release reviewed and skip to the next release"
+                        >
+                          {reviewingReleaseId === item.releaseId ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Disc3 className="h-4 w-4" />}
+                        </Button>
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-64 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                        >
+                          Mark all tracks on this release reviewed and skip to next release
+                        </span>
+                      </span>
+                    </>
                   ) : (
                     (() => {
                       const labelIsActive = activeLabelIds.has(item.labelId);
@@ -1336,7 +1515,7 @@ export function ListenInboxClient({
                       disabled={isBusy || (!wantsDeactivate && isAdded)}
                       title={wantsDeactivate ? "Deactivate this label for processing." : "Add this release label to DigQueue and activate it for processing."}
                       aria-label={wantsDeactivate ? "Deactivate label" : "Add and activate label"}
-                      className="border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100"
+                      className="col-span-2 w-full justify-center border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100 sm:col-auto sm:w-auto sm:justify-start"
                     >
                       <PlusCircle className="h-3.5 w-3.5" />
                       {isToggling
@@ -1356,6 +1535,7 @@ export function ListenInboxClient({
                     type="button"
                     size="sm"
                     variant={item.saved ? "secondary" : "ghost"}
+                    className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
                     onClick={() => void toggleRowSaved(item.trackId)}
                     title="Track save is local only and does not add to your Discogs wantlist."
                     aria-label={item.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}

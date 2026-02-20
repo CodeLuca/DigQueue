@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   BookmarkCheck,
   BookmarkPlus,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Disc3,
@@ -14,6 +15,7 @@ import {
   ListOrdered,
   Pause,
   Play,
+  Loader2,
   Shuffle,
   SkipBack,
   SkipForward,
@@ -97,6 +99,8 @@ const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
 const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
 const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
+const REQUEST_TIMEOUT_MS = 15000;
+const BULK_REQUEST_TIMEOUT_MS = 30000;
 type PlaybackMode = "in_order" | "shuffle";
 type ReleaseWishlistApiResponse = {
   ok?: boolean;
@@ -108,6 +112,11 @@ type ReleaseWishlistApiResponse = {
   discogsSynced?: boolean;
 };
 type TodoApiResponse = {
+  ok?: boolean;
+  tracks?: Array<{ trackId: number; listened: boolean; saved: boolean }>;
+  error?: string;
+};
+type ReleaseReviewedApiResponse = {
   ok?: boolean;
   tracks?: Array<{ trackId: number; listened: boolean; saved: boolean }>;
   error?: string;
@@ -127,6 +136,7 @@ export function MiniPlayer() {
   const playerRef = useRef<YTPlayer | null>(null);
   const pendingPlayItemRef = useRef<QueueApiItem | null>(null);
   const currentRef = useRef<QueueApiItem | null>(null);
+  const loadNextRequestRef = useRef<Promise<boolean> | null>(null);
   const handlingEndedForIdRef = useRef<number | null>(null);
   const middlePreviewPreparedForIdRef = useRef<number | null>(null);
   const middlePreviewEndRef = useRef<number | null>(null);
@@ -142,7 +152,7 @@ export function MiniPlayer() {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [todoLoading, setTodoLoading] = useState<"reviewed" | "saved" | null>(null);
+  const [todoLoading, setTodoLoading] = useState<"reviewed" | "reviewed_release" | "saved" | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
   const [queueItemsState, setQueueItemsState] = useState<QueueApiItem[]>([]);
   const [queueLoading, setQueueLoading] = useState(false);
@@ -178,6 +188,21 @@ export function MiniPlayer() {
     }
   }, [isListeningStationTab]);
 
+  const fetchWithTimeout = useCallback(async (input: RequestInfo | URL, init?: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("Request timed out. Please try again.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }, []);
+
   const fetchQueueItems = useCallback(async () => {
     setQueueLoading(true);
     setQueueError(null);
@@ -205,7 +230,7 @@ export function MiniPlayer() {
     mode?: "set" | "toggle";
     value?: boolean;
   }) => {
-    const response = await fetch("/api/tracks/todo", {
+    const response = await fetchWithTimeout("/api/tracks/todo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -215,10 +240,10 @@ export function MiniPlayer() {
       throw new Error(body?.error || "Unable to update track.");
     }
     return body;
-  }, []);
+  }, [fetchWithTimeout]);
 
   const updateReleaseWishlist = useCallback(async (payload: { releaseId: number; mode?: "toggle" | "set"; value?: boolean }) => {
-    const response = await fetch("/api/releases/wishlist", {
+    const response = await fetchWithTimeout("/api/releases/wishlist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -234,7 +259,20 @@ export function MiniPlayer() {
       localConfirmedAll: body.localConfirmedAll !== false,
       discogsSynced: body.discogsSynced !== false,
     };
-  }, []);
+  }, [fetchWithTimeout]);
+
+  const markReleaseReviewed = useCallback(async (releaseId: number) => {
+    const response = await fetchWithTimeout("/api/releases/reviewed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ releaseId }),
+    }, BULK_REQUEST_TIMEOUT_MS);
+    const body = (await response.json().catch(() => null)) as ReleaseReviewedApiResponse | null;
+    if (!response.ok || !body?.ok) {
+      throw new Error(body?.error || "Unable to mark release reviewed.");
+    }
+    return body;
+  }, [fetchWithTimeout]);
 
   const setGlobalPlaybackMode = useCallback((nextMode: PlaybackMode) => {
     setPlaybackMode(nextMode);
@@ -259,67 +297,101 @@ export function MiniPlayer() {
   }, [current]);
 
   const loadNext = useCallback(async (action: "played" | "listened" | null = null, currentId?: number) => {
-    const activeMode = "hybrid";
-    const activeOrder = playbackMode;
-    await syncQueueToListeningScope();
-    const activeCurrentId = currentId ?? currentRef.current?.id;
-    const response = action && activeCurrentId
-      ? await fetch("/api/queue/next", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ currentId: activeCurrentId, action, mode: activeMode, order: activeOrder }),
-        })
-      : await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
-    if (!response.ok) return false;
-    let item = (await response.json()) as QueueApiItem | null;
-    if (!item && action) {
-      const fallback = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
-      if (fallback.ok) {
-        item = (await fallback.json()) as QueueApiItem | null;
-      }
-    }
-    if (!item) {
-      if (action) {
-        if (playerRef.current) {
-          if (playerRef.current.stopVideo) playerRef.current.stopVideo();
-          else playerRef.current.pauseVideo();
+    if (loadNextRequestRef.current) return loadNextRequestRef.current;
+    const request = (async () => {
+      const activeMode = "hybrid";
+      const activeOrder = playbackMode;
+      await syncQueueToListeningScope();
+      const activeCurrentId = currentId ?? currentRef.current?.id;
+      const response = action && activeCurrentId && activeCurrentId > 0
+        ? await fetch("/api/queue/next", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ currentId: activeCurrentId, action, mode: activeMode, order: activeOrder }),
+          })
+        : await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
+      if (!response.ok) return false;
+      let item = (await response.json()) as QueueApiItem | null;
+      if (!item && action) {
+        const fallback = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
+        if (fallback.ok) {
+          item = (await fallback.json()) as QueueApiItem | null;
         }
-        setCurrent(null);
-        setPlaying(false);
-        setCurrentTime(0);
-        setDuration(0);
+      }
+      if (!item) {
+        if (action) {
+          if (playerRef.current) {
+            if (playerRef.current.stopVideo) playerRef.current.stopVideo();
+            else playerRef.current.pauseVideo();
+          }
+          setCurrent(null);
+          setPlaying(false);
+          setCurrentTime(0);
+          setDuration(0);
+        }
+        return true;
+      }
+
+      const previousCurrent = currentRef.current;
+      if (previousCurrent) {
+        setHistory((prev) => [previousCurrent, ...prev].slice(0, 50));
+      }
+      setCurrent(item);
+      if (playerRef.current) {
+        playerRef.current.loadVideoById(item.youtubeVideoId);
+        setPlaying(true);
       }
       return true;
+    })();
+    loadNextRequestRef.current = request;
+    try {
+      return await request;
+    } finally {
+      if (loadNextRequestRef.current === request) {
+        loadNextRequestRef.current = null;
+      }
     }
-
-    const previousCurrent = currentRef.current;
-    if (previousCurrent) {
-      setHistory((prev) => [previousCurrent, ...prev].slice(0, 50));
-    }
-    setCurrent(item);
-    if (playerRef.current) {
-      playerRef.current.loadVideoById(item.youtubeVideoId);
-      setPlaying(true);
-    }
-    return true;
   }, [playbackMode, syncQueueToListeningScope]);
 
   const markReviewed = useCallback(async () => {
     const trackId = current?.track?.id ?? null;
     setTodoLoading("reviewed");
     try {
-      const ok = await loadNext(trackId ? "listened" : "played");
-      if (ok && trackId) {
+      if (trackId) {
+        const body = await updateTrackTodo({ trackIds: [trackId], field: "listened", mode: "set", value: true });
+        const listenedValue = body.tracks?.find((item) => item.trackId === trackId)?.listened ?? true;
         window.dispatchEvent(
           new CustomEvent(TRACK_TODO_UPDATED_EVENT, {
-            detail: { trackId, field: "listened", value: true },
+            detail: { trackId, field: "listened", value: listenedValue },
           }),
         );
+        await loadNext("played");
+        return;
       }
+      await loadNext("played");
     } finally {
       setTodoLoading(null);
     }
-  }, [current?.track?.id, loadNext]);
+  }, [current?.track?.id, loadNext, updateTrackTodo]);
+
+  const markEntireReleaseReviewed = useCallback(async () => {
+    const releaseId = current?.release?.id;
+    if (!releaseId) return;
+    setTodoLoading("reviewed_release");
+    try {
+      const body = await markReleaseReviewed(releaseId);
+      for (const track of body.tracks ?? []) {
+        window.dispatchEvent(
+          new CustomEvent(TRACK_TODO_UPDATED_EVENT, {
+            detail: { trackId: track.trackId, field: "listened", value: Boolean(track.listened) },
+          }),
+        );
+      }
+      await loadNext();
+    } finally {
+      setTodoLoading(null);
+    }
+  }, [current?.release?.id, loadNext, markReleaseReviewed]);
 
   const toggleSaved = useCallback(async () => {
     if (!current?.track?.id) return;
@@ -388,7 +460,7 @@ export function MiniPlayer() {
     const previousCurrent = currentRef.current;
     const switchingToDifferentItem = previousCurrent?.id && previousCurrent.id !== item.id;
 
-    if (switchingToDifferentItem) {
+    if (switchingToDifferentItem && previousCurrent && previousCurrent.id > 0) {
       // Manual "play now" should advance queue state for the item being replaced.
       void fetch("/api/queue/next", {
         method: "POST",
@@ -405,9 +477,10 @@ export function MiniPlayer() {
     if (switchingToDifferentItem && previousCurrent) {
       setHistory((prev) => [previousCurrent, ...prev].slice(0, 50));
     }
-    // If user explicitly picks an item from Up Next, drop it from pending immediately.
-    void fetch(`/api/queue/item/${item.id}`, { method: "DELETE" }).catch(() => null);
-    setQueueItemsState((prev) => prev.filter((entry) => entry.id !== item.id));
+    // Keep selected item in DB until it actually finishes/gets reviewed so played history persists.
+    if (item.id > 0) {
+      setQueueItemsState((prev) => prev.filter((entry) => entry.id !== item.id));
+    }
     setCurrent(item);
     playerRef.current.loadVideoById(item.youtubeVideoId);
     setPlaying(true);
@@ -1042,7 +1115,7 @@ export function MiniPlayer() {
             <span className="w-8 text-[11px] text-[var(--color-muted)] sm:w-10">{formatTime(sliderMax)}</span>
           </div>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 pb-1 md:w-auto md:pb-0">
+        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:w-auto md:overflow-visible md:pb-0">
           <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
             <span className="group relative inline-flex">
               <Button
@@ -1087,15 +1160,36 @@ export function MiniPlayer() {
                   type="button"
                   size="sm"
                   variant="secondary"
-                  className="h-9 rounded-full border border-emerald-400/50 bg-emerald-500/20 px-3 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-0"
+                  className="h-10 w-10 rounded-full border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-0"
                   onClick={() => void markReviewed()}
                   disabled={!current?.track?.id || todoLoading !== null}
-                  title="Mark reviewed and move to the next track"
-                  aria-label="Mark reviewed and move to next track"
+                  title="Mark current track reviewed and move to next track"
+                  aria-label="Mark current track reviewed and move to next track"
                 >
-                  {todoLoading === "reviewed" ? "..." : "Mark Reviewed"}
+                  {todoLoading === "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
                 </Button>
-                <span role="tooltip" className={tooltipClass}>Mark reviewed and move to next</span>
+                <span role="tooltip" className={tooltipClass}>Mark current track reviewed and move to next track</span>
+              </span>
+            ) : null}
+            {!isLibraryTab ? (
+              <span className="group relative inline-flex">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className={`h-10 w-10 ${iconButtonClass}`}
+                  onClick={() => void markEntireReleaseReviewed()}
+                  disabled={!current?.release?.id || todoLoading !== null}
+                  title="Mark all tracks on this release reviewed and skip to the next release"
+                  aria-label="Mark all tracks on this release reviewed and skip to the next release"
+                >
+                  {todoLoading === "reviewed_release" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Disc3 className="h-5 w-5" />
+                  )}
+                </Button>
+                <span role="tooltip" className={tooltipClass}>Mark all tracks on this release reviewed and skip to the next release</span>
               </span>
             ) : null}
             <span className="group relative inline-flex">
@@ -1109,7 +1203,9 @@ export function MiniPlayer() {
                 aria-label={current?.track?.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}
                 title={current?.track?.saved ? "Saved track (local only)" : "Save track (local only)"}
               >
-                {todoLoading === "saved" ? "..." : current?.track?.saved ? (
+                {todoLoading === "saved" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : current?.track?.saved ? (
                   <HeartOff className="h-3.5 w-3.5" />
                 ) : (
                   <Heart className="h-3.5 w-3.5" />
@@ -1131,7 +1227,7 @@ export function MiniPlayer() {
                 type="button"
                 size="sm"
                 variant={current?.release?.wishlist ? "secondary" : "ghost"}
-                className={`${iconButtonClass} ${
+                className={`h-10 w-10 ${iconButtonClass} ${
                   current?.release?.wishlist
                     ? "border-amber-500/60 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 hover:text-amber-100"
                     : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
@@ -1141,7 +1237,11 @@ export function MiniPlayer() {
                 title={current?.release?.wishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
                 aria-label={current?.release?.wishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
               >
-                {current?.release?.wishlist ? <BookmarkCheck className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+                {current?.release?.wishlist ? (
+                  <BookmarkCheck className="h-5 w-5 stroke-[2.4]" />
+                ) : (
+                  <BookmarkPlus className="h-5 w-5 stroke-[2.4]" />
+                )}
               </Button>
               <span
                 role="tooltip"
@@ -1171,7 +1271,7 @@ export function MiniPlayer() {
             <span role="tooltip" className={tooltipClass}>Open on YouTube</span>
           </span>
         ) : null}
-        {currentYoutubeUrl ? (
+        {currentYoutubeUrl && isIOS ? (
           <span className="group relative inline-flex shrink-0">
             <Button
               type="button"
@@ -1179,13 +1279,13 @@ export function MiniPlayer() {
               variant="ghost"
               className={iconButtonClass}
               onClick={openCurrentInYouTubeApp}
-              title={isIOS ? "Open in YouTube app for background playback" : "Open in YouTube"}
-              aria-label={isIOS ? "Open in YouTube app for background playback" : "Open in YouTube"}
+              title="Open in YouTube app for background playback"
+              aria-label="Open in YouTube app for background playback"
             >
               <ExternalLink className="h-3.5 w-3.5" />
             </Button>
             <span role="tooltip" className={tooltipClass}>
-              {isIOS ? "Open in YouTube app (best for background play)" : "Open video in YouTube"}
+              Open in YouTube app (best for background play)
             </span>
           </span>
         ) : null}

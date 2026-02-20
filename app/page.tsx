@@ -508,52 +508,53 @@ export default async function HomePage({
               </div>
 
               {data.erroredLabels.length > 0 ? (
-                <div className="rounded-lg border border-rose-500/35 bg-[linear-gradient(135deg,rgba(120,10,10,0.22),rgba(120,10,10,0.06))] p-3">
+                <div className="rounded-md border border-rose-500/30 bg-rose-950/10 p-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose-100">
-                        <AlertTriangle className="h-4 w-4" />
+                      <p className="inline-flex items-center gap-1 text-xs font-semibold text-rose-100">
+                        <AlertTriangle className="h-3.5 w-3.5" />
                         Processing incidents
                       </p>
-                      <p className="text-xs text-rose-100/80">
+                      <p className="text-[11px] text-rose-100/70">
                         {data.erroredLabels.length} active labels need retry or config fixes.
                       </p>
                     </div>
                     <form action={retryErroredLabelsAction}>
-                      <Button type="submit" variant="secondary" size="sm">
-                        <RefreshCcw className="h-3.5 w-3.5" />
-                        Reset All Errors
+                      <Button type="submit" variant="secondary" size="sm" className="h-7 px-2 text-[11px]">
+                        <RefreshCcw className="h-3 w-3" />
+                        Reset
                       </Button>
                     </form>
                   </div>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-2 space-y-1.5">
                     {data.erroredLabels.slice(0, 5).map((label) => {
                       const visibleLastError = getVisibleLabelError(label.lastError);
                       return (
-                        <div key={label.id} className="rounded-md border border-rose-500/30 bg-black/20 p-2.5">
-                          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                        <div key={label.id} className="rounded-md border border-rose-500/25 bg-black/10 p-2">
+                          <div className="mb-1 flex flex-wrap items-center justify-between gap-1.5">
                             <div className="min-w-0">
-                              <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-semibold text-rose-50 hover:text-[var(--color-accent)]">
+                              <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-medium text-rose-50 hover:text-[var(--color-accent)]">
                                 {label.name}
                               </Link>
-                              <p className="text-[11px] text-rose-100/70">
+                              <p className="text-[10px] text-rose-100/60">
                                 Last update {new Date(label.updatedAt).toLocaleString()}
                               </p>
                             </div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1">
                               <Link href={`/labels/${label.id}`}>
-                                <Button type="button" size="sm" variant="ghost">
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                  Open
+                                <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" aria-label="Open label">
+                                  <ExternalLink className="h-3 w-3" />
                                 </Button>
                               </Link>
                               <form action={retryLabelAction}>
                                 <input type="hidden" name="labelId" value={label.id} />
-                                <Button type="submit" size="sm" variant="secondary">Retry</Button>
+                                <Button type="submit" size="sm" variant="secondary" className="h-7 px-2 text-[11px]">
+                                  Retry
+                                </Button>
                               </form>
                             </div>
                           </div>
-                          {visibleLastError ? <p className="line-clamp-2 text-xs text-rose-100/90">{visibleLastError}</p> : null}
+                          {visibleLastError ? <p className="line-clamp-2 text-[11px] text-rose-100/85">{visibleLastError}</p> : null}
                         </div>
                       );
                     })}

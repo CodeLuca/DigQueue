@@ -14,6 +14,95 @@ function userScope(userId: string) {
   };
 }
 
+type InboxRow = {
+  trackId: number;
+  trackTitle: string;
+  trackArtists: string | null;
+  position: string;
+  duration: string | null;
+  listened: boolean;
+  saved: boolean;
+  releaseId: number;
+  releaseTitle: string;
+  releaseCatno: string | null;
+  releaseArtist: string | null;
+  releaseDiscogsUrl: string;
+  releaseThumbUrl: string | null;
+  releaseWishlist: boolean;
+  importSource: string;
+  labelId: number;
+  labelName: string;
+  hasChosenVideo: boolean;
+  youtubeVideoId: string | null;
+  videoEmbeddable: boolean | null;
+  isUpNext: boolean;
+  playedCount: number;
+  wasPlayed: boolean;
+  needsMark: boolean;
+  playbackSource: "discogs" | "youtube" | null;
+};
+
+function normalizeValue(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function dedupeInboxRows(rows: InboxRow[]) {
+  const grouped = new Map<string, InboxRow[]>();
+  for (const row of rows) {
+    const key = [
+      normalizeValue(row.releaseDiscogsUrl),
+      normalizeValue(row.position),
+      normalizeValue(row.trackTitle),
+    ].join("::");
+    const bucket = grouped.get(key) ?? [];
+    bucket.push(row);
+    grouped.set(key, bucket);
+  }
+
+  const deduped: InboxRow[] = [];
+  for (const variants of grouped.values()) {
+    if (variants.length === 1) {
+      deduped.push(variants[0]);
+      continue;
+    }
+
+    const primary =
+      variants.find((row) => row.saved && row.importSource !== "discogs_want") ??
+      variants.find((row) => row.saved) ??
+      variants.find((row) => row.importSource !== "discogs_want") ??
+      variants[0];
+
+    const hasWishlistTrue = variants.some((row) => row.releaseWishlist);
+    const hasWishlistFalse = variants.some((row) => !row.releaseWishlist);
+    const nonWantWishlist = variants.find((row) => row.importSource !== "discogs_want")?.releaseWishlist;
+    const releaseWishlist =
+      hasWishlistTrue && hasWishlistFalse && typeof nonWantWishlist === "boolean"
+        ? nonWantWishlist
+        : hasWishlistTrue;
+
+    const playedCount = Math.max(...variants.map((row) => row.playedCount));
+    const listened = variants.some((row) => row.listened);
+
+    deduped.push({
+      ...primary,
+      listened,
+      saved: variants.some((row) => row.saved),
+      releaseWishlist,
+      hasChosenVideo: variants.some((row) => row.hasChosenVideo),
+      youtubeVideoId: variants.find((row) => row.youtubeVideoId)?.youtubeVideoId ?? null,
+      videoEmbeddable: variants.some((row) => row.videoEmbeddable === false)
+        ? false
+        : variants.find((row) => row.videoEmbeddable !== null)?.videoEmbeddable ?? null,
+      isUpNext: variants.some((row) => row.isUpNext),
+      playedCount,
+      wasPlayed: playedCount > 0,
+      needsMark: !listened && playedCount > 0,
+    });
+  }
+
+  return deduped;
+}
+
 export async function getDashboardData(options?: { includeRecommendations?: boolean }) {
   const includeRecommendations = options?.includeRecommendations ?? false;
   const userId = await requireCurrentAppUserId();
@@ -347,6 +436,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
       labelId: labels.id,
       labelName: labels.name,
       hasChosenVideo: isNotNull(youtubeMatches.id),
+      youtubeVideoId: youtubeMatches.videoId,
       videoEmbeddable: youtubeMatches.embeddable,
       matchChannelTitle: youtubeMatches.channelTitle,
     })
@@ -398,7 +488,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
       where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
       orderBy: [asc(labels.name)],
     });
-    return { rows: enrichedRows, labels: allLabels };
+    return { rows: dedupeInboxRows(enrichedRows), labels: allLabels };
   } catch {
     return { rows: [], labels: [] };
   }
@@ -434,6 +524,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
       labelId: labels.id,
       labelName: labels.name,
       hasChosenVideo: isNotNull(youtubeMatches.id),
+      youtubeVideoId: youtubeMatches.videoId,
       videoEmbeddable: youtubeMatches.embeddable,
       matchChannelTitle: youtubeMatches.channelTitle,
     })
@@ -485,7 +576,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
       where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
       orderBy: [asc(labels.name)],
     });
-    return { rows: enrichedRows, labels: allLabels };
+    return { rows: dedupeInboxRows(enrichedRows), labels: allLabels };
   } catch {
     return { rows: [], labels: [] };
   }
@@ -536,6 +627,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
       labelId: labels.id,
       labelName: labels.name,
       hasChosenVideo: isNotNull(youtubeMatches.id),
+      youtubeVideoId: youtubeMatches.videoId,
       videoEmbeddable: youtubeMatches.embeddable,
       matchChannelTitle: youtubeMatches.channelTitle,
     })
@@ -587,7 +679,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
       where: and(eq(labels.active, true), eq(labels.sourceType, "workspace"), scope.labels),
       orderBy: [asc(labels.name)],
     });
-    return { rows: enrichedRows, labels: allLabels };
+    return { rows: dedupeInboxRows(enrichedRows), labels: allLabels };
   } catch {
     return { rows: [], labels: [] };
   }
