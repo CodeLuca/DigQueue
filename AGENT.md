@@ -2,7 +2,7 @@
 
 ## Project
 - Name: DigQueue
-- Stack: Next.js App Router + TypeScript + Tailwind + SQLite + Drizzle
+- Stack: Next.js App Router + TypeScript + Tailwind + Supabase Postgres + Drizzle
 
 ## Guardrails
 - No piracy/downloading copyrighted audio.

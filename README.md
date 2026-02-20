@@ -4,7 +4,7 @@ DigQueue is a local-first MVP for digging Discogs labels while you work.
 
 It provides:
 - Label queue ingestion from Discogs (URL, ID, or name search)
-- Release + track caching in SQLite via Drizzle
+- Release + track caching in Supabase Postgres via Drizzle
 - Automatic YouTube candidate matching (embeddable/syndicated)
 - Release-level full-upload fallback when per-track matching is weak
 - Error-aware processing with retry/error tracking on labels and releases
@@ -27,7 +27,7 @@ No Soulseek, ripping, or copyrighted audio download features are implemented.
 
 - Next.js (App Router) + TypeScript
 - Tailwind + shadcn-style UI components
-- SQLite (`better-sqlite3`) + Drizzle ORM
+- Supabase Postgres + Drizzle ORM
 - Next.js server routes for Discogs + YouTube APIs
 - YouTube IFrame Player API for continuous playback
 
@@ -41,7 +41,10 @@ DISCOGS_CONSUMER_SECRET=...
 YOUTUBE_API_KEY=...
 BANDCAMP_WISHLIST_URL=...
 NEXT_PUBLIC_APP_NAME=DigQueue
-DATABASE_URL=./db/digqueue.db
+SUPABASE_DB_URL=postgresql://...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
 Optional:
@@ -71,7 +74,6 @@ This repo should not accumulate multiple completed major features locally withou
 
 Node:
 - Recommended: Node `20.x` (see `.nvmrc`)
-- Native sqlite bindings are auto-checked and rebuilt on `dev/build/start/migrate` if Node version changed.
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -146,7 +148,7 @@ Snapshot before migration:
 - `db/snapshots/2026-02-18-pre-supabase/csv/*.csv`
 
 Schema migration:
-- `supabase/migrations/20260218224335_initial_sqlite_port.sql`
+- `supabase/migrations/` (initial schema + follow-up migrations)
 
 Import tooling:
 - `supabase/import/load_snapshot.sql`

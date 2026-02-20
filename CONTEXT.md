@@ -4,7 +4,7 @@
 - `DISCOGS_TOKEN`
 - `YOUTUBE_API_KEY`
 - `NEXT_PUBLIC_APP_NAME` (default: DigQueue)
-- `DATABASE_URL` (default: `./db/digqueue.db`)
+- `SUPABASE_DB_URL` (preferred) or `POSTGRES_URL`/`DATABASE_URL` (Postgres URL)
 
 ## Important Paths
 - DB schema: `db/schema.ts`
@@ -16,5 +16,5 @@
 
 ## Operational Notes
 - API routes and data-heavy pages are forced dynamic.
-- SQLite lock mitigation is enabled via DB timeout.
+- Supabase Postgres is the only supported database backend.
 - Seed labels can be loaded from dashboard action.

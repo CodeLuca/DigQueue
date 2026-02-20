@@ -10,15 +10,12 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "supabase db push --dns-resolver https",
     "db:studio": "drizzle-kit studio",
-    "native:check": "node scripts/ensure-native-sqlite.mjs",
-    "native:fix": "npm rebuild better-sqlite3",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
     "supabase:db:push": "supabase db push --dns-resolver https",
     "supabase:migration:new": "supabase migration new",
-    "supabase:import:snapshot": "bash scripts/supabase-import-snapshot.sh \"$SUPABASE_DB_URL\" db/snapshots/2026-02-18-pre-supabase \"$SUPABASE_APP_USER_ID\"",
-    "supabase:import:sqlite": "node scripts/supabase-import-from-sqlite.mjs"
+    "supabase:import:snapshot": "bash scripts/supabase-import-snapshot.sh \"$SUPABASE_DB_URL\" db/snapshots/2026-02-18-pre-supabase \"$SUPABASE_APP_USER_ID\""
   },
   "engines": {
     "node": ">=20 <23"
@@ -26,7 +23,6 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
-    "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -42,7 +38,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

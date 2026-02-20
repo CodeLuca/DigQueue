@@ -1,11 +1,11 @@
-# SQLite -> Supabase Import
+# Snapshot -> Supabase Import
 
 ## Snapshot source
 Current snapshot is stored at:
 - `db/snapshots/2026-02-18-pre-supabase`
 
 It includes:
-- `schema.sql`: raw SQLite schema dump
+- `schema.sql`: raw legacy schema dump
 - `row-counts.json`: row counts per table
 - `csv/*.csv`: full table exports
 

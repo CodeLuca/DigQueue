@@ -7,7 +7,7 @@ const envSchema = z.object({
   YOUTUBE_API_KEY: z.string().optional(),
   BANDCAMP_WISHLIST_URL: z.string().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("DigQueue"),
-  DATABASE_URL: z.string().default("./db/digqueue.db"),
+  DATABASE_URL: z.string().optional(),
   SUPABASE_ENV: z.enum(["local", "production"]).optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),

@@ -2,7 +2,7 @@
 
 ## Current MVP Status
 - [x] App scaffold and dark UI foundation
-- [x] SQLite/Drizzle schema + migration
+- [x] Supabase Postgres/Drizzle schema + migration
 - [x] Discogs label -> release -> track ingestion
 - [x] YouTube search + candidate scoring + override
 - [x] Queue orchestration + persistent mini-player
