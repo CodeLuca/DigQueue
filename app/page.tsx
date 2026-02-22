@@ -536,9 +536,6 @@ export default async function HomePage({
                   const normalizedStatus = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
                   const totalLoadedReleases = Math.max(0, label.loadedReleaseCount);
                   const fetchedReleases = Math.max(0, label.fetchedReleaseCount);
-                  const safeTotalPages = Math.max(1, label.totalPages);
-                  const scannedPages = Math.min(safeTotalPages, Math.max(0, label.currentPage - 1));
-                  const hasMorePages = label.currentPage <= safeTotalPages;
                   const progressPct = totalLoadedReleases > 0
                     ? Math.min(100, Math.round((fetchedReleases / totalLoadedReleases) * 100))
                     : 0;
@@ -554,27 +551,6 @@ export default async function HomePage({
                           : normalizedStatus === "complete"
                             ? "Complete"
                             : normalizedStatus;
-                  const loadBlockerMessage = label.tracksFullyLoaded
-                    ? "Complete: all known releases/tracks are loaded."
-                    : !canProcess
-                      ? "Stopped: Discogs is not connected."
-                    : !label.active
-                        ? "Stopped: source is inactive."
-                        : normalizedStatus === "queued"
-                          ? "Waiting for an available worker slot."
-                          : normalizedStatus === "processing"
-                            ? totalLoadedReleases === 0 && hasMorePages
-                              ? `Stage 1/3: discovering release pages (${scannedPages}/${safeTotalPages} scanned).`
-                              : fetchedReleases < totalLoadedReleases
-                                ? `Stage 2/3: loading release details/tracks (${fetchedReleases}/${totalLoadedReleases}).`
-                                : hasMorePages
-                                  ? `Stage 1/3: discovering more pages (${scannedPages}/${safeTotalPages} scanned).`
-                                  : "Stage 3/3: matching playable sources and queueing tracks."
-                            : normalizedStatus === "paused"
-                              ? "Paused."
-                              : normalizedStatus === "error"
-                                ? `Stopped by error: ${visibleLastError || "unknown processing failure."}`
-                                : "Pending more processing steps.";
                   return (
                     <div
                     key={label.id}
@@ -601,15 +577,9 @@ export default async function HomePage({
                         )}
                         <div className="min-w-0">
                           <Link href={`/labels/${label.id}`} className="line-clamp-1 text-sm font-medium hover:text-[var(--color-accent)]">{label.name}</Link>
-                          <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{label.summaryText}</p>
+                          <p className="mt-1 line-clamp-1 text-xs text-[var(--color-muted)]">{label.summaryText}</p>
                           <p className="mt-1 text-xs text-[var(--color-muted)]">
-                            Tracks loaded {label.loadedTrackCount} • Releases fetched {fetchedReleases}/{totalLoadedReleases} ({progressPct}%)
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--color-muted)]">
-                            Pages scanned {scannedPages}/{safeTotalPages} • Last update {new Date(label.updatedAt).toLocaleString()}
-                          </p>
-                          <p className={`mt-1 text-xs ${normalizedStatus === "error" ? "text-red-300" : "text-[var(--color-muted)]"}`}>
-                            {loadBlockerMessage}
+                            {label.loadedTrackCount} tracks • {fetchedReleases}/{totalLoadedReleases} releases • {progressPct}% • {new Date(label.updatedAt).toLocaleDateString()}
                           </p>
                           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface)]">
                             <div
