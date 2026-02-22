@@ -16,6 +16,7 @@ export function AppNav() {
   const searchParams = useSearchParams();
   const authMode = searchParams.get("mode");
   const isMarketingRoute =
+    pathname === "/welcome" ||
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/reset-password" ||

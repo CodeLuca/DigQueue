@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Bookmark, CheckCheck, Disc3, Heart, Inbox, Settings, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,9 +24,7 @@ const highlights = [
 
 export default async function WelcomePage() {
   const userId = await getCurrentAppUserId();
-  if (!userId) {
-    redirect("/login?next=/welcome");
-  }
+  const isLoggedIn = Boolean(userId);
 
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-8 md:px-8">
@@ -43,10 +40,19 @@ export default async function WelcomePage() {
             Labels give catalog-driven digging. Artists let you follow a producer across labels and aliases.
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-            <Link href="/?tab=step-1"><Button type="button">Open Sources</Button></Link>
-            <Link href="/?tab=step-2"><Button type="button" variant="outline">Open Listening Station</Button></Link>
-            <Link href="/?tab=library"><Button type="button" variant="outline">Open Library</Button></Link>
-            <Link href="/how-to-use"><Button type="button" variant="ghost">Full How-To</Button></Link>
+            {isLoggedIn ? (
+              <>
+                <Link href="/?tab=step-1"><Button type="button">Open Sources</Button></Link>
+                <Link href="/?tab=step-2"><Button type="button" variant="outline">Open Listening Station</Button></Link>
+                <Link href="/?tab=library"><Button type="button" variant="outline">Open Library</Button></Link>
+                <Link href="/how-to-use"><Button type="button" variant="ghost">Full How-To</Button></Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login"><Button type="button">Login</Button></Link>
+                <Link href="/login?mode=register"><Button type="button" variant="outline">Register</Button></Link>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -99,13 +105,24 @@ export default async function WelcomePage() {
             <CardTitle className="inline-flex items-center gap-2"><CheckCheck className="h-4 w-4 text-[var(--color-accent)]" />First 10 Minutes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>1. Connect Discogs in <Link href="/settings" className="text-[var(--color-accent)] hover:underline">Settings</Link> if needed.</p>
-            <p>2. Add sources in Sources tab.</p>
-            <p>3. Play from Listening Station and mark tracks/release as you go.</p>
-            <p>4. Clear leftovers in Library → Needs Review.</p>
-            <div className="pt-1">
-              <Link href="/how-to-use"><Button type="button" size="sm" variant="outline">Open Detailed Guide</Button></Link>
-            </div>
+            {isLoggedIn ? (
+              <>
+                <p>1. Connect Discogs in <Link href="/settings" className="text-[var(--color-accent)] hover:underline">Settings</Link> if needed.</p>
+                <p>2. Add sources in Sources tab.</p>
+                <p>3. Play from Listening Station and mark tracks/release as you go.</p>
+                <p>4. Clear leftovers in Library → Needs Review.</p>
+                <div className="pt-1">
+                  <Link href="/how-to-use"><Button type="button" size="sm" variant="outline">Open Detailed Guide</Button></Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>1. Create your account.</p>
+                <p>2. Login and land back here.</p>
+                <p>3. Connect Discogs once in Settings.</p>
+                <p>4. Start with 1-3 strong sources.</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </section>

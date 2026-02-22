@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 const PUBLIC_PATHS = new Set([
+  "/welcome",
   "/login",
   "/register",
   "/connect-discogs",
@@ -59,6 +60,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isPublicPath(pathname)) return NextResponse.next();
+
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/welcome", request.url));
+  }
 
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("next", pathname + search);
