@@ -49,10 +49,10 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const filterButtonClass = (active: boolean) =>
-    `rounded-md border px-2 py-1 font-medium transition ${
+    `inline-flex min-h-8 items-center rounded-md border px-2 py-1 font-medium transition ${
       active
         ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_24%,var(--color-surface2)_76%)] text-[var(--color-text)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]"
-        : "border-[var(--color-border)] text-[var(--color-muted)] opacity-70 hover:opacity-100 hover:bg-[var(--color-surface)]"
+        : "border-[var(--color-border)] bg-[var(--color-surface)]/55 text-[var(--color-muted)] opacity-90 hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]"
     }`;
 
   const counts = useMemo(() => {
@@ -109,10 +109,10 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
       <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-sm font-medium">Recently Played ({filteredItems.length})</p>
-        <div className="flex flex-wrap gap-1.5 text-xs">
+        <div className="grid w-full grid-cols-1 gap-1.5 text-xs sm:flex sm:w-auto sm:flex-wrap">
           <button
             type="button"
-            className={filterButtonClass(filter === "all")}
+            className={`${filterButtonClass(filter === "all")} justify-center sm:justify-start`}
             onClick={() => setFilter("all")}
             aria-pressed={filter === "all"}
           >
@@ -120,7 +120,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
           </button>
           <button
             type="button"
-            className={filterButtonClass(filter === "wantlist")}
+            className={`${filterButtonClass(filter === "wantlist")} justify-center sm:justify-start`}
             onClick={() => setFilter("wantlist")}
             aria-pressed={filter === "wantlist"}
           >
@@ -128,7 +128,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
           </button>
           <button
             type="button"
-            className={filterButtonClass(filter === "reviewed-no-wantlist")}
+            className={`${filterButtonClass(filter === "reviewed-no-wantlist")} justify-center sm:justify-start`}
             onClick={() => setFilter("reviewed-no-wantlist")}
             aria-pressed={filter === "reviewed-no-wantlist"}
           >
@@ -168,11 +168,12 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
+                    className="w-full justify-center sm:w-auto sm:justify-start"
                     disabled={!item.trackId || loadingId === item.id}
                     onClick={() => void playAgain(item)}
                     title="Play this track now in the mini-player"
@@ -182,7 +183,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
                   {item.release?.id ? (
                     <Link
                       href={`/releases/${item.release.id}`}
-                      className="rounded-md border border-[var(--color-border)] px-2 py-1.5 text-xs hover:bg-[var(--color-surface)]"
+                      className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--color-border)] px-2 py-1.5 text-xs hover:bg-[var(--color-surface)] sm:h-auto sm:justify-start"
                     >
                       Release
                     </Link>

@@ -103,8 +103,17 @@ function dedupeInboxRows(rows: InboxRow[]) {
   return deduped;
 }
 
-export async function getDashboardData(options?: { includeRecommendations?: boolean }) {
-  const includeRecommendations = options?.includeRecommendations ?? false;
+type DashboardTab = "step-1" | "step-2" | "wishlist" | "played-reviewed" | "recommendations";
+
+export async function getDashboardData(options?: { includeRecommendations?: boolean; tab?: DashboardTab }) {
+  const tab = options?.tab ?? "step-1";
+  const includeRecommendations = options?.includeRecommendations ?? tab === "recommendations";
+  const needsLabelProgress = tab === "step-1";
+  const needsListeningMetrics = tab === "step-2";
+  const needsWishlistMetric = tab === "wishlist";
+  const needsPlayedMetrics = tab === "played-reviewed";
+  const needsQueueCount = tab === "step-2";
+  const needsErrorSummary = tab === "step-2";
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
   try {
@@ -128,183 +137,207 @@ export async function getDashboardData(options?: { includeRecommendations?: bool
             orderBy: [asc(labels.name)],
           })
         : Promise.resolve([]),
-      db
-        .select({ labelId: releases.labelId, thumbUrl: releases.thumbUrl })
-        .from(releases)
-        .where(and(isNotNull(releases.thumbUrl), scope.releases))
-        .orderBy(asc(releases.labelId), asc(releases.releaseOrder)),
-      db
-        .select({ labelId: releases.labelId, value: count() })
-        .from(releases)
-        .where(scope.releases)
-        .groupBy(releases.labelId),
-      db
-        .select({ value: count() })
-        .from(queueItems)
-        .innerJoin(tracks, eq(queueItems.trackId, tracks.id))
-        .innerJoin(releases, eq(tracks.releaseId, releases.id))
-        .innerJoin(labels, eq(releases.labelId, labels.id))
-        .where(and(eq(queueItems.status, "pending"), eq(tracks.listened, false), eq(labels.active, true), scope.queueItems, scope.tracks, scope.releases, scope.labels)),
-      db
-        .select({ labelId: releases.labelId, value: count() })
-        .from(releases)
-        .where(and(eq(releases.detailsFetched, true), scope.releases))
-        .groupBy(releases.labelId),
-      db
-        .select({ labelId: releases.labelId, value: count() })
-        .from(tracks)
-        .innerJoin(releases, eq(tracks.releaseId, releases.id))
-        .where(and(scope.tracks, scope.releases))
-        .groupBy(releases.labelId),
+      needsLabelProgress
+        ? db
+            .select({ labelId: releases.labelId, thumbUrl: releases.thumbUrl })
+            .from(releases)
+            .where(and(isNotNull(releases.thumbUrl), scope.releases))
+            .orderBy(asc(releases.labelId), asc(releases.releaseOrder))
+        : Promise.resolve([]),
+      needsLabelProgress
+        ? db
+            .select({ labelId: releases.labelId, value: count() })
+            .from(releases)
+            .where(scope.releases)
+            .groupBy(releases.labelId)
+        : Promise.resolve([]),
+      needsQueueCount
+        ? db
+            .select({ value: count() })
+            .from(queueItems)
+            .innerJoin(tracks, eq(queueItems.trackId, tracks.id))
+            .innerJoin(releases, eq(tracks.releaseId, releases.id))
+            .innerJoin(labels, eq(releases.labelId, labels.id))
+            .where(and(eq(queueItems.status, "pending"), eq(tracks.listened, false), eq(labels.active, true), scope.queueItems, scope.tracks, scope.releases, scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+      needsLabelProgress
+        ? db
+            .select({ labelId: releases.labelId, value: count() })
+            .from(releases)
+            .where(and(eq(releases.detailsFetched, true), scope.releases))
+            .groupBy(releases.labelId)
+        : Promise.resolve([]),
+      needsLabelProgress
+        ? db
+            .select({ labelId: releases.labelId, value: count() })
+            .from(tracks)
+            .innerJoin(releases, eq(tracks.releaseId, releases.id))
+            .where(and(scope.tracks, scope.releases))
+            .groupBy(releases.labelId)
+        : Promise.resolve([]),
     ]);
 
-  const thumbByLabel = new Map<number, string>();
-  for (const row of releaseThumbRows) {
-    if (!row.thumbUrl) continue;
-    if (!thumbByLabel.has(row.labelId)) {
-      thumbByLabel.set(row.labelId, row.thumbUrl);
+    const thumbByLabel = new Map<number, string>();
+    for (const row of releaseThumbRows) {
+      if (!row.thumbUrl) continue;
+      if (!thumbByLabel.has(row.labelId)) {
+        thumbByLabel.set(row.labelId, row.thumbUrl);
+      }
     }
-  }
 
-  const releaseCountByLabel = new Map<number, number>();
-  for (const row of releaseCountRows) {
-    releaseCountByLabel.set(row.labelId, row.value);
-  }
-  const fetchedReleaseCountByLabel = new Map<number, number>();
-  for (const row of fetchedReleaseRows) {
-    fetchedReleaseCountByLabel.set(row.labelId, row.value);
-  }
-  const trackCountByLabel = new Map<number, number>();
-  for (const row of trackCountRows) {
-    trackCountByLabel.set(row.labelId, row.value);
-  }
-  const existingReleaseIds = includeRecommendations
-    ? (
-        await db
-          .select({ releaseId: releases.id })
-          .from(releases)
-          .where(scope.releases)
-      ).map((row) => row.releaseId)
-    : [];
+    const releaseCountByLabel = new Map<number, number>();
+    for (const row of releaseCountRows) {
+      releaseCountByLabel.set(row.labelId, row.value);
+    }
+    const fetchedReleaseCountByLabel = new Map<number, number>();
+    for (const row of fetchedReleaseRows) {
+      fetchedReleaseCountByLabel.set(row.labelId, row.value);
+    }
+    const trackCountByLabel = new Map<number, number>();
+    for (const row of trackCountRows) {
+      trackCountByLabel.set(row.labelId, row.value);
+    }
+    const existingReleaseIds = includeRecommendations
+      ? (
+          await db
+            .select({ releaseId: releases.id })
+            .from(releases)
+            .where(scope.releases)
+        ).map((row) => row.releaseId)
+      : [];
 
-  const labelsWithMetadata = labelRows.map((label) => {
-    const loadedReleaseCount = releaseCountByLabel.get(label.id) ?? 0;
-    const fetchedReleaseCount = fetchedReleaseCountByLabel.get(label.id) ?? 0;
-    const loadedTrackCount = trackCountByLabel.get(label.id) ?? 0;
-    const pagesDone = label.currentPage > Math.max(1, label.totalPages);
-    const releasesFullyLoaded = loadedReleaseCount > 0 && fetchedReleaseCount >= loadedReleaseCount;
-    const tracksFullyLoaded = pagesDone && releasesFullyLoaded;
-    const summaryText =
-      label.blurb ||
-      `${loadedReleaseCount} release${loadedReleaseCount === 1 ? "" : "s"} loaded • page ${label.currentPage}/${Math.max(1, label.totalPages)}`;
+    const labelsWithMetadata = labelRows.map((label) => {
+      const loadedReleaseCount = releaseCountByLabel.get(label.id) ?? 0;
+      const fetchedReleaseCount = fetchedReleaseCountByLabel.get(label.id) ?? 0;
+      const loadedTrackCount = trackCountByLabel.get(label.id) ?? 0;
+      const pagesDone = label.currentPage > Math.max(1, label.totalPages);
+      const releasesFullyLoaded = loadedReleaseCount > 0 && fetchedReleaseCount >= loadedReleaseCount;
+      const tracksFullyLoaded = pagesDone && releasesFullyLoaded;
+      const summaryText =
+        label.blurb ||
+        `${loadedReleaseCount} release${loadedReleaseCount === 1 ? "" : "s"} loaded • page ${label.currentPage}/${Math.max(1, label.totalPages)}`;
 
-    return {
-      ...label,
-      imageUrl: label.imageUrl || thumbByLabel.get(label.id) || null,
-      summaryText,
-      loadedTrackCount,
-      loadedReleaseCount,
-      fetchedReleaseCount,
-      tracksFullyLoaded,
-    };
-  });
-
-  const scopedTotals = await Promise.all([
-    db
-      .select({ value: count() })
-      .from(tracks)
-      .innerJoin(releases, eq(tracks.releaseId, releases.id))
-      .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(tracks.listened, false), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)),
-    db
-      .select({ value: count() })
-      .from(queueItems)
-      .innerJoin(releases, eq(queueItems.releaseId, releases.id))
-      .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(queueItems.status, "played"), eq(labels.active, true), scope.queueItems, scope.releases, scope.labels)),
-    db
-      .select({ value: count() })
-      .from(tracks)
-      .innerJoin(releases, eq(tracks.releaseId, releases.id))
-      .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(tracks.listened, true), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)),
-    db
-      .select({ value: count() })
-      .from(tracks)
-      .innerJoin(releases, eq(tracks.releaseId, releases.id))
-      .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(tracks.saved, true), eq(labels.active, true), scope.tracks, scope.releases, scope.labels)),
-    db
-      .select({ value: count() })
-      .from(releases)
-      .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(releases.wishlist, true), eq(labels.active, true), scope.releases, scope.labels)),
-  ]);
-
-  const [labelsErrorCount, lowConfidenceCount] = await Promise.all([
-    db.select({ value: count() }).from(labels).where(and(eq(labels.status, "error"), eq(labels.active, true), scope.labels)),
-    db
-      .select({ value: count() })
-      .from(releases)
-      .innerJoin(labels, eq(releases.labelId, labels.id))
-      .where(and(eq(releases.youtubeMatched, true), lt(releases.matchConfidence, 0.4), eq(labels.active, true), scope.releases, scope.labels)),
-  ]);
-
-  const erroredLabels = await db.query.labels.findMany({
-    where: and(eq(labels.status, "error"), eq(labels.active, true), scope.labels),
-    orderBy: [asc(labels.updatedAt)],
-    limit: 20,
-  });
-
-  const recentlyPlayed = await db.query.queueItems.findMany({
-    where: and(eq(queueItems.status, "played"), scope.queueItems),
-    orderBy: [desc(queueItems.id)],
-    limit: 12,
-    with: { track: true, release: true, label: true },
-  });
-
-  let recommendations: Awaited<ReturnType<typeof buildDeepRecommendations>> = [];
-  let externalRecommendations: Awaited<ReturnType<typeof buildExternalRecommendations>> = [];
-  if (includeRecommendations) {
-    const [candidateTracks, listenedTracks, playedQueueItems] = await Promise.all([
-      db.query.tracks.findMany({
-        where: and(eq(tracks.listened, false), scope.tracks),
-        orderBy: [asc(tracks.id)],
-        limit: 3600,
-        with: { release: { with: { label: true } } },
-      }),
-      db.query.tracks.findMany({
-        where: and(eq(tracks.listened, true), scope.tracks),
-        orderBy: [asc(tracks.id)],
-        limit: 5200,
-        with: { release: { with: { label: true } } },
-      }),
-      db.query.queueItems.findMany({
-        where: and(eq(queueItems.status, "played"), isNotNull(queueItems.trackId), scope.queueItems),
-        orderBy: [desc(queueItems.id)],
-        limit: 2400,
-        columns: { trackId: true, releaseId: true, labelId: true },
-      }),
-    ]);
-    recommendations = await buildDeepRecommendations({
-      candidateTracks,
-      listenedTracks,
-      playedQueueItems,
-      limit: 24,
+      return {
+        ...label,
+        imageUrl: label.imageUrl || thumbByLabel.get(label.id) || null,
+        summaryText,
+        loadedTrackCount,
+        loadedReleaseCount,
+        fetchedReleaseCount,
+        tracksFullyLoaded,
+      };
     });
-    try {
-      externalRecommendations = await buildExternalRecommendations({
+
+    const needsUnplayedTracksMetric = needsListeningMetrics;
+    const needsPlayedItemsMetric = needsListeningMetrics || needsPlayedMetrics;
+    const needsDoneTracksMetric = needsListeningMetrics || needsPlayedMetrics;
+    const needsSavedTracksMetric = needsListeningMetrics;
+
+    const scopedTotals = await Promise.all([
+      needsUnplayedTracksMetric
+        ? db
+            .select({ value: count() })
+            .from(tracks)
+            .innerJoin(releases, eq(tracks.releaseId, releases.id))
+            .innerJoin(labels, eq(releases.labelId, labels.id))
+            .where(and(eq(tracks.listened, false), eq(labels.active, true), scope.tracks, scope.releases, scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+      needsPlayedItemsMetric
+        ? db
+            .select({ value: count() })
+            .from(queueItems)
+            .innerJoin(releases, eq(queueItems.releaseId, releases.id))
+            .innerJoin(labels, eq(releases.labelId, labels.id))
+            .where(and(eq(queueItems.status, "played"), eq(labels.active, true), scope.queueItems, scope.releases, scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+      needsDoneTracksMetric
+        ? db
+            .select({ value: count() })
+            .from(tracks)
+            .innerJoin(releases, eq(tracks.releaseId, releases.id))
+            .innerJoin(labels, eq(releases.labelId, labels.id))
+            .where(and(eq(tracks.listened, true), eq(labels.active, true), scope.tracks, scope.releases, scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+      needsSavedTracksMetric
+        ? db
+            .select({ value: count() })
+            .from(tracks)
+            .innerJoin(releases, eq(tracks.releaseId, releases.id))
+            .innerJoin(labels, eq(releases.labelId, labels.id))
+            .where(and(eq(tracks.saved, true), eq(labels.active, true), scope.tracks, scope.releases, scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+      needsWishlistMetric
+        ? db
+            .select({ value: count() })
+            .from(releases)
+            .innerJoin(labels, eq(releases.labelId, labels.id))
+            .where(and(eq(releases.wishlist, true), eq(labels.active, true), scope.releases, scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+    ]);
+
+    const [labelsErrorCount, lowConfidenceCount] = await Promise.all([
+      needsErrorSummary
+        ? db.select({ value: count() }).from(labels).where(and(eq(labels.status, "error"), eq(labels.active, true), scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+      needsErrorSummary
+        ? db
+            .select({ value: count() })
+            .from(releases)
+            .innerJoin(labels, eq(releases.labelId, labels.id))
+            .where(and(eq(releases.youtubeMatched, true), lt(releases.matchConfidence, 0.4), eq(labels.active, true), scope.releases, scope.labels))
+        : Promise.resolve([{ value: 0 }]),
+    ]);
+
+    const erroredLabels = needsErrorSummary
+      ? await db.query.labels.findMany({
+          where: and(eq(labels.status, "error"), eq(labels.active, true), scope.labels),
+          orderBy: [asc(labels.updatedAt)],
+          limit: 20,
+        })
+      : [];
+
+    let recommendations: Awaited<ReturnType<typeof buildDeepRecommendations>> = [];
+    let externalRecommendations: Awaited<ReturnType<typeof buildExternalRecommendations>> = [];
+    if (includeRecommendations) {
+      const [candidateTracks, listenedTracks, playedQueueItems] = await Promise.all([
+        db.query.tracks.findMany({
+          where: and(eq(tracks.listened, false), scope.tracks),
+          orderBy: [asc(tracks.id)],
+          limit: 3600,
+          with: { release: { with: { label: true } } },
+        }),
+        db.query.tracks.findMany({
+          where: and(eq(tracks.listened, true), scope.tracks),
+          orderBy: [asc(tracks.id)],
+          limit: 5200,
+          with: { release: { with: { label: true } } },
+        }),
+        db.query.queueItems.findMany({
+          where: and(eq(queueItems.status, "played"), isNotNull(queueItems.trackId), scope.queueItems),
+          orderBy: [desc(queueItems.id)],
+          limit: 2400,
+          columns: { trackId: true, releaseId: true, labelId: true },
+        }),
+      ]);
+      recommendations = await buildDeepRecommendations({
         candidateTracks,
         listenedTracks,
-        activeLabels: labelRows.filter((label) => label.active).map((label) => ({ id: label.id, name: label.name })),
-        existingReleaseIds,
-        existingLabelNames: allLabelNameRows.map((label) => label.name),
-        limit: 18,
+        playedQueueItems,
+        limit: 24,
       });
-    } catch {
-      externalRecommendations = [];
+      try {
+        externalRecommendations = await buildExternalRecommendations({
+          candidateTracks,
+          listenedTracks,
+          activeLabels: labelRows.filter((label) => label.active).map((label) => ({ id: label.id, name: label.name })),
+          existingReleaseIds,
+          existingLabelNames: allLabelNameRows.map((label) => label.name),
+          limit: 18,
+        });
+      } catch {
+        externalRecommendations = [];
+      }
     }
-  }
 
     return {
       labels: labelsWithMetadata,
@@ -319,7 +352,7 @@ export async function getDashboardData(options?: { includeRecommendations?: bool
         releasesLowConfidence: lowConfidenceCount[0]?.value ?? 0,
       },
       erroredLabels,
-      recentlyPlayed,
+      recentlyPlayed: [],
       recommendations,
       externalRecommendations,
     };

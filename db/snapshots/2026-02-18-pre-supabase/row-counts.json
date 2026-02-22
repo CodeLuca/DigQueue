@@ -1,0 +1,10 @@
+[{"table_name":"labels","row_count":74},
+{"table_name":"releases","row_count":1099},
+{"table_name":"tracks","row_count":1692},
+{"table_name":"youtube_matches","row_count":449},
+{"table_name":"queue_items","row_count":136},
+{"table_name":"feedback_events","row_count":216},
+{"table_name":"release_signals","row_count":39},
+{"table_name":"api_cache","row_count":845},
+{"table_name":"app_secrets","row_count":1},
+{"table_name":"__drizzle_migrations","row_count":10}]

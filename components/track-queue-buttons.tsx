@@ -88,12 +88,12 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
 
   return (
     <div className="space-y-1">
-      <div className="flex flex-wrap gap-1">
+      <div className="grid grid-cols-2 gap-1 sm:flex sm:flex-wrap">
         <Link
           href={youtubeSearchUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-8 items-center rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface2)]"
+          className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface2)] sm:justify-start"
         >
           YouTube
         </Link>
@@ -101,6 +101,7 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
           type="button"
           size="sm"
           variant="outline"
+          className="w-full justify-center sm:w-auto sm:justify-start"
           onClick={() => void enqueue(false)}
           disabled={loading !== null || youtubeQuotaExceeded}
           title="Add to queue (plays after current/up-next items)"
@@ -112,6 +113,7 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
           type="button"
           size="sm"
           variant="secondary"
+          className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
           onClick={() => void enqueue(true)}
           disabled={loading !== null || youtubeQuotaExceeded}
           title="Play now in the mini-player"

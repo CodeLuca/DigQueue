@@ -8,6 +8,11 @@ import { logFeedbackEvent } from "@/lib/recommendations";
 import { getBandcampTrackVideosForRelease, getDiscogsTrackVideos } from "@/lib/track-video-sources";
 import { isYoutubeFatalConfigError, searchYoutube } from "@/lib/youtube";
 
+const NEXT_QUEUE_CANDIDATE_LIMIT = 120;
+const SHUFFLE_QUEUE_CANDIDATE_LIMIT = 300;
+const UP_NEXT_MULTIPLIER = 2;
+const UP_NEXT_MIN_FETCH = 40;
+
 function safeErrorMessage(error: unknown) {
   if (error instanceof Error) {
     const raw = error.message || "";
@@ -353,7 +358,7 @@ export async function nextQueueItem(userId: string, currentId?: number, mode: "t
   const items = await db.query.queueItems.findMany({
     where: condition,
     orderBy: [desc(queueItems.priority), desc(queueItems.bumpedAt), asc(queueItems.id)],
-    limit: 200,
+    limit: NEXT_QUEUE_CANDIDATE_LIMIT,
     with: {
       track: true,
       release: true,
@@ -380,7 +385,7 @@ export async function nextQueueItemShuffled(userId: string, currentId?: number, 
   const items = await db.query.queueItems.findMany({
     where: condition,
     orderBy: [desc(queueItems.priority), desc(queueItems.bumpedAt), asc(queueItems.id)],
-    limit: 1200,
+    limit: SHUFFLE_QUEUE_CANDIDATE_LIMIT,
     with: {
       track: true,
       release: true,
@@ -441,7 +446,7 @@ export async function upNext(userId: string, limit = 20) {
   const scope = userScope(userId);
   const items = await db.query.queueItems.findMany({
     where: and(eq(queueItems.status, "pending"), scope.queueItems),
-    limit: Math.max(limit * 3, 60),
+    limit: Math.max(limit * UP_NEXT_MULTIPLIER, UP_NEXT_MIN_FETCH),
     orderBy: [desc(queueItems.priority), desc(queueItems.bumpedAt), asc(queueItems.id)],
     with: {
       track: true,

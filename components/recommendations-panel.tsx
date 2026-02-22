@@ -298,11 +298,12 @@ export function RecommendationsPanel({
               <p className="text-[11px] text-[var(--color-muted)]">Score {track.score.toFixed(1)}</p>
             </div>
             {track.reason ? <p className="mt-1 text-xs text-[var(--color-muted)]">{track.reason}</p> : null}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <div className="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
               <Button
                 type="button"
                 size="sm"
                 variant="secondary"
+                className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
                 disabled={loading}
                 onClick={() => void onQueue(track.id, true)}
                 title="Play this recommended track now"
@@ -315,6 +316,7 @@ export function RecommendationsPanel({
                 type="button"
                 size="sm"
                 variant="outline"
+                className="w-full justify-center sm:w-auto sm:justify-start"
                 disabled={loading}
                 onClick={() => void onQueue(track.id, false)}
                 title="Add this track to the front of your queue"
@@ -322,13 +324,22 @@ export function RecommendationsPanel({
               >
                 Queue Next
               </Button>
-              <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void onReviewed(track.id)} title="Mark this track as reviewed">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full justify-center sm:w-auto sm:justify-start"
+                disabled={loading}
+                onClick={() => void onReviewed(track.id)}
+                title="Mark this track as reviewed"
+              >
                 Reviewed
               </Button>
               <Button
                 type="button"
                 size="sm"
                 variant={track.saved ? "secondary" : "outline"}
+                className="w-full justify-center sm:w-auto sm:justify-start"
                 disabled={loading || Boolean(track.saved)}
                 onClick={() => void onSave(track.id)}
                 title="Save track locally (not Discogs wantlist)"
@@ -340,6 +351,7 @@ export function RecommendationsPanel({
                 type="button"
                 size="sm"
                 variant={release.wishlist ? "secondary" : "outline"}
+                className="w-full justify-center sm:w-auto sm:justify-start"
                 disabled={loading || Boolean(release.wishlist)}
                 onClick={() => void onAddRecordWishlist(track.id, track.releaseId)}
                 title="Add release to Discogs wishlist"
@@ -351,6 +363,7 @@ export function RecommendationsPanel({
                 type="button"
                 size="sm"
                 variant="ghost"
+                className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
                 disabled={loading}
                 onClick={() => void onDismissTrack(track.id, track.releaseId)}
                 title="Dismiss recommendation"
@@ -393,11 +406,12 @@ export function RecommendationsPanel({
                 <p className="text-[11px] text-[var(--color-muted)]">Score {item.score.toFixed(1)}</p>
               </div>
               <p className="mt-1 text-xs text-[var(--color-muted)]">{item.reason}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <div className="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
+                  className="w-full justify-center sm:w-auto sm:justify-start"
                   disabled={loading}
                   onClick={() => void onExternalAddLabel(item.releaseId)}
                   title="Create and activate label from this release"
@@ -409,6 +423,7 @@ export function RecommendationsPanel({
                   type="button"
                   size="sm"
                   variant="outline"
+                  className="w-full justify-center sm:w-auto sm:justify-start"
                   disabled={loading}
                   onClick={() => void onExternalWant(item.releaseId)}
                   title="Add record to Discogs wishlist"
@@ -420,16 +435,17 @@ export function RecommendationsPanel({
                   href={item.discogsUrl}
                   target="_blank"
                   rel="noreferrer"
-                className="inline-flex h-8 items-center justify-center rounded-md px-2.5 text-xs text-[var(--color-text)] transition-colors duration-150 hover:bg-[var(--color-surface2)]/80"
-                title="Open release on Discogs"
-                aria-label="Open release on Discogs"
-              >
-                Discogs
-              </a>
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--color-border)] px-2.5 text-xs text-[var(--color-text)] transition-colors duration-150 hover:bg-[var(--color-surface2)]/80 sm:justify-start"
+                  title="Open release on Discogs"
+                  aria-label="Open release on Discogs"
+                >
+                  Discogs
+                </a>
                 <Button
                   type="button"
                   size="sm"
                   variant="ghost"
+                  className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
                   disabled={loading}
                   onClick={() => void onExternalDismiss(item.releaseId)}
                   title="Dismiss recommendation"

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const userId = await requireCurrentAppUserId();
   const rawLimit = new URL(request.url).searchParams.get("limit");
   const parsedLimit = rawLimit ? Number(rawLimit) : 24;
-  const limit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(100, Math.floor(parsedLimit))) : 24;
+  const limit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(60, Math.floor(parsedLimit))) : 24;
   const items = await upNext(userId, limit);
   return NextResponse.json({ items });
 }

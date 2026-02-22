@@ -27,6 +27,7 @@ import {
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { LabelDeleteButton } from "@/components/label-delete-button";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
 import { SyncSavedToDiscogsButton } from "@/components/sync-saved-to-discogs-button";
@@ -81,7 +82,7 @@ export default async function HomePage({
   }
 
   const [data, listenData, wishlistData, playedReviewedData, bandcampWishlist] = await Promise.all([
-    getDashboardData({ includeRecommendations: activeTab === "recommendations" }),
+    getDashboardData({ includeRecommendations: activeTab === "recommendations", tab: activeTab }),
     activeTab === "step-2" ? getToListenData(undefined, false) : Promise.resolve(null),
     activeTab === "wishlist" ? getWishlistData(undefined, false) : Promise.resolve(null),
     activeTab === "played-reviewed" ? getPlayedReviewedData(undefined, false) : Promise.resolve(null),
@@ -508,35 +509,41 @@ export default async function HomePage({
               </div>
 
               {data.erroredLabels.length > 0 ? (
-                <div className="rounded-md border border-rose-500/30 bg-rose-950/10 p-2">
+                <div className="rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_90%,black_10%)] p-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="inline-flex items-center gap-1 text-xs font-semibold text-rose-100">
+                      <p className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-text)]">
                         <AlertTriangle className="h-3.5 w-3.5" />
                         Processing incidents
                       </p>
-                      <p className="text-[11px] text-rose-100/70">
+                      <p className="text-[11px] text-[var(--color-muted)]">
                         {data.erroredLabels.length} active labels need retry or config fixes.
                       </p>
                     </div>
                     <form action={retryErroredLabelsAction}>
-                      <Button type="submit" variant="secondary" size="sm" className="h-7 px-2 text-[11px]">
+                      <FormSubmitButton
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        pendingText="Resetting..."
+                      >
                         <RefreshCcw className="h-3 w-3" />
                         Reset
-                      </Button>
+                      </FormSubmitButton>
                     </form>
                   </div>
                   <div className="mt-2 space-y-1.5">
                     {data.erroredLabels.slice(0, 5).map((label) => {
                       const visibleLastError = getVisibleLabelError(label.lastError);
                       return (
-                        <div key={label.id} className="rounded-md border border-rose-500/25 bg-black/10 p-2">
+                        <div key={label.id} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2">
                           <div className="mb-1 flex flex-wrap items-center justify-between gap-1.5">
                             <div className="min-w-0">
-                              <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-medium text-rose-50 hover:text-[var(--color-accent)]">
+                              <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-medium text-[var(--color-text)] hover:text-[var(--color-accent)]">
                                 {label.name}
                               </Link>
-                              <p className="text-[10px] text-rose-100/60">
+                              <p className="text-[10px] text-[var(--color-muted)]">
                                 Last update {new Date(label.updatedAt).toLocaleString()}
                               </p>
                             </div>
@@ -548,13 +555,19 @@ export default async function HomePage({
                               </Link>
                               <form action={retryLabelAction}>
                                 <input type="hidden" name="labelId" value={label.id} />
-                                <Button type="submit" size="sm" variant="secondary" className="h-7 px-2 text-[11px]">
+                                <FormSubmitButton
+                                  type="submit"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-[11px]"
+                                  pendingText="Retrying..."
+                                >
                                   Retry
-                                </Button>
+                                </FormSubmitButton>
                               </form>
                             </div>
                           </div>
-                          {visibleLastError ? <p className="line-clamp-2 text-[11px] text-rose-100/85">{visibleLastError}</p> : null}
+                          {visibleLastError ? <p className="line-clamp-2 text-[11px] text-[var(--color-muted)]">{visibleLastError}</p> : null}
                         </div>
                       );
                     })}

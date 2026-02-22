@@ -17,6 +17,7 @@ import {
   Play,
   PlusCircle,
   RefreshCcw,
+  SkipForward,
   Shuffle,
   X,
 } from "lucide-react";
@@ -628,6 +629,8 @@ export function ListenInboxClient({
         window.dispatchEvent(new CustomEvent("digqueue:next"));
       }
       router.refresh();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Unable to mark release reviewed.");
     } finally {
       setReviewingReleaseId(null);
     }
@@ -1482,7 +1485,7 @@ export function ListenInboxClient({
                           title="Mark all tracks on this release reviewed and skip to the next release"
                           aria-label="Mark all tracks on this release reviewed and skip to the next release"
                         >
-                          {reviewingReleaseId === item.releaseId ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Disc3 className="h-4 w-4" />}
+                          {reviewingReleaseId === item.releaseId ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <SkipForward className="h-4 w-4" />}
                         </Button>
                         <span
                           role="tooltip"

@@ -145,6 +145,7 @@ export function MiniPlayer() {
   const middlePreviewSeekPendingForIdRef = useRef<number | null>(null);
   const listeningScopeTrackIdsRef = useRef<number[]>([]);
   const listeningScopeEnabledRef = useRef(false);
+  const lastQueueDedupeAtRef = useRef(0);
   const releaseDetailsCacheRef = useRef(new Map<number, ReleaseDetailsApiResponse>());
   const [current, setCurrent] = useState<QueueApiItem | null>(null);
   const [history, setHistory] = useState<QueueApiItem[]>([]);
@@ -207,6 +208,11 @@ export function MiniPlayer() {
     setQueueLoading(true);
     setQueueError(null);
     try {
+      const now = Date.now();
+      if (now - lastQueueDedupeAtRef.current > 60_000) {
+        lastQueueDedupeAtRef.current = now;
+        void fetch("/api/queue/maintenance/dedupe", { method: "POST" }).catch(() => null);
+      }
       const response = await fetch("/api/queue/list?limit=30");
       if (!response.ok) throw new Error("Unable to load queue.");
       const body = (await response.json()) as { items?: QueueApiItem[] };
@@ -1186,7 +1192,7 @@ export function MiniPlayer() {
                   {todoLoading === "reviewed_release" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Disc3 className="h-5 w-5" />
+                    <SkipForward className="h-5 w-5" />
                   )}
                 </Button>
                 <span role="tooltip" className={tooltipClass}>Mark all tracks on this release reviewed and skip to the next release</span>

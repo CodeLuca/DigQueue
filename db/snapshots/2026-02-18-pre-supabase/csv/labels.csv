@@ -1,0 +1,75 @@
+id,name,discogs_url,status,current_page,total_pages,added_at,updated_at,retry_count,last_error,active,blurb,image_url,notable_releases_json,source_type
+-900001,"Discogs Wants",https://www.discogs.com/mywants,complete,1,1,1771445244030,1771446596151,0,,0,,,[],derived_want
+83,SuperBra,https://www.discogs.com/label/83,complete,1,1,1771447327006,1771454594938,0,,0,,,[],derived_want
+238,"Hooj Choons",https://www.discogs.com/label/238,complete,1,1,1771447326988,1771454594907,0,,0,,,[],derived_want
+254,Maurizio,https://www.discogs.com/label/254,complete,1,1,1771447326993,1771454594916,0,,0,,,[],derived_want
+891,Overdrive,https://www.discogs.com/label/891,complete,1,1,1771447326996,1771454594920,0,,0,,,[],derived_want
+1327,Central,https://www.discogs.com/label/1327,complete,1,1,1771447326978,1771454594902,0,,0,,,[],derived_want
+1367,Bio,https://www.discogs.com/label/1367,complete,1,1,1771447326970,1771454594892,0,,0,,,[],derived_want
+1426,Moodmusic,https://www.discogs.com/label/1426,complete,1,1,1771447326994,1771454594916,0,,0,,,[],derived_want
+1558,"Plink Plonk",https://www.discogs.com/label/1558,complete,1,1,1771447326999,1771454594922,0,,0,,,[],derived_want
+1977,"Marc et Claude's",https://www.discogs.com/label/1977,complete,1,1,1771447326993,1771454594915,0,,0,,,[],derived_want
+3923,"3D Records",https://www.discogs.com/label/3923,complete,1,1,1771447326957,1771454594883,0,,0,,,[],derived_want
+5240,"Airgap Records",https://www.discogs.com/label/5240,complete,1,1,1771447326963,1771454594886,0,,0,,,[],derived_want
+6378,"Viscous Disc",https://www.discogs.com/label/6378,complete,1,1,1771447327008,1771454594942,0,,0,,,[],derived_want
+6454,"Phono Elements",https://www.discogs.com/label/6454,complete,1,1,1771447326997,1771454594921,0,,0,,,[],derived_want
+7580,"Bitboutique Records",https://www.discogs.com/label/7580,complete,1,1,1771447326974,1771454594894,0,,0,,,[],derived_want
+9459,"Bionic Beat Recordings",https://www.discogs.com/label/9459,complete,1,1,1771447326973,1771454594893,0,,0,,,[],derived_want
+10519,"Spacemate Recordings",https://www.discogs.com/label/10519,complete,1,1,1771447327002,1771454594933,0,,0,,,[],derived_want
+12756,"Moto Music",https://www.discogs.com/label/12756,complete,1,1,1771447326994,1771454594916,0,,0,,,[],derived_want
+21050,"Styrax Records",https://www.discogs.com/label/21050,complete,1,1,1771447327002,1771454594937,0,,0,,,[],derived_want
+21606,"Dunloop Recordings",https://www.discogs.com/label/21606,complete,1,1,1771447326980,1771454594903,0,,0,,,[],derived_want
+22766,Restricted,https://www.discogs.com/label/22766,complete,1,1,1771447326999,1771454594927,0,,0,,,[],derived_want
+26938,Casablanca,https://www.discogs.com/label/26938,complete,1,1,1771447326976,1771454594899,0,,0,,,[],derived_want
+36714,"Firecracker Recordings",https://www.discogs.com/label/36714,complete,1,1,1771447326981,1771454594904,0,,0,,,[],derived_want
+38414,"Music Man Records",https://www.discogs.com/label/38414,complete,1,1,1771447326995,1771454594917,0,,0,,,[],derived_want
+46332,"Connaisseur Recordings",https://www.discogs.com/label/46332,complete,1,1,1771447326979,1771454594903,0,,0,,,[],derived_want
+117386,"Future Times",https://www.discogs.com/label/117386,complete,1,1,1771447326982,1771454594906,0,,0,,,[],derived_want
+144751,Giegling,https://www.discogs.com/label/144751,complete,1,1,1771447326983,1771454594907,0,,0,,,[],derived_want
+147719,Denude,https://www.discogs.com/label/147719,processing,2,1,1771432369752,1771441883798,0,,0,,,[],workspace
+192926,"Aniara Recordings",https://www.discogs.com/label/192926,complete,1,1,1771447326964,1771454594886,0,,0,,,[],derived_want
+344431,"Arctic (6)",https://www.discogs.com/label/344431,complete,1,1,1771447326968,1771454594890,0,,0,,,[],derived_want
+363756,"Mood Hut",https://www.discogs.com/label/363756-Mood-Hut,complete,2,1,1771421475000,1771452205610,90,,0,"Label based in Vancouver, British Columbia, Canada.",https://i.discogs.com/CsLjPAbAkybcbMQRoZj_idRLJtH7roTSjITKy5CM_yA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9MLTM2Mzc1/Ni0xNTAzNTE2NjAx/LTM2MDUucG5n.jpeg,"[""Opening The Door"",""Falling"",""Our Time"",""Music For Beings""]",workspace
+473973,"Art Of Dark",https://www.discogs.com/label/473973,processing,2,1,1771432350016,1771441878764,0,,0,,,[],workspace
+487390,Outlaw,https://www.discogs.com/label/487390,complete,1,1,1771447326996,1771454594920,0,,0,,,[],derived_want
+541304,"Delsin Records",https://www.discogs.com/label/541304-Delsin-Records,processing,2,3,1771421475000,1771452214501,0,,0,"Company based in Netherlands. Use this for copyright and publisher credits only. For label instead use Delsin.",https://i.discogs.com/QUpFk513hF7VaYrukC6JKPkU8McesB5a01FDfFDJF80/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9MLTU0MTMw/NC0xNDA2ODMwMzIx/LTk4NjYuanBlZw.jpeg,"[""I Would Do Anything For A Dairylea"",""The Lost Day EP"",""Service Pack"",""Pharaoh's Doorway EP""]",workspace
+738872,S.O.N.S,https://www.discogs.com/label/738872,complete,1,1,1771447327000,1771454594928,0,,0,,,[],derived_want
+739381,"Wisdom Teeth",https://www.discogs.com/label/739381,complete,1,1,1771447327009,1771454594943,0,,0,,,[],derived_want
+819847,"Acting Press",https://www.discogs.com/label/819847,complete,1,1,1771447326958,1771454594885,0,,0,,,[],derived_want
+847737,"Malka Tuti",https://www.discogs.com/label/847737,processing,2,2,1771432357999,1771441882477,0,,0,,,[],workspace
+852291,"Domain Records",https://www.discogs.com/label/852291,processing,2,4,1771432368815,1771441883249,0,,0,,,[],workspace
+921036,"Craigie Knowes",https://www.discogs.com/label/921036,processing,2,2,1771432352884,1771441879994,0,,0,,,[],workspace
+952963,Atipic,https://www.discogs.com/label/952963,complete,2,1,1771421475000,1771454594891,1,,0,,,[],workspace
+990172,"Black Ice",https://www.discogs.com/label/990172,complete,1,1,1771447326975,1771454594894,0,,0,,,[],derived_want
+1015857,"Animals On Psychedelics",https://www.discogs.com/label/1015857,complete,2,1,1771421475000,1771454594889,1,,0,"Animals On Psychedelics is a label out of Cleethorpes United Kingdom, founded in 2015 and run by DJ/promoter Carl_H (Carl Hardy). Through a combination of name, artwork and musical output, Animals On Psychedelics focuses on the more tripped out, spacey side of electronic music. Distributed by Off The Grid Distribution, Berlin.",https://i.discogs.com/eVs-tKRiLk18ywAdOfzIBH3fIrzQ1-Rmmf0oR_opN-M/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9MLTEwMTU4/NTctMTYwMDI5NTk1/NS0zMzgzLnBuZw.jpeg,"[""Dream Forest EP"",""Heavy Consciousness"",""Butter EP"",""Sunken Gardens""]",workspace
+1038740,"Discarded Gems",https://www.discogs.com/label/1038740-Discarded-Gems,complete,2,1,1771421475000,1771451216601,1,,0,"Vinyl record imprint based in Berlin.",https://i.discogs.com/DN5KNvdT1ru9RuWbkKMl_Ka8lpYl4ZsKbND0ZcjB5cw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9MLTEwMzg3/NDAtMTQ2ODU3ODQ5/Ni05NDY3LmpwZWc.jpeg,"[""Paradise City Breakers EP"",""Tribute To The Channel"",""Overseas"",""Trippy Land""]",workspace
+1049780,"Secret Society Chile",https://www.discogs.com/label/1049780,complete,1,1,1771447327001,1771454594929,0,,0,,,[],derived_want
+1056771,"Lonely Planets Rec",https://www.discogs.com/label/1056771,complete,1,1,1771447326992,1771454594912,0,,0,,,[],derived_want
+1120990,"Kalahari Oyster Cult",https://www.discogs.com/label/1120990-Kalahari-Oyster-Cult,processing,2,2,1771421475000,1771447959798,0,,0,"Belgium-based label run by Colin Volvert (Rey Colino). Distributed by One Eye Witness",https://i.discogs.com/OogoIX0XD41-aoAWOvgW7IGYsoqbVYIA3iEQyUwqqLc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9MLTExMjA5/OTAtMTYwNDQ0MjA2/NS00NDk4LmpwZWc.jpeg,"[""X-Ray Records 1992-1994"",""Elsewhere MMDLXXVI"",""Systems E.P. 1"",""Plooi""]",workspace
+1121895,Revoke,https://www.discogs.com/label/1121895,complete,1,1,1771447327000,1771454594927,0,,0,,,[],derived_want
+1125646,"Lost Palms",https://www.discogs.com/label/1125646,complete,1,1,1771447326993,1771454594914,0,,0,,,[],derived_want
+1159164,"In Dust We Trust",https://www.discogs.com/label/1159164,complete,1,1,1771447326989,1771454594911,0,,0,,,[],derived_want
+1247544,"Harmony Rec.",https://www.discogs.com/label/1247544,processing,2,1,1771432347305,1771441880723,0,,0,,,[],workspace
+1287914,Superluminal,https://www.discogs.com/label/1287914-Superluminal,processing,2,1,1771421475000,1771447968149,0,,0,"Electronic music record label based in Berlin, Germany. Owned by Matthias (52). The majority of catalogs are independently distributed by the artist.",https://i.discogs.com/RatR2BdaVu4Z6F58GDj4EOfFNA-uy6rxpHg5-yGjjC8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9MLTEyODc5/MTQtMTUwMDczNDkx/NS02MzQ5LmpwZWc.jpeg,"[""Wisdom Keepers"",""DTRT Dream During A Cold Winter"",""Hyper Destiny"",""Rituals LP""]",workspace
+1390196,NAFF,https://www.discogs.com/label/1390196-NAFF,error,2,1,1771421475000,1771441932994,1,"Discogs rate limit retries exhausted.",0,,,[],workspace
+1411307,"EYA Records",https://www.discogs.com/label/1411307,processing,2,1,1771432360956,1771441883134,0,,0,,,[],workspace
+1438825,"Planet Euphorique",https://www.discogs.com/label/1438825,processing,2,1,1771432355292,1771441881057,0,,0,,,[],workspace
+1468696,Shamandrum,https://www.discogs.com/label/1468696,complete,1,1,1771447327001,1771454594929,0,,0,,,[],derived_want
+1483632,"Blkmarket Music",https://www.discogs.com/label/1483632,complete,1,1,1771447326976,1771454594898,0,,0,,,[],derived_want
+1592903,"Fixed Rhythms",https://www.discogs.com/label/1592903,processing,2,1,1771432363531,1771441880928,0,,0,,,[],workspace
+1682339,"People, Places, Records",https://www.discogs.com/label/1682339-People-Places-Records,processing,2,1,1771421475000,1771441877287,0,,0,,,[],workspace
+1752374,"Pavilion (4)",https://www.discogs.com/label/1752374,complete,1,1,1771447326997,1771454594921,0,,0,,,[],derived_want
+1798608,"Animalia (3)",https://www.discogs.com/label/1798608,complete,2,1,1771447326965,1771454594888,0,,1,"A colourful and diverse platform for the lesser known producers of Melbourne, born in 2020. Curated by Kia (23).",https://i.discogs.com/knDhKApLvV2y2cgWH7fn_zntWo5FFF6G6gNIzVvji_U/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9MLTE3OTg2/MDgtMTU4NTY2MTAy/Mi00MTQ2LmpwZWc.jpeg,"[""Animalia - 001"",""Numina"",""AbiaA"",""Elemental""]",workspace
+1913682,"One Eye Witness",https://www.discogs.com/label/1913682-One-Eye-Witness,error,2,4,1771421475000,1771441935849,1,"Discogs rate limit retries exhausted.",0,,,[],workspace
+1923234,"Electric Shapes",https://www.discogs.com/label/1923234,complete,1,1,1771447326981,1771454594904,0,,0,,,[],derived_want
+1927891,"Tru Community",https://www.discogs.com/label/1927891,complete,1,1,1771447327007,1771454594939,0,,0,,,[],derived_want
+2223778,"High Priestess Recordings",https://www.discogs.com/label/2223778,processing,2,1,1771432344820,1771441878856,0,,0,,,[],workspace
+2430592,Return_backspace,https://www.discogs.com/label/2430592,processing,2,1,1771432367089,1771441887209,0,,0,,,[],workspace
+2891648,"Junction Forest",https://www.discogs.com/label/2891648,complete,1,1,1771447326992,1771454594912,0,,0,,,[],derived_want
+2910968,"People & Places",https://www.discogs.com/label/2910968-People-Places,error,2,1,1771421475000,1771441937374,1,"Discogs rate limit retries exhausted.",0,,,[],workspace
+3373479,"Hidden Folder",https://www.discogs.com/label/3373479,processing,2,1,1771432343115,1771441878168,0,,0,,,[],workspace
+3496129,"Iceman Records.",https://www.discogs.com/label/3496129,complete,1,1,1771447326989,1771454594908,0,,0,,,[],derived_want
+3504445,"Lirica Archives",https://www.discogs.com/label/3504445-Lirica-Archives,processing,2,1,1771421475000,1771441876453,0,,0,,,[],workspace
+3803408,"Lirica White Series",https://www.discogs.com/label/3803408-Lirica-White-Series,complete,2,1,1771421475000,1771441897379,0,,0,,,[],workspace
+4369585,"Ekstasis (2)",https://www.discogs.com/label/4369585,complete,1,1,1771447326980,1771454594903,0,,0,,,[],derived_want
+4377691,Intermissions,https://www.discogs.com/label/4377691,complete,1,1,1771447326991,1771454594911,0,,0,,,[],derived_want

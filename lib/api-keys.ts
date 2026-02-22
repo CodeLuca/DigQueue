@@ -27,7 +27,7 @@ export async function getApiKeys(): Promise<ApiKeys> {
   let data: ApiKeys;
   try {
     const row = await db.query.appSecrets.findFirst({
-      where: sql`${appSecrets.userId}::text = ${userId}`,
+      where: sql`${appSecrets.userId} = ${userId}::uuid`,
     });
     data = {
       discogsToken: row?.discogsToken ?? null,
@@ -49,7 +49,7 @@ export async function setApiKeys(input: { discogsToken?: string; youtubeApiKey?:
   const youtubeApiKey = input.youtubeApiKey?.trim() || null;
 
   const existing = await db.query.appSecrets.findFirst({
-    where: sql`${appSecrets.userId}::text = ${userId}`,
+    where: sql`${appSecrets.userId} = ${userId}::uuid`,
   });
   if (existing) {
     await db
@@ -59,7 +59,7 @@ export async function setApiKeys(input: { discogsToken?: string; youtubeApiKey?:
         youtubeApiKey,
         updatedAt: now,
       })
-      .where(sql`${appSecrets.userId}::text = ${userId}`);
+      .where(sql`${appSecrets.userId} = ${userId}::uuid`);
     cache = null;
     return;
   }

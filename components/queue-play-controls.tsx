@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 
 export function QueuePlayControls() {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+    <div className="grid gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center">
       <Button
         type="button"
         size="sm"
+        className="w-full justify-center sm:w-auto sm:justify-start"
         title="Start playback in the mini-player from the next queued item"
         onClick={() => window.dispatchEvent(new CustomEvent("digqueue:next"))}
       >

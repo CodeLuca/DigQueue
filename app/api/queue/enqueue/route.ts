@@ -6,6 +6,7 @@ import { z } from "zod";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
+import { dedupePendingQueueItems } from "@/lib/queue-maintenance";
 import { getFirstDiscogsReleaseYoutubeVideoId } from "@/lib/discogs";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { findTrackSeedVideos } from "@/lib/track-video-sources";
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
   if (!track) {
     return NextResponse.json({ error: "Track not found" }, { status: 404 });
   }
+
+  // Keep pending queue clean for this track to avoid runaway duplicates from prior races/imports.
+  await dedupePendingQueueItems(userId, { trackId: track.id });
 
   const release = await db.query.releases.findFirst({ where: and(eq(releases.id, track.releaseId), eq(releases.userId, userId)) });
   const label = release ? await db.query.labels.findFirst({ where: and(eq(labels.id, release.labelId), eq(labels.userId, userId)) }) : null;

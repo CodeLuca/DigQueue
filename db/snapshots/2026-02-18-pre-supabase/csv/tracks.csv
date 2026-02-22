@@ -1,0 +1,1693 @@
+id,release_id,position,title,duration,artists_text,listened,wishlist,created_at,saved
+1,24573458,1,"If You Don't Know Why",5:57,"Jack Jutson",0,0,1771423169045,0
+2,24573458,2,"Opening The Door",3:53,"Jack Jutson",0,0,1771423169045,0
+3,24573458,3,"The Only Way ",4:29,"Jack Jutson",0,0,1771423169045,0
+4,24573458,4,"Only You Know Why",4:17,"Jack Jutson",0,0,1771423169045,0
+5,24573458,5,"Clues (Part I)",4:19,"Jack Jutson",0,0,1771423169046,0
+6,24573458,6,"Clues (Part II)",5:03,"Jack Jutson",0,0,1771423169046,0
+7,24573458,7,"I Saw Fire",4:08,"Jack Jutson",0,0,1771423169046,0
+8,24573458,8,"Closing The Door",5:50,"Jack Jutson",0,0,1771423169046,0
+9,24573458,9,"Only You Know Why / If You Don't Know Why (Perspective)",10:04,"Jack Jutson",0,0,1771423169046,0
+10,24573458,10,"Only You Know Why (Taupo Mix)",4:09,"Jack Jutson",0,0,1771423169046,0
+11,15373598,1,Falling,4:26,"Pender Street Steppers",0,0,1771423172225,0
+12,15373598,2,"Falling (Dub)",4:50,"Pender Street Steppers",0,0,1771423172225,0
+13,15373598,3,"Our Time",6:23,"Pender Street Steppers",0,0,1771423172225,0
+14,15373598,4,"Our Time (Dub)",5:57,"Pender Street Steppers",0,0,1771423172226,0
+15,14358569,A1,"Falling (Vocal)",4:17,"Pender Street Steppers",0,0,1771423174935,0
+16,14358569,A2,"Falling (Dub)",6:20,"Pender Street Steppers",0,0,1771423174935,0
+17,14358569,B1,"Our Time (Vocal)",6:23,"Pender Street Steppers",0,0,1771423174935,0
+18,14358569,B2,"Our Time (Dub)",5:57,"Pender Street Steppers",0,0,1771423174935,0
+19,9358185,A,"Roamin’",10:32,"Kinetic Electronix",0,0,1771423177846,0
+20,9358185,B1,DewDropInn,6:42,"Kinetic Electronix",0,0,1771423177846,0
+21,9358185,B2,"Newjack Bubble",7:05,"Kinetic Electronix",0,0,1771423177847,0
+22,9358185,C,"Spring Step",10:26,"Kinetic Electronix",0,0,1771423177848,0
+23,9358185,D1,"Low Moves",11:20,"Kinetic Electronix",0,0,1771423177848,0
+24,9358185,D2,Spirals,5:41,"Kinetic Electronix",0,0,1771423177848,0
+25,11704902,1,"Roamin’",10:31,"Kinetic Electronix",0,0,1771423180497,0
+26,11704902,2,"DewDroppinn II",6:48,"Kinetic Electronix",0,0,1771423180498,0
+27,11704902,3,"New Jack Bubble",7:05,"Kinetic Electronix",0,0,1771423180498,0
+28,11704902,4,"Spring Step",10:26,"Kinetic Electronix",0,0,1771423180498,0
+29,11704902,5,"Low Moves DJ Tool",11:10,"Kinetic Electronix",0,0,1771423180499,0
+30,11704902,6,"Spirals DJ Tool",5:41,"Kinetic Electronix",0,0,1771423180499,0
+31,9975057,"","This Side",,"Neo Image",0,0,1771423183204,0
+32,9975057,A1,"Winskill Dub",7:11,"Neo Image",0,0,1771423183204,0
+33,9975057,A2,Duckberg,6:07,"Neo Image",0,0,1771423183205,0
+34,9975057,"","That Side",,"Neo Image",0,0,1771423183205,0
+35,9975057,B1,"Positive Pressure",5:48,"Neo Image",0,0,1771423183206,0
+36,9975057,B2,"Crystal Pool",5:01,"Neo Image",0,0,1771423183206,0
+37,9975057,B3,"4B (Dab Mix)",6:17,"Neo Image",0,0,1771423183206,0
+38,11704939,1,"Winskill Dub",7:09,"Neo Image",0,0,1771423186072,0
+39,11704939,2,Duckberg,6:05,"Neo Image",0,0,1771423186072,0
+40,11704939,3,"Positive Pressure",5:47,"Neo Image",0,0,1771423186073,0
+41,11704939,4,"Crystal Pool",5:05,"Neo Image",0,0,1771423186073,0
+42,11704939,5,"4B (Dab Mix)",6:19,"Neo Image",0,0,1771423186073,0
+43,6500912,A1,"Devonian Garden",,Cloudface,0,0,1771423189062,0
+44,6500912,A2,Otcho,,Cloudface,0,0,1771423189062,0
+45,6500912,B1,2N,,Cloudface,0,0,1771423189063,0
+46,6500912,B2,Summer,,Cloudface,0,0,1771423189064,0
+47,11704460,1,"Devonian Garden",6:19,Cloudface,0,0,1771423191767,0
+48,11704460,2,Otcho,4:50,Cloudface,0,0,1771423191768,0
+49,11704460,4,2N,6:09,Cloudface,0,0,1771423191768,0
+50,11704460,3,Summer,4:30,Cloudface,0,0,1771423191769,0
+51,4730289,A,"Devonian Garden",6:15,Cloudface,0,0,1771423194400,0
+52,4730289,B,Otcho,4:51,Cloudface,0,0,1771423194400,0
+53,4730289,C,Summer,4:28,Cloudface,0,0,1771423194400,0
+54,4730289,D,2N,6:09,Cloudface,0,0,1771423194400,0
+55,11704550,1,"Ululu II",4:40,"Aquarian Foundation",0,0,1771423196887,0
+56,11704550,2,"Figurine Progression",4:40,"Aquarian Foundation",0,0,1771423196887,0
+57,11704550,3,"Girdle Of Venus",5:01,"Aquarian Foundation",0,0,1771423196887,0
+58,11704550,4,"Binary Raindrops",6:48,"Aquarian Foundation",0,0,1771423196887,0
+59,11704550,5,Vhembe,7:30,"Aquarian Foundation",0,0,1771423196887,0
+60,4843497,A1,"Ululu II",4:41,"Aquarian Foundation",0,0,1771423199436,0
+61,4843497,A2,"Figurine Progression",4:41,"Aquarian Foundation",0,0,1771423199437,0
+62,4843497,A3,"Girdle Of Venus",5:01,"Aquarian Foundation",0,0,1771423199437,0
+63,4843497,B1,"Binary Raindrops",6:48,"Aquarian Foundation",0,0,1771423199437,0
+64,4843497,B2,Vhembe,7:32,"Aquarian Foundation",0,0,1771423199437,0
+65,11704701,1,"Messages (Original Mix)",10:03,"Ttam Renat",0,0,1771423202053,0
+66,11704701,2,"Messages (Perspective)",3:21,"Ttam Renat",0,0,1771423202054,0
+67,11704701,3,"Thurian Retrograde",6:59,"Ttam Renat",0,0,1771423202055,0
+68,11704701,4,"Merging (Hut Mix)",8:37,"Ttam Renat",0,0,1771423202055,0
+69,5023205,A1,"Messages (Original Mix)",10:01,"Ttam Renat",0,0,1771423204741,0
+70,5023205,A2,"Messages (Perspective)",3:21,"Ttam Renat",0,0,1771423204741,0
+71,5023205,B1,"Thurian Retrograde",6:58,"Ttam Renat",0,0,1771423204741,0
+72,5023205,B2,"Merging (Hut Mix)",8:33,"Ttam Renat",0,0,1771423204742,0
+73,11704367,1,"Bubble World",7:41,"Pender Street Steppers",0,0,1771423207191,0
+74,11704367,2,"Love Theme (Angelo)",6:51,"Pender Street Steppers",0,0,1771423207191,0
+75,11704367,3,"Temple Walk",7:23,"Pender Street Steppers",0,0,1771423207191,0
+76,6619479,A1,"Bubble World",7:42,"Pender Street Steppers",0,0,1771423209768,0
+77,6619479,B1,"Love Theme (Angelo)",6:52,"Pender Street Steppers",0,0,1771423209769,0
+78,6619479,B2,"Temple Walk",7:24,"Pender Street Steppers",0,0,1771423209770,0
+79,5334004,A1,"Bubble World",7:42,"Pender Street Steppers",0,0,1771423212397,0
+80,5334004,B1,"Love Theme (Angelo)",6:52,"Pender Street Steppers",0,0,1771423212398,0
+81,5334004,B2,"Temple Walk",7:24,"Pender Street Steppers",0,0,1771423212404,0
+82,11704718,1,"Filter Feelings",6:58,"House Of Doors",0,0,1771423214965,0
+83,11704718,2,Moesha,4:17,"House Of Doors",0,0,1771423214966,0
+84,11704718,3,"Frakin Cence",4:42,"House Of Doors",0,0,1771423214968,0
+85,8661449,A,"Filter Feelings",7:01,"House Of Doors",0,0,1771423217457,0
+86,8661449,B1,Moesha,4:20,"House Of Doors",0,0,1771423217460,0
+87,8661449,B2,"Frakin Cence",4:44,"House Of Doors",0,0,1771423217461,0
+88,5723035,A,"Filter Feelings",7:01,"House Of Doors",0,0,1771423219876,0
+89,5723035,B1,Moesha,4:20,"House Of Doors",0,0,1771423219877,0
+90,5723035,B2,"Frakin Cence",4:44,"House Of Doors",0,0,1771423219878,0
+91,14114103,A,"Just Off Wave  ",5:23,"C.Z. Wang And  Neo Image",0,0,1771423222423,0
+92,14114103,B,"Open Mic Beat",5:31,"C.Z. Wang And  Neo Image",0,0,1771423222423,0
+93,11704621,1,"Looking Forward To You",8:09,"Jack Jutson",0,0,1771423224897,0
+94,11704621,2,"Take It To The Edge",5:48,"Jack Jutson",0,0,1771423224898,0
+95,11704621,3,"Something (On My Mind)",10:31,"Jack Jutson",0,0,1771423224898,0
+96,8998013,A,"Something (On My Mind)",,"Jack Jutson",0,0,1771423227853,0
+97,8998013,B1,"Looking Forward To You",,"Jack Jutson",0,0,1771423227853,0
+98,8998013,B2,"Take It To The Edge",,"Jack Jutson",0,0,1771423227853,0
+99,6440250,A1,"Looking Forward To You",8:09,"Jack Jutson",0,0,1771423230453,0
+100,6440250,A2,"Take It To The Edge",5:48,"Jack Jutson",0,0,1771423230453,0
+101,6440250,B,"Something (On My Mind)",10:03,"Jack Jutson",0,0,1771423230453,0
+102,5853011,A1,"Looking Forward To You",8:09,"Jack Jutson",0,0,1771423232887,0
+103,5853011,A2,"Take It To The Edge",5:48,"Jack Jutson",0,0,1771423232888,0
+104,5853011,B,"Something (On My Mind)",10:03,"Jack Jutson",0,0,1771423232890,0
+105,6946862,A,"The Glass City",8:47,"Pender Street Steppers",0,0,1771423235363,0
+106,6946862,B,"Golden Garden",8:48,"Pender Street Steppers",0,0,1771423235364,0
+107,11704344,1,"The Glass City",8:46,"Pender Street Steppers",0,0,1771423237752,0
+108,11704344,2,"Golden Garden",8:48,"Pender Street Steppers",0,0,1771423237753,0
+109,10661232,A,"The Glass City",8:47,"Pender Street Steppers",0,0,1771423240154,0
+110,10661232,B,"Golden Garden",8:48,"Pender Street Steppers",0,0,1771423240154,0
+111,11704736,1,Starcave,5:54,"House Of Doors",0,0,1771423242851,0
+112,11704736,2,"Burmstar (Twin Mix)",7:21,"House Of Doors",0,0,1771423242851,0
+113,11704736,3,"Burmstar (Flute Mix)",6:43,"House Of Doors",0,0,1771423242852,0
+114,7158628,A,Starcave,5:55,"House Of Doors",0,0,1771423245754,0
+115,7158628,B1,"Burmstar (Twin Mix)",7:22,"House Of Doors",0,0,1771423245755,0
+116,7158628,B2,"Burmstar (Flute Mix)",6:38,"House Of Doors",0,0,1771423245756,0
+117,11704754,1,"Gong Bath",7:20,"Slow Riffs",0,0,1771423248213,0
+118,11704754,2,"Virgo Dub",5:45,"Slow Riffs",0,0,1771423248214,0
+119,11704754,3,"Peace Arch",4:42,"Slow Riffs",0,0,1771423248214,0
+120,7493926,A,"Gong Bath",7:20,"Slow Riffs",0,0,1771423250647,0
+121,7493926,B,"Virgo Dub",5:45,"Slow Riffs",0,0,1771423250648,0
+122,7493926,BB,"Peace Arch",4:42,"Slow Riffs",0,0,1771423250648,0
+123,8657336,A,"Ooze City",9:48,Lnrdcroy,0,0,1771423253132,0
+124,8657336,B1,"Aquabus (Plaza Of Nations Dub)",9:53,Lnrdcroy,0,0,1771423253139,0
+125,8657336,B2,"Kali Yuga ",8:52,Lnrdcroy,0,0,1771423253139,0
+126,8334239,A1,"Sunny Dae",4:37,"Tauru Jonson, Lion Heart (6)",0,0,1771423255649,0
+127,8334239,A2,"Memories In Time",4:18,"Dorjan Attamofd",0,0,1771423255650,0
+128,8334239,A3,"A Perfect Shift",3:35,"Cafe DM, Blue Heron",0,0,1771423255650,0
+129,8334239,A4,"Meteor Connection",4:22,"Lion Heart (6), Cee Zee Du",0,0,1771423255650,0
+130,8334239,B1,"Hymn To A Whale Talker",4:28,"Blue Heron",0,0,1771423255650,0
+131,8334239,B2,"Bless The Weather",3:41,"Blue Heron",0,0,1771423255650,0
+132,8334239,B3,"Paul's Blues",7:26,"Blue Heron, Coyote (32)",0,0,1771423255650,0
+133,11704773,1,"Sunny Dae",4:37,"Tauru Jonson, Lion Heart (6)",0,0,1771423258489,0
+134,11704773,2,"Memories In Time",4:18,"Dorjan Attamofd",0,0,1771423258489,0
+135,11704773,3,"A Perfect Shift",3:35,"Cafe DM, Blue Heron",0,0,1771423258490,0
+136,11704773,4,"Meteor Connection",4:22,"Lion Heart (6), Cee Zee Du",0,0,1771423258490,0
+137,11704773,5,"Hymn To A Whale Talker",4:28,"Blue Heron",0,0,1771423258490,0
+138,11704773,6,"Bless The Weather",3:41,"Blue Heron",0,0,1771423258490,0
+139,11704773,7,"Paul's Blues",7:26,"Blue Heron",0,0,1771423258491,0
+140,19320688,A,"Better  ",5:33,"Bluntman Deejay",0,0,1771423261455,0
+141,19320688,B,Fever,6:02,"Bluntman Deejay",0,0,1771423261456,0
+142,8899824,A,"Better  ",5:33,"Unknown Artist",0,0,1771423263891,0
+143,8899824,B,Fever,6:02,"Unknown Artist",0,0,1771423263891,0
+144,9148392,A1,"Always On (Club Mix)",,"Music People (2)",0,0,1771423266404,0
+145,9148392,A2,"Always On (Bonus Beats)",,"Music People (2)",0,0,1771423266405,0
+146,9148392,B1,"Always On (Original Mix)",,"Music People (2)",0,0,1771423266406,0
+147,9148392,B2,Four,,"Music People (2)",0,0,1771423266406,0
+148,11704875,1,"Always On (Club Mix)",8:47,"Music People (2)",0,0,1771423269100,0
+149,11704875,2,"Always On (Bonus Beats)",3:28,"Music People (2)",0,0,1771423269101,0
+150,11704875,3,"Always On (Original Mix)",5:03,"Music People (2)",0,0,1771423269101,0
+151,11704875,4,4,5:38,"Music People (2)",0,0,1771423269101,0
+152,9619490,A1,"For Vanda",,Ramzi,0,0,1771423271677,0
+153,9619490,A2,Fuma,,Ramzi,0,0,1771423271677,0
+154,9619490,B1,Messiah,,Ramzi,0,0,1771423271677,0
+155,9619490,B2,"Male Heya",,Ramzi,0,0,1771423271677,0
+156,11704924,1,"For Vanda",5:50,RAMZi,0,0,1771423274229,0
+157,11704924,2,Fuma,2:57,RAMZi,0,0,1771423274229,0
+158,11704924,3,Messiah,5:12,RAMZi,0,0,1771423274230,0
+159,11704924,4,"Male Heya",4:08,RAMZi,0,0,1771423274230,0
+160,10968142,A1,"Vanda's Room",,RAMZi,0,0,1771423276952,0
+161,10968142,A2,Fuma,,RAMZi,0,0,1771423276957,0
+162,10968142,B1,Messiah,,RAMZi,0,0,1771423276969,0
+163,10968142,B2,"Male Heya",,RAMZi,0,0,1771423276970,0
+164,11704411,1,II,7:11,Cloudface,0,0,1771423280661,0
+165,11704411,2,"ee n oh",4:39,Cloudface,0,0,1771423280662,0
+166,11704411,3,"j p",2:27,Cloudface,0,0,1771423280662,0
+167,11704411,4,"w w i",7:10,Cloudface,0,0,1771423280662,0
+168,11704411,5,babyJ,7:40,Cloudface,0,0,1771423280662,0
+169,10872633,A1,II,7:09,Cloudface,0,0,1771423283359,0
+170,10872633,A2,"ee n oh",4:39,Cloudface,0,0,1771423283360,0
+171,10872633,A3,"j p",2:29,Cloudface,0,0,1771423283360,0
+172,10872633,B1,"w w i",7:11,Cloudface,0,0,1771423283360,0
+173,10872633,B2,babyJ,7:41,Cloudface,0,0,1771423283360,0
+174,11704315,1,"Raining Again",5:54,"Pender Street Steppers",0,0,1771423285939,0
+175,11704315,2,"Mirror (Dub)",4:31,"Pender Street Steppers",0,0,1771423285939,0
+176,11704315,3,"Molto Bene",4:19,"Pender Street Steppers",0,0,1771423285939,0
+177,11704315,4,Blackboard,5:09,"Pender Street Steppers",0,0,1771423285940,0
+178,11704315,5,"No Need",7:51,"Pender Street Steppers",0,0,1771423285940,0
+179,11159284,A1,"Raining Again",5:54,"Pender Street Steppers",0,0,1771423288656,0
+180,11159284,A2,"Mirror (Dub)",4:31,"Pender Street Steppers",0,0,1771423288657,0
+181,11159284,A3,"Molto Bene",4:20,"Pender Street Steppers",0,0,1771423288657,0
+182,11159284,B1,Blackboard,5:09,"Pender Street Steppers",0,0,1771423288657,0
+183,11159284,B2,"No Need",7:51,"Pender Street Steppers",0,0,1771423288657,0
+184,12214779,A,Dancer,,"Local Artist",0,0,1771423291452,0
+185,12214779,B,Dreamer,,"Local Artist",0,0,1771423291452,0
+186,13594488,A1,"Third Space",4:06,"People Plus",0,0,1771423293813,0
+187,13594488,A2,Ascension,6:24,"People Plus",0,0,1771423293813,0
+188,13594488,B1,"Jungle Room",8:21,"People Plus",0,0,1771423293813,0
+189,13594488,B2,"O.S.C. 1",7:01,"People Plus",0,0,1771423293813,0
+190,13594488,B3,"Journey To Being",5:37,"People Plus",0,0,1771423293814,0
+191,13833487,A,"Gemini Month",,"Ciao (9)",0,0,1771423296585,0
+192,13833487,B1,"Trance Breaks (Dub Mix)",,"Ciao (9)",0,0,1771423296586,0
+193,13833487,B2,"Hits From The Bongo",,"Ciao (9)",0,0,1771423296586,0
+194,24116117,A,"Falling (Vocal)",,"Pender Street Steppers",0,0,1771423299649,0
+195,24116117,AA,"Falling (Dub)",,"Pender Street Steppers",0,0,1771423299650,0
+196,24116117,B,"Our Time (Vocal)",,"Pender Street Steppers",0,0,1771423299650,0
+197,24116117,BB,"Our Time (Dub)",,"Pender Street Steppers",0,0,1771423299651,0
+198,14298283,A1,"Touch Tone",6:51,"Local Artist",0,0,1771423302426,0
+199,14298283,A2,"Boys Cry",5:39,"Local Artist",0,0,1771423302427,0
+200,14298283,B1,Fruits,8:31,"Local Artist",0,0,1771423302428,0
+201,14298283,B2,Gravity,3:37,"Local Artist",0,0,1771423302429,0
+202,19776394,A1,"Touch Tone",6:51,"Local Artist",0,0,1771423305183,0
+203,19776394,A2,"Boys Cry",5:39,"Local Artist",0,0,1771423305183,0
+204,19776394,B1,Fruits,8:31,"Local Artist",0,0,1771423305184,0
+205,19776394,B2,Gravity,3:37,"Local Artist",0,0,1771423305184,0
+206,15994976,A1,"Peace Whorl",,Hotspring,0,0,1771423307780,0
+207,15994976,A2,"5000 Tons",,Hotspring,0,0,1771423307780,0
+208,15994976,A3,Clothes,,Hotspring,0,0,1771423307780,0
+209,15994976,A4,Resounding,,Hotspring,0,0,1771423307781,0
+210,15994976,B1,Nighttime,,Hotspring,0,0,1771423307781,0
+211,15994976,B2,"Obit For Sunshade",,Hotspring,0,0,1771423307781,0
+212,15994976,B3,"An Item",,Hotspring,0,0,1771423307781,0
+213,15994976,B4,"Warmlight V365",,Hotspring,0,0,1771423307782,0
+214,35061497,A1,"Pull Me Up",2:49,"Hussain Bokhari",0,0,1771423310707,0
+215,35061497,A2,"Bangkok Boy",2:36,"Hussain Bokhari",0,0,1771423310707,0
+216,35061497,A3,"Into The Fall",4:30,"Hussain Bokhari",0,0,1771423310707,0
+217,35061497,A4,"Whatever Counts",2:47,"Hussain Bokhari",0,0,1771423310708,0
+218,35061497,A5,Weatherman,2:14,"Hussain Bokhari",0,0,1771423310708,0
+219,35061497,B1,"There's Your Baby",3:12,"Hussain Bokhari",0,0,1771423310708,0
+220,35061497,B2,"Dee Sharp",2:14,"Hussain Bokhari",0,0,1771423310708,0
+221,35061497,B3,"Keeping Busy",2:42,"Hussain Bokhari",0,0,1771423310708,0
+222,35061497,B4,"Skag Step",2:08,"Hussain Bokhari",0,0,1771423310709,0
+223,35061497,B5,"Last Track",1:58,"Hussain Bokhari",0,0,1771423310709,0
+224,35061497,B6,"Divide My Emotions",2:27,"Hussain Bokhari",0,0,1771423310710,0
+225,35061497,B7,"Rathr Be Owned",2:22,"Hussain Bokhari",0,0,1771423310710,0
+226,22770713,A1,"If You Don't Know Why",5:57,"Jack Jutson",0,0,1771423314088,0
+227,22770713,A2,"Opening The Door",3:52,"Jack Jutson",0,0,1771423314088,0
+228,22770713,A3,"The Only Way ",4:28,"Jack Jutson",0,0,1771423314089,0
+229,22770713,A4,"Only You Know Why",4:16,"Jack Jutson",0,0,1771423314089,0
+230,22770713,B1,"Clues (Part I)",4:20,"Jack Jutson",0,0,1771423314089,0
+231,22770713,B2,"Clues (Part II)",5:03,"Jack Jutson",0,0,1771423314089,0
+232,22770713,B3,"I Saw Fire",4:07,"Jack Jutson",0,0,1771423314090,0
+233,22770713,B4,"Closing The Door",5:49,"Jack Jutson",0,0,1771423314090,0
+234,24379307,1,"If You Don't Know Why",5:57,"Jack Jutson",0,0,1771423316956,0
+235,24379307,2,"Opening The Door",3:52,"Jack Jutson",0,0,1771423316956,0
+236,24379307,3,"The Only Way ",4:28,"Jack Jutson",0,0,1771423316956,0
+237,24379307,4,"Only You Know Why",4:16,"Jack Jutson",0,0,1771423316957,0
+238,24379307,5,"Clues (Part I)",4:20,"Jack Jutson",0,0,1771423316957,0
+239,24379307,6,"Clues (Part II)",5:03,"Jack Jutson",0,0,1771423316957,0
+240,24379307,7,"I Saw Fire",4:07,"Jack Jutson",0,0,1771423316957,0
+241,24379307,8,"Closing The Door",5:49,"Jack Jutson",0,0,1771423316957,0
+242,24379307,9,"Only You Know Why (Taupo Instrumental)",4:08,"Jack Jutson",0,0,1771423316959,0
+243,24288440,A1,"Head Right",3:17,"Local Artist",0,0,1771423320775,0
+244,24288440,A2,"Expanding Horizons",4:08,"Local Artist",0,0,1771423320776,0
+245,24288440,A3,"Without You",3:36,"Local Artist",0,0,1771423320776,0
+246,24288440,A4,"Neo Wise",4:27,"Local Artist",0,0,1771423320776,0
+247,24288440,B1,"Rif Kibdani",3:42,"Local Artist",0,0,1771423320776,0
+248,24288440,B2,"Self Healing",4:08,"Local Artist",0,0,1771423320776,0
+249,24288440,B3,"Good Enough",3:41,"Local Artist",0,0,1771423320776,0
+250,24288440,B4,"Give You My Love",3:34,"Local Artist",0,0,1771423320777,0
+251,24288440,B5,"Distance Calling",3:57,"Local Artist",0,0,1771423320777,0
+252,25480108,A1,"Prayer Bass",5:54,"Big Zen",0,0,1771423323634,0
+253,25480108,A2,"Sugar Coated",5:39,"Big Zen",0,0,1771423323634,0
+254,25480108,B1,"Cash Splash",6:47,"Big Zen",0,0,1771423323635,0
+255,25480108,B2,"Rumble Ball",6:33,"Big Zen",0,0,1771423323635,0
+256,27699792,A1,"The Time Has Come",,"Freak Heat Waves",0,0,1771423326271,0
+257,27699792,A2,"In a Moment Divine (With Cindy Lee)",,"Freak Heat Waves",0,0,1771423326271,0
+258,27699792,A3,Endless,,"Freak Heat Waves",0,0,1771423326272,0
+259,27699792,A4,"Music Has An Interesting Power",,"Freak Heat Waves",0,0,1771423326272,0
+260,27699792,B1,"How Do We Come Alive",,"Freak Heat Waves",0,0,1771423326272,0
+261,27699792,B2,"Off My Mind",,"Freak Heat Waves",0,0,1771423326272,0
+262,27699792,B3,"Altered States",,"Freak Heat Waves",0,0,1771423326272,0
+263,27699792,B4,"Mondo Tempo",,"Freak Heat Waves",0,0,1771423326272,0
+264,28922830,A1,Catsu,,Cousin,0,0,1771423330928,0
+265,28922830,A2,Overpass,,Cousin,0,0,1771423330928,0
+266,28922830,B1,"3x A Charm",,Cousin,0,0,1771423330929,0
+267,28922830,B2,Muster,,Cousin,0,0,1771423330929,0
+268,28922830,B3,Citta,,Cousin,0,0,1771423330929,0
+269,28552975,A1,Fizz,,Knopha,0,0,1771423333573,0
+270,28552975,A2,"The Light",,Knopha,0,0,1771423333574,0
+271,28552975,A3,"Mizu Le Goût",,Knopha,0,0,1771423333579,0
+272,28552975,B1,Corundum,,Knopha,0,0,1771423333580,0
+273,28552975,B2,Corundrum,,Knopha,0,0,1771423333580,0
+274,30411197,A1,Lemuria,,"Oro Azul",0,0,1771423336284,0
+275,30411197,A2,Atlantis,,"Oro Azul",0,0,1771423336285,0
+276,30411197,B1,Mantarraya,,"Oro Azul",0,0,1771423336285,0
+277,30411197,B2,Eros,,"Oro Azul",0,0,1771423336285,0
+278,30588286,A1,Blood,,Hotspring,0,0,1771423338852,0
+279,30588286,A2,"Could You?",,Hotspring,0,0,1771423338853,0
+280,30588286,A3,"Day, Moment",,Hotspring,0,0,1771423338853,0
+281,30588286,A4,"Dealt Hand",,Hotspring,0,0,1771423338854,0
+282,30588286,A5,"Don't Hum Without Me",,Hotspring,0,0,1771423338854,0
+283,30588286,B1,"Fifty Summers",,Hotspring,0,0,1771423338854,0
+284,30588286,B2,"Glanzstraße 6",,Hotspring,0,0,1771423338854,0
+285,30588286,B3,"Organ with Fire",,Hotspring,0,0,1771423338855,0
+286,30588286,B4,"Three of Swords",,Hotspring,0,0,1771423338855,0
+287,32256042,1,"Wrong Again",3:02,"Jack Jutson",0,0,1771423342398,0
+288,32256042,2,"Foolish Man",4:06,"Jack Jutson",0,0,1771423342398,0
+289,32256042,3,"Red Cloud",4:07,"Jack Jutson",0,0,1771423342399,0
+290,32256042,4,"Down The Line",5:37,"Jack Jutson",0,0,1771423342399,0
+291,32256042,5,"Pink Shoes [Part I]",1:15,"Jack Jutson",0,0,1771423342402,0
+292,32256042,6,"At Last",3:09,"Jack Jutson",0,0,1771423342403,0
+293,32256042,7,"At My Door",2:00,"Jack Jutson",0,0,1771423342403,0
+294,32256042,8,"My Other Mind",2:47,"Jack Jutson",0,0,1771423342404,0
+295,32256042,9,"Falling Down A Well",2:53,"Jack Jutson",0,0,1771423342404,0
+296,32256042,10,"Born Without A Smile",3:25,"Jack Jutson",0,0,1771423342404,0
+297,32256042,11,"Pink Shoes [Part II]",1:25,"Jack Jutson",0,0,1771423342405,0
+298,32270187,A1,"Wrong Again",3:02,"Jack Jutson",0,0,1771423345336,0
+299,32270187,A2,"Foolish Man",4:06,"Jack Jutson",0,0,1771423345337,0
+300,32270187,A3,"Red Cloud",4:07,"Jack Jutson",0,0,1771423345337,0
+301,32270187,A4,"Down The Line",5:37,"Jack Jutson",0,0,1771423345337,0
+302,32270187,A5,"Pink Shoes (Part I)",1:15,"Jack Jutson",0,0,1771423345338,0
+303,32270187,B1,"At Last",3:09,"Jack Jutson",0,0,1771423345338,0
+304,32270187,B2,"At My Door",2:00,"Jack Jutson",0,0,1771423345339,0
+305,32270187,B3,"My Other Mind",2:47,"Jack Jutson",0,0,1771423345339,0
+306,32270187,B4,"Falling Down A Well",2:53,"Jack Jutson",0,0,1771423345339,0
+307,32270187,B5,"Born Without A Smile",3:25,"Jack Jutson",0,0,1771423345339,0
+308,32270187,B6,"Pink Shoes (Part II)",1:25,"Jack Jutson",0,0,1771423345340,0
+309,35849794,A1,1izm,,Musicentrydelete,0,0,1771423349767,0
+310,35849794,A2,K1Deep,,Musicentrydelete,0,0,1771423349767,0
+311,35849794,A3,RiseMODX,,Musicentrydelete,0,0,1771423349767,0
+312,35849794,B1,"Sub AM",,Musicentrydelete,0,0,1771423349767,0
+313,35849794,B2,Musicentrydelete,,Musicentrydelete,0,0,1771423349767,0
+314,35849794,C1,Wavebeats,,Musicentrydelete,0,0,1771423349767,0
+315,35849794,C2,"Wavebeats (Dub)",,Musicentrydelete,0,0,1771423349767,0
+316,35849794,C3,"1 electric",,Musicentrydelete,0,0,1771423349767,0
+317,35849794,C4,Depth,,Musicentrydelete,0,0,1771423349767,0
+318,35849794,D1,eBase,,Musicentrydelete,0,0,1771423349767,0
+319,35585914,A1,"Vertical Horizon",,"Slow Riffs",0,0,1771423352617,0
+320,35585914,A2,"Cosmic Joke",,"Slow Riffs",0,0,1771423352617,0
+321,35585914,A3,"Talking Drum",,"Slow Riffs",0,0,1771423352617,0
+322,35585914,A4,"Her Shining Abode",,"Slow Riffs",0,0,1771423352618,0
+323,35585914,A5,"Sleep Weel",,"Slow Riffs",0,0,1771423352618,0
+324,35585914,B1,Simulacra,,"Slow Riffs",0,0,1771423352618,0
+325,35585914,B2,Skywatchers,,"Slow Riffs",0,0,1771423352618,0
+326,35585914,B3,"Mutual Dreaming",,"Slow Riffs",0,0,1771423352619,0
+327,35585914,B4,"Lascaux Caves",,"Slow Riffs",0,0,1771423352619,0
+328,11704658,1,"777 E. Union",6:12,"Slow Riffs",0,0,1771423355523,0
+329,11704658,2,Baliwick,7:41,"Slow Riffs",0,0,1771423355524,0
+330,11704658,3,"Jacob's Ladder",8:16,"Slow Riffs",0,0,1771423355524,0
+331,11704658,4,"Move Like Mountains",7:37,"Slow Riffs",0,0,1771423355525,0
+332,11704658,5,"Our Void",5:00,"Slow Riffs",0,0,1771423355531,0
+333,11704658,6,"They Speak We Listen",12:49,"Slow Riffs",0,0,1771423355531,0
+334,11704658,7,"Park Slope",11:47,"Slow Riffs",0,0,1771423355532,0
+335,5090398,A1,"777 E. Union",,"Slow Riffs",0,0,1771423358480,0
+336,5090398,A2,Baliwick,,"Slow Riffs",0,0,1771423358480,0
+337,5090398,A3,"Jacob's Ladder",,"Slow Riffs",0,0,1771423358480,0
+338,5090398,A4,"Move Like Mountains",,"Slow Riffs",0,0,1771423358481,0
+339,5090398,B1,"Our Void",,"Slow Riffs",0,0,1771423358481,0
+340,5090398,B2,"They Speak We Listen",,"Slow Riffs",0,0,1771423358481,0
+341,5090398,B3,"Park Slope",,"Slow Riffs",0,0,1771423358481,0
+342,11327995,A1,"777 E. Union",,"Slow Riffs",0,0,1771423361406,0
+343,11327995,A2,Baliwick,,"Slow Riffs",0,0,1771423361406,0
+344,11327995,A3,"Jacob's Ladder",,"Slow Riffs",0,0,1771423361406,0
+345,11327995,A4,"Move Like Mountains",,"Slow Riffs",0,0,1771423361406,0
+346,11327995,B1,"Our Void",,"Slow Riffs",0,0,1771423361406,0
+347,11327995,B2,"They Speak We Listen",,"Slow Riffs",0,0,1771423361407,0
+348,11327995,B3,"Park Slope",,"Slow Riffs",0,0,1771423361407,0
+349,11704567,1,"Loose Truth",10:08,"Jack Jutson",0,0,1771423364158,0
+350,11704567,2,Mata,9:41,"Jack Jutson",0,0,1771423364158,0
+351,11704567,3,Kapha,11:12,"Jack Jutson",0,0,1771423364159,0
+352,11704567,4,"Sand Boiling",10:03,"Jack Jutson",0,0,1771423364159,0
+353,11704567,5,"Mother Official",10:08,"Jack Jutson",0,0,1771423364159,0
+354,11704567,6,Makaw,9:10,"Jack Jutson",0,0,1771423364160,0
+355,3458414,A1,"Loose Truth",10:08,"Jack Jutson",0,0,1771423366740,0
+356,3458414,A2,Mata,9:42,"Jack Jutson",0,0,1771423366741,0
+357,3458414,A3,Kapha,11:12,"Jack Jutson",0,0,1771423366741,0
+358,3458414,B1,"Sand Boiling",10:03,"Jack Jutson",0,0,1771423366742,0
+359,3458414,B2,"Mother Official",10:09,"Jack Jutson",0,0,1771423366742,0
+360,3458414,B3,Makaw,9:11,"Jack Jutson",0,0,1771423366742,0
+361,3504275,A1,Untitled,,"Aquarian Foundation",0,0,1771423369696,0
+362,3504275,B1,Untitled,,"Aquarian Foundation",0,0,1771423369696,0
+363,11704488,1,"PART I",22:09,"Aquarian Foundation",0,0,1771423372049,0
+364,11704488,2,"PART II",26:06,"Aquarian Foundation",0,0,1771423372049,0
+365,11704488,3,"PART III",17:25,"Aquarian Foundation",0,0,1771423372049,0
+366,11704488,4,"PART IV",16:10,"Aquarian Foundation",0,0,1771423372049,0
+367,11704522,1,"Meditations At Throne Of Balam (PART I)",14:24,"Aquarian Foundation",0,0,1771423374724,0
+368,11704522,2,"Meditations At Throne Of Balam (PART II)",15:09,"Aquarian Foundation",0,0,1771423374724,0
+369,11704522,3,"Ritual Dance/Blessed Guardian (PART I)",18:03,"Aquarian Foundation",0,0,1771423374725,0
+370,11704522,4,"Ritual Dance/Blessed Guardian (PART II)",11:11,"Aquarian Foundation",0,0,1771423374725,0
+371,4205217,A,"Meditations At Throne Of Balam",,"Aquarian Foundation",0,0,1771423413261,0
+372,4205217,B,"Ritual Dance/Blessed Guardian",,"Aquarian Foundation",0,0,1771423413262,0
+373,11704598,1,"Aloe Vera",14:59,"Jack Jutson",0,0,1771423415838,0
+374,11704598,2,Berekke,15:12,"Jack Jutson",0,0,1771423415838,0
+375,11704598,4,Munari,15:00,"Jack Jutson",0,0,1771423415840,0
+376,11704598,3,"Turkish Radiance",14:59,"Jack Jutson",0,0,1771423415844,0
+377,5090346,A1,Berekke,,"Jack Jutson",0,0,1771423434230,0
+378,5090346,A2,"Aloe Vera",,"Jack Jutson",0,0,1771423434230,0
+379,5090346,B1,"Turkish Radiance",,"Jack Jutson",0,0,1771423434230,0
+380,5090346,B2,Munari,,"Jack Jutson",0,0,1771423434230,0
+381,11704683,1,"Water Feature",10:14,"Dream Carpets",0,0,1771423437249,0
+382,11704683,2,Snorlax,10:13,"Dream Carpets",0,0,1771423437250,0
+383,11704683,3,"Melon City",10:06,"Dream Carpets",0,0,1771423437250,0
+384,11704683,4,"November Sun Suite",7:53,"Dream Carpets",0,0,1771423437251,0
+385,11704683,5,"Cloud Beam",10:11,"Dream Carpets",0,0,1771423437254,0
+386,11704683,6,"Malauna Dervish",11:40,"Dream Carpets",0,0,1771423437255,0
+387,5090368,A1,"Water Feature",,"Dream Carpets",0,0,1771423440352,0
+388,5090368,A2,Snorlax,,"Dream Carpets",0,0,1771423440353,0
+389,5090368,A3,"Melon City",,"Dream Carpets",0,0,1771423440353,0
+390,5090368,B1,"November Sun Suite",,"Dream Carpets",0,0,1771423440354,0
+391,5090368,B2,"Cloud Beam",,"Dream Carpets",0,0,1771423440355,0
+392,5090368,B3,"Malauna Dervish",,"Dream Carpets",0,0,1771423440355,0
+393,11704277,1,"Street Side",45:50,"Pender Street Steppers",0,0,1771423443319,0
+394,11704277,2,"Steppers Side",45:51,"Pender Street Steppers",0,0,1771423443320,0
+395,4979025,"","Street Side",,"Pender Street Steppers",0,0,1771423445919,0
+396,4979025,A1,"Waitin' Out The Rain",,"Pender Street Steppers",0,0,1771423445920,0
+397,4979025,A2,"Unknown Groove",,"Pender Street Steppers",0,0,1771423445920,0
+398,4979025,A3,"M. Flight",,"Pender Street Steppers",0,0,1771423445921,0
+399,4979025,A4,"Ancient Plains",,"Pender Street Steppers",0,0,1771423445921,0
+400,4979025,A5,"Openin' Up",,"Pender Street Steppers",0,0,1771423445922,0
+401,4979025,A6,"Bubble World",,"Pender Street Steppers",0,0,1771423445922,0
+402,4979025,A7,"Morning Coffee",,"Pender Street Steppers",0,0,1771423445922,0
+403,4979025,A8,"Saturatin'",,"Pender Street Steppers",0,0,1771423445923,0
+404,4979025,"","Steppers Side",,"Pender Street Steppers",0,0,1771423445923,0
+405,4979025,B1,"Air Care",,"Pender Street Steppers",0,0,1771423445923,0
+406,4979025,B2,"Pool 88 ('99 Dub)",,"Pender Street Steppers",0,0,1771423445924,0
+407,4979025,B3,"Steepin' In",,"Pender Street Steppers",0,0,1771423445924,0
+408,4979025,B4,"Th' Coaster",,"Pender Street Steppers",0,0,1771423445924,0
+409,4979025,B5,"Heat Dish",,"Pender Street Steppers",0,0,1771423445924,0
+410,4979025,B6,"Steppers Theme",,"Pender Street Steppers",0,0,1771423445924,0
+411,4979025,B7,"Temple Walk",,"Pender Street Steppers",0,0,1771423445924,0
+412,4979025,B8,"Love Theme (Gain Wah Bubble Dub)",,"Pender Street Steppers",0,0,1771423445924,0
+413,4979025,B9,"Love Theme (Angelo Version)",,"Pender Street Steppers",0,0,1771423445925,0
+414,27725574,A1,"Streaming Through You",3:22,"Jack Jutson",0,0,1771423449593,0
+415,27725574,A2,"Self Healing",3:43,"Jack Jutson",0,0,1771423449593,0
+416,27725574,A3,"New Year's Eve 2013",5:49,"Jack Jutson",0,0,1771423449594,0
+417,27725574,A4,"Babylon Night Club",3:49,"Jack Jutson",0,0,1771423449594,0
+418,27725574,A5,Untitled,2:59,"Jack Jutson",0,0,1771423449594,0
+419,27725574,A6,"In'scape",5:41,"Jack Jutson",0,0,1771423449595,0
+420,27725574,B1,Sometimes,5:37,"Jack Jutson",0,0,1771423449595,0
+421,27725574,B2,"Thirstin' (Hoop Mix)",5:40,"Jack Jutson",0,0,1771423449595,0
+422,27725574,B3,"A New Day",3:30,"Jack Jutson",0,0,1771423449595,0
+423,27725574,B4,Untitled,1:41,"Jack Jutson",0,0,1771423449596,0
+424,27725574,B5,"The Limit",3:51,"Jack Jutson",0,0,1771423449596,0
+425,27725574,B6,"Waking Up",3:40,"Jack Jutson",0,0,1771423449596,0
+426,27725574,B7,"Moon Sign",1:20,"Jack Jutson",0,0,1771423449597,0
+427,28847056,1,"The Time Has Come",3:48,"Freak Heat Waves",0,0,1771423452644,0
+428,28847056,2,"In a Moment Divine",5:09,"Freak Heat Waves",0,0,1771423452644,0
+429,28847056,3,Endless,3:24,"Freak Heat Waves",0,0,1771423452645,0
+430,28847056,4,"Music Has An Interesting Power",0:56,"Freak Heat Waves",0,0,1771423452645,0
+431,28847056,5,"How Do We Come Alive",4:15,"Freak Heat Waves",0,0,1771423452645,0
+432,28847056,6,"Off My Mind",3:34,"Freak Heat Waves",0,0,1771423452646,0
+433,28847056,7,"Altered States",3:19,"Freak Heat Waves",0,0,1771423452646,0
+434,28847056,8,"Mondo Tempo",5:18,"Freak Heat Waves",0,0,1771423452646,0
+435,4492488,1.1,"RnB Exploraysh",,"Unknown Artist",0,0,1771423455520,0
+436,4492488,1.2,Indigo,,"Ttam Renat",0,0,1771423455523,0
+437,4492488,1.3,"Now More Than Ever",,"Warm It Up Chris",0,0,1771423455523,0
+438,4492488,1.4,Z50-50,,"Cedric Meister",0,0,1771423455524,0
+439,4492488,1.5,"Otcho (Moody Mix)",,Cloudface,0,0,1771423455524,0
+440,4492488,1.6,"Strylight Run",,"House Of Doors",0,0,1771423455528,0
+441,4492488,1.7,Limekind,,"Hardaway (2)",0,0,1771423455528,0
+442,4492488,1.8,"Came Into My Life",,Jorcha,0,0,1771423455529,0
+443,4492488,1.9,Ariya,,"House Of Doors",0,0,1771423455529,0
+444,4492488,1.10,"Rhythm Cloud",,"Aquarian Foundation",0,0,1771423455529,0
+445,4492488,1.11,"Mansion Of Horus",,"Local Artist",0,0,1771423455530,0
+446,4492488,1.12,"Girlfriend (Original Mix)",,"Jack Jutson",0,0,1771423455530,0
+447,4492488,1.13,"Riverine Swim (Crenon)",,"Aquarian Foundation",0,0,1771423455531,0
+448,4492488,1.14,G.V.S.B.,,"No Gold",0,0,1771423455531,0
+449,4492488,1.15,"RnB Exploraysh",,"Unknown Artist",0,0,1771423455532,0
+450,35648863,A1,"The Time Has Come",,"Freak Heat Waves",0,0,1771423458900,0
+451,35648863,A2,"In a Moment Divine (With Cindy Lee)",,"Freak Heat Waves",0,0,1771423458901,0
+452,35648863,A3,Endless,,"Freak Heat Waves",0,0,1771423458907,0
+453,35648863,A4,"Music Has An Interesting Power",,"Freak Heat Waves",0,0,1771423458907,0
+454,35648863,B1,"How Do We Come Alive",,"Freak Heat Waves",0,0,1771423458908,0
+455,35648863,B2,"Off My Mind",,"Freak Heat Waves",0,0,1771423458908,0
+456,35648863,B3,"Altered States",,"Freak Heat Waves",0,0,1771423458911,0
+457,35648863,B4,"Mondo Tempo",,"Freak Heat Waves",0,0,1771423458911,0
+458,3708068,1,"Expansiv Pac",4:02,"No Gold",0,0,1771423461701,0
+459,3708068,2,"New Best Recipe",5:10,"No Gold",0,0,1771423461702,0
+460,3708068,3,"Open Source",1:18,"No Gold",0,0,1771423461703,0
+461,3708068,4,"Pond ed",6:22,"No Gold",0,0,1771423461704,0
+462,2579,A,"Puddled Up",16:03,"Lucky & Easy",1,0,1771423600228,0
+463,2579,B1,Chippoke,3:28,"Lucky & Easy",1,0,1771423600228,0
+464,2579,B2,"Blo Sum",5:32,"Lucky & Easy",1,0,1771423600229,0
+465,2579,B3,"Scrotum Ear Lobe",3:33,"Lucky & Easy",1,0,1771423600229,0
+466,3117,A1,Home,6:28,Norken,1,0,1771423603163,0
+467,3117,A2,Walk,7:00,Norken,1,0,1771423603164,0
+468,3117,B1,Fern,7:35,Norken,1,0,1771423603164,0
+469,3117,B2,Static,6:45,Norken,1,0,1771423603165,0
+470,3119,A1,"Comfort Control",3:30,CiM,1,0,1771423606198,0
+471,3119,A2,"Friends I've Made",2:50,CiM,1,0,1771423606198,0
+472,3119,A3,RN.a,1:30,CiM,1,0,1771423606199,0
+473,3119,A4,Shift,4:24,CiM,1,0,1771423606199,0
+474,3119,B1,Recursive,2:03,CiM,1,0,1771423606200,0
+475,3119,B2,"Mobile Unit Downtime",3:28,CiM,1,0,1771423606202,0
+476,3119,B3,Nissan,3:03,CiM,1,0,1771423606202,0
+477,3119,B4,"Asial Fill",1:56,CiM,1,0,1771423606203,0
+478,4670,A1,"Another Plain",,"Optic Nerve",1,0,1771423621298,0
+479,4670,A2,"Aura (2000)",,"Optic Nerve",1,0,1771423621298,0
+480,4670,B,"Pharaoh's Doorway",,"Optic Nerve",1,0,1771423621299,0
+481,5299,A1,Chatsubo,,"Peel Seamus",1,0,1771423624055,0
+482,5299,A2,Audience,,"Peel Seamus",1,0,1771423624055,0
+483,5299,B1,"Futur H",,"Peel Seamus",0,0,1771423624056,0
+484,5299,B2,Fadeless,,"Peel Seamus",0,0,1771423624057,0
+485,7221,A1,Trespassers,10:54,Newworldaquarium,0,0,1771423626816,0
+486,7221,A2,Justkoko,1:03,Newworldaquarium,0,0,1771423626817,0
+487,7221,B,Kokoandleewho?,9:08,Newworldaquarium,0,0,1771423626817,0
+488,35746,A1,"Todas Las Noches",,$tinkworx,0,0,1771423629603,0
+489,35746,A2,"Sumitomo Trust",,$tinkworx,0,0,1771423629603,0
+490,35746,A3,"Hu T'ieh",,$tinkworx,0,0,1771423629603,0
+491,35746,B1,"Raise Up",,$tinkworx,0,0,1771423629604,0
+492,35746,B2,"Mus Mus",,$tinkworx,0,0,1771423629604,0
+493,37841,A1,"World Record Holder",6:23,Pile,0,0,1771423632660,0
+494,37841,A2,RNA,1:29,CiM,0,0,1771423632661,0
+495,37841,A3,Architexture,7:07,Akufen,0,0,1771423632662,0
+496,37841,B1,"Funkenflug Der Traume",4:20,"Ellen Allien",0,0,1771423632662,0
+497,37841,B2,"Take My Soul",5:06,"Bergheim 34",0,0,1771423632663,0
+498,37841,B3,"Delay 05 A - Untitled",5:53,"Safety Scissors",0,0,1771423632663,0
+499,37841,C1,"Q1.1 (1A)",7:54,"Basic Channel",0,0,1771423632663,0
+500,37841,C2,"Believers Goodbye",8:18,Headgear,0,0,1771423632664,0
+501,37841,D1,"Crawling & Hungry",11:06,Convextion,0,0,1771423632665,0
+502,37841,D2,Monolith,4:41,Bitstream,0,0,1771423632665,0
+503,54311,1,"909 Thing",4:21,D5,0,0,1771423636388,0
+504,54311,2,Automation,6:27,D5,0,0,1771423636388,0
+505,54311,3,"Absolute Zero",5:24,D5,0,0,1771423636388,0
+506,54311,4,Network,6:27,D5,0,0,1771423636388,0
+507,54311,5,"Analogue Assault",4:45,D5,0,0,1771423636388,0
+508,54311,6,"Groove 6",5:17,D5,0,0,1771423636388,0
+509,54311,7,"Think Tank",4:37,D5,0,0,1771423636388,0
+510,54311,8,Intruders,7:29,D5,0,0,1771423636389,0
+511,54311,9,"The Message",5:07,D5,0,0,1771423636389,0
+512,54311,10,Drift,4:39,D5,0,0,1771423636389,0
+513,54311,11,"Space Travel",5:54,D5,0,0,1771423636389,0
+514,54311,12,Arrival,3:48,D5,0,0,1771423636389,0
+515,54313,A1,MF-2D,4:52,Strand,0,0,1771423651039,0
+516,54313,A2,"Ya Dig",5:33,Strand,0,0,1771423651040,0
+517,54313,B1,"Pocket Pimp",5:32,Strand,0,0,1771423651040,0
+518,54313,B2,"De Grand Act",5:35,Strand,0,0,1771423651041,0
+519,56880,1-1,"Western (Salz Remix)",4:29,"Philippe Cam",0,0,1771423653673,0
+520,56880,1-2,"World Record Holder",3:39,Pile,0,0,1771423653674,0
+521,56880,1-3,Architexture,4:25,Akufen,0,0,1771423653676,0
+522,56880,1-4,Pelati,5:25,Styro2000,0,0,1771423653676,0
+523,56880,1-5,"Believers Goodbye",7:45,Headgear,0,0,1771423653677,0
+524,56880,1-6,"Funkenflug Der Träume",3:50,"Ellen Allien",0,0,1771423653677,0
+525,56880,1-7,"Q1.1 (1A)",7:05,"Basic Channel",0,0,1771423653677,0
+526,56880,1-8,"Untitled (Deconstructed By Sutekh)",5:29,"Safety Scissors",0,0,1771423653677,0
+527,56880,1-9,"Closer Dancer",8:15,"Closer Musik",0,0,1771423653677,0
+528,56880,1-10,"808 The Bass Queen (Queen Of Bass Mix)",4:52,"Ricardo Villalobos",0,0,1771423653678,0
+529,56880,1-11,Synkro,8:18,Luomo,0,0,1771423653678,0
+530,56880,1-12,RNA,1:11,CiM,0,0,1771423653678,0
+531,56880,1-13,"Back To The Start",7:01,"Matthew Herbert",0,0,1771423653678,0
+532,56880,2-1,"The Narrativ",3:07,"Colin Newman, Corrado Izzo",0,0,1771423653679,0
+533,56880,2-2,"Portside Waves",3:24,"Stephan Laubner",0,0,1771423653679,0
+534,56880,2-3,"Crawling & Hungry",6:58,Convextion,0,0,1771423653679,0
+535,56880,2-4,Fragile,5:34,Monolake,0,0,1771423653680,0
+536,56880,2-5,Lila,6:02,"Studio 1",0,0,1771423653680,0
+537,56880,2-6,"Take My Soul",4:19,"Bergheim 34",0,0,1771423653680,0
+538,56880,2-7,"17 & 4",6:13,"Michael Mayer",0,0,1771423653681,0
+539,56880,2-8,Monolith,4:06,Bitstream,0,0,1771423653681,0
+540,56880,2-9,Welltick,5:58,"Kotai, Jochen Bader",0,0,1771423653681,0
+541,56880,2-10,Upekah,7:55,Son.sine,0,0,1771423653682,0
+542,56880,2-11,"Find A Way",9:40,"Round Four, Tikiman",0,0,1771423653683,0
+543,69345,A1,Shantar,,Strand,0,0,1771423657906,0
+544,69345,A2,"The Last Scion",,Strand,0,0,1771423657907,0
+545,69345,B1,Vamp,,Strand,0,0,1771423657948,0
+546,69345,B2,B9,,Strand,0,0,1771423657948,0
+547,69345,B3,"Untitled ",,Strand,0,0,1771423657948,0
+548,71791,A,"Re Spoken (Nubian Mindz Remix 2)",5:44,Aardvarck,0,0,1771423660591,0
+549,71791,B,"Re Spoken (Domu's Broken Dialect Mix)",6:21,Aardvarck,0,0,1771423660591,0
+550,71867,A1,Dimensions,,"Peel Seamus",0,0,1771423664250,0
+551,71867,A2,Return,,"Peel Seamus",0,0,1771423664251,0
+552,71867,A3,Homeworld,,"Peel Seamus",0,0,1771423664251,0
+553,71867,B1,South,,"Peel Seamus",0,0,1771423664252,0
+554,71867,B2,Moving,,"Peel Seamus",0,0,1771423664254,0
+555,71867,B3,Universal,,"Peel Seamus",0,0,1771423664255,0
+556,163900,1,"Fourth & Go",5:04,Strand,0,0,1771423675406,0
+557,163900,2,Georges,5:18,Strand,0,0,1771423675406,0
+558,163900,3,Mogabo,5:05,Strand,0,0,1771423675407,0
+559,163900,4,Reflective,4:38,Strand,0,0,1771423675407,0
+560,163900,5,MF-2D,4:54,Strand,0,0,1771423675413,0
+561,163900,6,"Ya' Dig",5:37,Strand,0,0,1771423675413,0
+562,163900,7,"Pocket Pimp",5:37,Strand,0,0,1771423675414,0
+563,163900,8,"De Grand Act",5:39,Strand,0,0,1771423675414,0
+564,163900,9,Shantar,5:10,Strand,0,0,1771423675414,0
+565,163900,10,"The Last Scion",5:46,Strand,0,0,1771423675414,0
+566,163900,11,Vamp,5:26,Strand,0,0,1771423675415,0
+567,163900,12,B9,5:11,Strand,0,0,1771423675415,0
+568,163900,13,"Deep Knobs [Bonus Memo I]",6:52,Strand,0,0,1771423675415,0
+569,163900,14,"Isotope 311 [Bonus Memo II]",6:15,Strand,0,0,1771423675415,0
+570,208856,A1,"Los Gatos Lloros",,$tinkworx,0,0,1771423678674,0
+571,208856,A2,"Luv Chocolat (For Wendilee)",,$tinkworx,0,0,1771423678674,0
+572,208856,B1,"Saliva (Original Mix)",,$tinkworx,0,0,1771423678675,0
+573,208856,B2,"Saliva (Putsch '79 Remix)",,$tinkworx,0,0,1771423678675,0
+574,230907,A1,"Pursuit Of Happiness",5:42,"Matt Flores",0,0,1771423681507,0
+575,230907,A2,Static,7:01,Norken,0,0,1771423681507,0
+576,230907,A3,Diver,4:53,Swimmingpool,0,0,1771423681507,0
+577,230907,B1,"Chicken Sandwich",4:11,"Fellmann & Louise",0,0,1771423681507,0
+578,230907,B2,Silkworm,6:29,SCSI-9,0,0,1771423681508,0
+579,230907,B3,"Nozum (Attica Blues Rmx)",5:32,Aardvarck,0,0,1771423681508,0
+580,230907,C1,Tempest,7:40,Kabuki,0,0,1771423681508,0
+581,230907,C2,"Deep Below",5:12,"The Green Man",0,0,1771423681511,0
+582,230907,C3,Adozenaday,5:31,Brothomstates,0,0,1771423681512,0
+583,230907,D1,"Dadamn Traffic",6:24,"Da Damn Phreak Noize Phunk",0,0,1771423681512,0
+584,230907,D2,Spiderman,6:09,Pentagon,0,0,1771423681512,0
+585,230907,D3,Nobile,5:24,"Telescope (2), Noelle Poeller",0,0,1771423681513,0
+586,338213,A,Sun,10:33,"Ross 154",0,0,1771423684546,0
+587,338213,B1,Sniper,5:45,"Ross 154",0,0,1771423684546,0
+588,338213,B2,Apricot,5:53,"Ross 154",0,0,1771423684546,0
+589,338213,C,Abrighterday,6:56,"Ross 154",0,0,1771423684547,0
+590,338213,D1,Strike,4:09,"Ross 154",0,0,1771423684547,0
+591,338213,D2,Themurderpeople,8:05,"Ross 154",0,0,1771423684547,0
+592,550901,1,"Red Pencil",4:11,Hauschka,0,0,1771423687621,0
+593,550901,2,"Universal Band Silhouette (Edit)",5:01,"Jan Jelinek",0,0,1771423687621,0
+594,550901,3,"My Beauty In The Moon",4:59,"Kelley Polar",0,0,1771423687622,0
+595,550901,4,Energize,6:28,"DJ Yoav B.",0,0,1771423687622,0
+596,550901,5,"Captain Korma",4:15,"The Orb",0,0,1771423687622,0
+597,550901,6,"El Ordenador Personal",7:54,"Alex Under",0,0,1771423687622,0
+598,550901,7,"Eve By Day",9:28,"Patrick Chardronnet",0,0,1771423687623,0
+599,550901,8,"Red Sky",7:09,"Nubian Mindz",0,0,1771423687623,0
+600,550901,9,"'84 Pontiac Dream",3:47,"Boards Of Canada",0,0,1771423687623,0
+601,550901,10,Ichso,13:45,"Ricardo Villalobos",0,0,1771423687623,0
+602,673403,A1,Run,,D5,0,0,1771423692137,0
+603,673403,A2,Sequensa,,D5,0,0,1771423692137,0
+604,673403,B1,"Sides Of Space",,D5,0,0,1771423692138,0
+605,955626,a1,Clear,,Quince,0,0,1771423694748,0
+606,955626,a2,"Phase One",,Quince,0,0,1771423694755,0
+607,955626,b1,"Sole Trader",,Quince,0,0,1771423694756,0
+608,996249,1,"Lost Track",6:53,Quince,0,0,1771423697468,0
+609,996249,2,GoBang,6:29,Quince,0,0,1771423697468,0
+610,996249,3,"Steady Freddy",5:47,Quince,0,0,1771423697469,0
+611,996249,4,"Space Time",4:36,Quince,0,0,1771423697469,0
+612,996249,5,Sub-01,7:46,Quince,0,0,1771423697470,0
+613,996249,6,"For My Mr",5:15,Quince,0,0,1771423697470,0
+614,996249,7,"No More Drama",8:00,Quince,0,0,1771423697471,0
+615,996249,8,Clear,6:40,Quince,0,0,1771423697471,0
+616,996249,9,Satur,4:54,Quince,0,0,1771423697471,0
+617,996249,10,"New Era",5:17,Quince,0,0,1771423697472,0
+618,996249,11,"Sole Trader",7:23,Quince,0,0,1771423697472,0
+619,996249,12,Vitjazzdepth,6:28,Quince,0,0,1771423697473,0
+620,1171737,1,Startoucher,5:05,Biosphere,0,0,1771423699732,0
+621,1171737,2,"Cost II",6:31,"The Black Dog",0,0,1771423699733,0
+622,1171737,3,Freefall,6:08,"A Mountain Of One",0,0,1771423699733,0
+623,1171737,4,"Sexual Sportswear",7:11,"Sébastien Tellier",0,0,1771423699734,0
+624,1171737,5,"Never Give Up",4:49,"Robert Owens",0,0,1771423699734,0
+625,1171737,6,"It's Time 2 Jack",6:01,"Green Velvet",0,0,1771423699734,0
+626,1171737,7,"Go Silla",5:19,"Prosumer & Murat Tepeli",0,0,1771423699734,0
+627,1171737,8,"Letters (No Melody Edit)",7:31,Reboot,0,0,1771423699735,0
+628,1171737,9,$26,6:42,"Justus Köhncke",0,0,1771423699735,0
+629,1171737,10,"The Force",9:59,Newworldaquarium,0,0,1771423699735,0
+630,1171737,11,"Ghost Hardware",4:48,Burial,0,0,1771423699736,0
+631,1171737,12,"No / Why / New York",4:22,"Alec Empire",0,0,1771423699736,0
+632,1209750,A,"Afrika Man",,"Nubian Mindz",0,0,1771423701921,0
+633,1209750,AA,"Techno Love",,"Nubian Mindz",0,0,1771423701921,0
+634,1308796,A,Rond,7:54,"Sterac aka Steve Rachmad",0,0,1771423704592,0
+635,1308796,AA,Bot,6:48,"Sterac aka Steve Rachmad",0,0,1771423704592,0
+636,1367007,A,"The Last Hour (A&R Edit)",,"Ripperton & Alex Attias",0,0,1771423706874,0
+637,1367007,AA,"The Last Hour (Redshape Laser Mix)",,"Ripperton & Alex Attias",0,0,1771423706875,0
+638,1748585,A,"Trespassers (Redshape Trespassed Mix)",,Newworldaquarium,0,0,1771423709262,0
+639,1748585,AA,"Energy Fields (Quince’s Dubbed Out Reconstruction)",,Taho,0,0,1771423709262,0
+640,1748594,A,"Energy Fields (Shed's Ride Disturbance Mix)",,Taho,0,0,1771423711455,0
+641,1748594,AA,"For My Mr (Sterac AKA Steve Rachmad Remix)",,Quince,0,0,1771423711456,0
+642,1948039,A,"The Force (Ame Remix)",7:59,Newworldaquarium,0,0,1771423713712,0
+643,1948039,AA,"The Force (Alternative Version)",9:41,Newworldaquarium,0,0,1771423713712,0
+644,1958131,"","The Dance Paradox",,Redshape,0,0,1771423716388,0
+645,1958131,A1,"Seduce Me",,Redshape,0,0,1771423716389,0
+646,1958131,A2,"Garage GT",,Redshape,0,0,1771423716389,0
+647,1958131,B1,"Bound (Part 1 & 2)",,Redshape,0,0,1771423716389,0
+648,1958131,B2,"Man Out Of Time",,Redshape,0,0,1771423716390,0
+649,1958131,C1,Globe,,Redshape,0,0,1771423716390,0
+650,1958131,C2,"Rorschach's Game",,Redshape,0,0,1771423716390,0
+651,1958131,D1,"Dead Space Mix (Edit)",,Redshape,0,0,1771423716390,0
+652,1958131,D2,"Dark & Sticky",,Redshape,0,0,1771423716391,0
+653,1958131,"","Paradox Dubs",,Redshape,0,0,1771423716391,0
+654,1958131,A,"Man Out Of Time (Major Space Dub)",,Redshape,0,0,1771423716391,0
+655,1958131,B,"Dead Space (Next Door Ultra Dub)",,Redshape,0,0,1771423716391,0
+656,1963516,1,"Seduce Me",4:15,Redshape,0,0,1771423718664,0
+657,1963516,2,"Garage GT",6:38,Redshape,0,0,1771423718664,0
+658,1963516,3,"Bound (Part 1 & 2)",8:08,Redshape,0,0,1771423718665,0
+659,1963516,4,"Man Out Of Time",4:40,Redshape,0,0,1771423718665,0
+660,1963516,5,Globe,7:17,Redshape,0,0,1771423718665,0
+661,1963516,6,"Rorschach's Game",4:14,Redshape,0,0,1771423718665,0
+662,1963516,7,"Dead Space Mix (Edit)",6:35,Redshape,0,0,1771423718666,0
+663,1963516,8,"Dark & Sticky",5:47,Redshape,0,0,1771423718666,0
+664,1984579,1,"Zellulose Wind",1:49,"Cio D'Or",0,0,1771423720962,0
+665,1984579,2,"Waiting For You",3:09,"King Midas Sound",0,0,1771423720962,0
+666,1984579,3,California,2:59,"Claude VonStroke",0,0,1771423720962,0
+667,1984579,4,"Nights Off",4:08,Siriusmo,0,0,1771423720962,0
+668,1984579,5,"Dream In Berlin",7:13,"Luna City Express, Yoon Lee",0,0,1771423720964,0
+669,1984579,6,Inessa,8:05,"Marek Hemmann",0,0,1771423720964,0
+670,1984579,7,Blackout,6:27,Solomun,0,0,1771423720965,0
+671,1984579,8,Updraft,7:15,Estroe,0,0,1771423720965,0
+672,1984579,9,"Words, Breaths And Pauses (Groove Edit)",8:05,"Cheap And Deep Productions, Uta Alder",0,0,1771423720965,0
+673,1984579,10,"Bound (Part 1 & 2)",8:08,Redshape,0,0,1771423720965,0
+674,1984579,11,"Deep Blue Meanies",6:56,"Juju & Jordash",0,0,1771423720965,0
+675,1984579,12,Unbalance,7:21,2562,0,0,1771423720965,0
+676,1984579,13,"Hier Kommt Alex",3:33,"Thomas Baldischwyler",0,0,1771423720965,0
+677,2272576,A,"Higher Love",,"DJ Yoav B.",0,0,1771423723280,0
+678,2272576,B1,"Love Dub",,"DJ Yoav B.",0,0,1771423723280,0
+679,2272576,B2,"Soul Surrender",,"DJ Yoav B.",0,0,1771423723280,0
+680,2529334,A,"Rear Window",,"A Made Up Sound",0,0,1771423725556,0
+681,2529334,AA,"Rear Window (Shattered)",,"A Made Up Sound",0,0,1771423725556,0
+682,2575899,A,"Rear Window",,"A Made Up Sound",0,0,1771423727940,0
+683,2575899,AA,"Rear Window (Shattered)",,"A Made Up Sound",0,0,1771423727940,0
+684,2720361,A,"Phase Response",,"Mike Dehnert",0,0,1771423730166,0
+685,2720361,B1,Moment,,"Mike Dehnert",0,0,1771423730166,0
+686,2720361,B2,Discrete,,"Mike Dehnert",0,0,1771423730166,0
+687,2780374,1,Intro,1:16,"Mike Dehnert",0,0,1771423732474,0
+688,2780374,2,Infix,5:17,"Mike Dehnert",0,0,1771423732474,0
+689,2780374,3,Framework,5:16,"Mike Dehnert",0,0,1771423732474,0
+690,2780374,4,Palindrome,11:07,"Mike Dehnert",0,0,1771423732475,0
+691,2780374,5,Quattro,6:24,"Mike Dehnert",0,0,1771423732475,0
+692,2780374,6,Klartext,5:56,"Mike Dehnert",0,0,1771423732475,0
+693,2780374,7,Teilfolge,5:44,"Mike Dehnert",0,0,1771423732475,0
+694,2780374,8,Inversion,5:50,"Mike Dehnert",0,0,1771423732477,0
+695,2780374,9,Kontextfrei,3:37,"Mike Dehnert",0,0,1771423732477,0
+696,2780374,10,Beatmatching,6:06,"Mike Dehnert",0,0,1771423732477,0
+697,2780374,11,Outro,3:26,"Mike Dehnert",0,0,1771423732477,0
+698,2950299,A1,"Collage Of Dreams",6:00,"John Beltran",0,0,1771423734730,0
+699,2950299,A2,"Miss Weird",5:47,"John Beltran",0,0,1771423734730,0
+700,2950299,B1,"Sweet Soul",5:28,"John Beltran",0,0,1771423734731,0
+701,2950299,B2,"Soft Summer",6:48,"John Beltran",0,0,1771423734731,0
+702,2950299,C1,"Morning At The Window",4:10,"John Beltran",0,0,1771423734731,0
+703,2950299,C2,Anticipation,4:08,"John Beltran",0,0,1771423734731,0
+704,2950299,C3,"Brilliant Flood",3:52,"John Beltran",0,0,1771423734732,0
+705,2950299,D1,"Water Colored Dreams",3:04,"John Beltran",0,0,1771423734732,0
+706,2950299,D2,Snowdrifts,9:35,"John Beltran",0,0,1771423734732,0
+707,2950299,E1,"Everything Under The Sun",4:44,"John Beltran",0,0,1771423734732,0
+708,2950299,E2,Expecting,4:18,"John Beltran",0,0,1771423734732,0
+709,2950299,E3,"Sub Surface",3:41,"John Beltran",0,0,1771423734733,0
+710,2950299,F1,"Gutaris Breeze",7:23,"John Beltran",0,0,1771423734734,0
+711,2950299,F2,"Collage Revisted",2:41,"John Beltran",0,0,1771423734734,0
+712,2950299,F3,Vienna,2:12,"John Beltran",0,0,1771423734735,0
+713,3198660,A1,24/7,5:34,Marcelus,0,0,1771423737104,0
+714,3198660,A2,"Finding Myself",8:04,Sigha,0,0,1771423737104,0
+715,3198660,B1,Static,5:55,Redshape,0,0,1771423737105,0
+716,3198660,B2,C.N.T.C.T.,7:02,"Area Forty_One",0,0,1771423737105,0
+717,3300138,1,"Dub Child",4:02,"Maya Jane Coles",0,0,1771423739405,0
+718,3300138,2,"High Reflection",5:29,"Octo Octa",0,0,1771423739405,0
+719,3300138,3,"Pivotal Moments In Life",4:20,"Levon Vincent",0,0,1771423739405,0
+720,3300138,4,"That's The Thing (To Do)",6:39,"Great Weekend",0,0,1771423739406,0
+721,3300138,5,"Devil Music",7:09,"Boo Williams",0,0,1771423739406,0
+722,3300138,6,Shiva,6:14,"Fosky, Shiva (30)",0,0,1771423739406,0
+723,3300138,7,"D.P.O.M.B. (Âme Live Version)",5:45,"Henrik Schwarz, Âme, Dixon",0,0,1771423739406,0
+724,3300138,8,U-29,5:58,Untold,0,0,1771423739406,0
+725,3300138,9,Ominous,6:17,Conforce,0,0,1771423739407,0
+726,3300138,10,Sunsun,7:59,Masomenos,0,0,1771423739407,0
+727,3300138,11,"Missing You",3:53,"John Talabot",0,0,1771423739407,0
+728,3300138,12,"All The Sun That Shines",6:52,"Peaking Lights",0,0,1771423739407,0
+729,3300138,13,Memai,6:24,"Bernd Friedmann",0,0,1771423739407,0
+730,3575572,1,Hello,4:33,Vedomir,0,0,1771423741710,0
+731,3575572,2,"Technicolour Dreams",6:08,"Oskar Offermann",0,0,1771423741710,0
+732,3575572,3,"My Way",7:26,"Amirali Shahrestani",0,0,1771423741711,0
+733,3575572,4,"Le Patron Est Devenue Fou!",9:42,"Etienne De Crécy",0,0,1771423741711,0
+734,3575572,5,"Bear Hug",4:06,"The 2 Bears",0,0,1771423741713,0
+735,3575572,6,Fraction,4:03,"Mike Dehnert",0,0,1771423741714,0
+736,3575572,7,"Once (Groove Edit)",3:59,"Allì Borèm",0,0,1771423741714,0
+737,3575572,8,"Cosmic Dance",8:32,"The Lady Blacktronika",0,0,1771423741715,0
+738,3575572,9,"Blind Side",5:00,"Claro Intelecto",0,0,1771423741718,0
+739,3575572,10,Coax,6:34,Shifted,0,0,1771423741719,0
+740,3575572,11,"Aligning The Daemon",4:47,Monolake,0,0,1771423741719,0
+741,3575572,12,"Bright Night",4:15,Dntel,0,0,1771423741720,0
+742,3575572,13,"Window Shopping",7:54,Stimming,0,0,1771423741721,0
+743,3575572,14,11,1:49,"Dean Blunt, Inga Copeland",0,0,1771423741721,0
+744,3642240,1,"Frozen Land",6:00,"Delta Funktionen",0,0,1771423744171,0
+745,3642240,2,Enter,6:48,"Delta Funktionen",0,0,1771423744171,0
+746,3642240,3,Utopia,7:30,"Delta Funktionen",0,0,1771423744171,0
+747,3642240,4,Redemption,5:38,"Delta Funktionen",0,0,1771423744172,0
+748,3642240,5,Target,6:41,"Delta Funktionen",0,0,1771423744172,0
+749,3642240,6,"And If You Know",6:36,"Delta Funktionen",0,0,1771423744172,0
+750,3642240,7,Challenger,5:36,"Delta Funktionen",0,0,1771423744172,0
+751,3642240,8,Onkalo,4:46,"Delta Funktionen",0,0,1771423744172,0
+752,3642240,9,"On A Distant Journey",10:34,"Delta Funktionen",0,0,1771423744177,0
+753,4484275,1,Retrouvailles,4:00,"John Beltran",0,0,1771423746491,0
+754,4484275,2,"Clouds Pull",3:36,"John Beltran",0,0,1771423746491,0
+755,4484275,3,"Het Leven Is Mooi",5:30,"John Beltran",0,0,1771423746492,0
+756,4484275,4,"Our Second Summer",1:26,"John Beltran",0,0,1771423746492,0
+757,4484275,5,"Seasons Go",5:51,"John Beltran",0,0,1771423746492,0
+758,4484275,6,"Amazing Things To Come",2:54,"John Beltran",0,0,1771423746493,0
+759,4484275,7,Esperanto,5:48,"John Beltran",0,0,1771423746493,0
+760,4484275,8,"Inexorably Tied To You",1:52,"John Beltran",0,0,1771423746494,0
+761,4484275,9,"Flower Power Nuclear Submarine",4:44,"John Beltran",0,0,1771423746494,0
+762,4484275,10,"Of All The Things In This World",2:12,"John Beltran",0,0,1771423746494,0
+763,4484275,11,Medellin,4:29,"John Beltran",0,0,1771423746495,0
+764,4484275,12,"Broken Mechanism",4:09,"John Beltran",0,0,1771423746502,0
+765,4484275,13,"For Vangelis",3:08,"John Beltran",0,0,1771423746502,0
+766,4484275,14,"Snow Day...",3:02,"John Beltran",0,0,1771423746502,0
+767,4484275,15,"Weekend Homage",2:21,"John Beltran",0,0,1771423746503,0
+768,4484275,16,"Second Summer (Version 2)",1:26,"John Beltran",0,0,1771423746503,0
+769,4484275,17,"The Second I Wake",2:13,"John Beltran",0,0,1771423746503,0
+770,5186071,1,"Excess Mortality",6:19,Conforce,0,0,1771423748726,0
+771,5186071,2,Spatiotemporal,7:28,Conforce,0,0,1771423748727,0
+772,5186071,3,"Temporary Reversals",7:09,Conforce,0,0,1771423748727,0
+773,5186071,4,"Semantic Fields",5:03,Conforce,0,0,1771423748727,0
+774,5186071,5,"Scientific Trajectory",6:13,Conforce,0,0,1771423748727,0
+775,5186071,6,"Underwater Settlers",6:33,Conforce,0,0,1771423748727,0
+776,5186071,7,"Formerly Programmed Decisions",6:08,Conforce,0,0,1771423748728,0
+777,5186071,8,"Abundance Of Selves ",6:24,Conforce,0,0,1771423748728,0
+778,5186071,9,"Optimum Pace",6:30,Conforce,0,0,1771423748728,0
+779,5186071,10,"Anti-Adaptive State",6:00,Conforce,0,0,1771423748728,0
+780,5241033,A1,"Nocturnal Passions Part I",,"Area Forty_One",0,0,1771423750952,0
+781,5241033,A2,Reminiscence,,"Area Forty_One",0,0,1771423750952,0
+782,5241033,B1,Freefall,,"Area Forty_One",0,0,1771423750953,0
+783,5241033,B2,"Isolated Soul",,"Area Forty_One",0,0,1771423750953,0
+784,5246939,1.01,"Fighting The Blind Man",,"Claro Intelecto",0,0,1771423753185,0
+785,5246939,1.02,"Granny Bag",,"Gerry Read",0,0,1771423753185,0
+786,5246939,1.03,Spacing,,"Unbroken Dub",0,0,1771423753186,0
+787,5246939,1.04,"Way Station",,CiM,0,0,1771423753187,0
+788,5246939,1.05,"Wave Trace",,Conforce,0,0,1771423753187,0
+789,5246939,1.06,Zeitstempel,,Sawlin,0,0,1771423753187,0
+790,5246939,1.07,Passenger,,"Mike Dehnert",0,0,1771423753188,0
+791,5246939,1.08,Supervoid,,"Area Forty_One",0,0,1771423753188,0
+792,5246939,1.09,"Moon FM Desire",,"Ross 154",0,0,1771423753188,0
+793,5246939,1.10,Verna,,Convextion,0,0,1771423753188,0
+794,5246939,2.01,Dive,,Bnjmn,0,0,1771423753189,0
+795,5246939,2.02,Petrol,,"Delta Funktionen",0,0,1771423753189,0
+796,5246939,2.03,"Rear Window (Shattered)",,"A Made Up Sound",0,0,1771423753189,0
+797,5246939,2.04,"Radio's Mutterings",,Herva,0,0,1771423753189,0
+798,5246939,2.05,"Keep Me Close",,"Bleak (4)",0,0,1771423753190,0
+799,5246939,2.06,"Dream Logic",,Hazylujah,0,0,1771423753190,0
+800,5246939,2.07,"Stem Cell",,D5,0,0,1771423753190,0
+801,5246939,2.08,"100 (Classic Mix)",,Redshape,0,0,1771423753191,0
+802,5246939,2.09,"Heart (Warehouse Mix)",,"Claro Intelecto",0,0,1771423753192,0
+803,5246939,2.10,"Return To Nightfall",,"John Beltran",0,0,1771423753193,0
+804,5786093,1,"Sleepygirl 1",5:23,Yagya,0,0,1771423755486,0
+805,5786093,2,"Sleepygirl 2",5:10,Yagya,0,0,1771423755487,0
+806,5786093,3,"Sleepygirl 3",5:59,Yagya,0,0,1771423755488,0
+807,5786093,4,"Sleepygirl 4",5:24,Yagya,0,0,1771423755488,0
+808,5786093,5,"Sleepygirl 5",6:02,Yagya,0,0,1771423755488,0
+809,5786093,6,"Sleepygirl 6",5:08,Yagya,0,0,1771423755488,0
+810,5786093,7,"Sleepygirl 7",5:20,Yagya,0,0,1771423755488,0
+811,5786093,8,"Sleepygirl 8",6:03,Yagya,0,0,1771423755489,0
+812,5786093,9,"Sleepygirl 9",5:26,Yagya,0,0,1771423755489,0
+813,5786093,10,"Sleepygirl 10",5:04,Yagya,0,0,1771423755489,0
+814,5786093,11,"Sleepygirl 11",6:14,Yagya,0,0,1771423755490,0
+815,5786093,12,"Sleepygirl 12",6:19,Yagya,0,0,1771423755490,0
+816,6087146,A1,Coil,,Bnjmn,0,0,1771423757704,0
+817,6087146,A2,Berth,,Bnjmn,0,0,1771423757705,0
+818,6087146,A3,Merge,,Bnjmn,0,0,1771423757705,0
+819,6087146,B1,"And Suddenly",,Bnjmn,0,0,1771423757705,0
+820,6087146,B2,Blown,,Bnjmn,0,0,1771423757705,0
+821,6087146,B3,Azure,,Bnjmn,0,0,1771423757705,0
+822,6373338,1,"Sonar Conversation",8:16,Conforce,0,0,1771423760444,0
+823,6373338,2,"First Impression",6:14,Conforce,0,0,1771423760444,0
+824,6373338,3,Subtraction,7:05,Conforce,0,0,1771423760444,0
+825,6373338,4,Intimidation,7:18,Conforce,0,0,1771423760445,0
+826,6373338,5,"Machine Conspiracy",4:45,Conforce,0,0,1771423760445,0
+827,6373338,6,"Rare Education",7:55,Conforce,0,0,1771423760445,0
+828,6373338,7,"Love Hate",8:09,Conforce,0,0,1771423760445,0
+829,6373338,8,"The Land Of The Highway",5:55,Conforce,0,0,1771423760446,0
+830,6373338,9,"Stop Hold",8:33,Conforce,0,0,1771423760446,0
+831,6572710,A1,"Portal 1",,"Vril (2)",0,0,1771423762805,0
+832,6572710,A2,"Portal 2",,"Vril (2)",0,0,1771423762805,0
+833,6572710,B1,"Portal 3",,"Vril (2)",0,0,1771423762805,0
+834,6572710,B2,"Portal 4",,"Vril (2)",0,0,1771423762806,0
+835,6572710,C1,"Portal 5",,"Vril (2)",0,0,1771423762806,0
+836,6572710,C2,"Portal 6",,"Vril (2)",0,0,1771423762806,0
+837,6572710,D1,"Portal 7",,"Vril (2)",0,0,1771423762807,0
+838,6572710,D2,"Portal 8",,"Vril (2)",0,0,1771423762807,0
+839,6588265,A1,"Portal 1",,"Vril (2)",0,0,1771423765778,0
+840,6588265,A2,"Portal 2",,"Vril (2)",0,0,1771423765778,0
+841,6588265,B1,"Portal 3",,"Vril (2)",0,0,1771423765778,0
+842,6588265,B2,"Portal 4",,"Vril (2)",0,0,1771423765779,0
+843,6588265,C1,"Portal 5",,"Vril (2)",0,0,1771423765779,0
+844,6588265,C2,"Portal 6",,"Vril (2)",0,0,1771423765779,0
+845,6588265,D1,"Portal 7",,"Vril (2)",0,0,1771423765779,0
+846,6588265,D2,"Portal 8",,"Vril (2)",0,0,1771423765779,0
+847,6761029,A,"A Candle",,Son.sine,0,0,1771423768034,0
+848,6761029,B1,"An Island",,Son.sine,0,0,1771423768034,0
+849,6761029,B2,"A Room",,Son.sine,0,0,1771423768035,0
+850,7085844,1,"Snert Hörpu Mina",2:48,Exos,0,0,1771423770238,0
+851,7085844,2,"Grow Bigger",5:19,Exos,0,0,1771423770238,0
+852,7085844,3,Untitled,0:16,Exos,0,0,1771423770239,0
+853,7085844,4,"Many Meters Work",5:42,Exos,0,0,1771423770239,0
+854,7085844,5,Untitled,0:13,Exos,0,0,1771423770239,0
+855,7085844,6,"Yellow Yard",7:50,Exos,0,0,1771423770240,0
+856,7085844,7,Untitled,0:18,Exos,0,0,1771423770240,0
+857,7085844,8,"My Home Is Sonic",5:48,Exos,0,0,1771423770240,0
+858,7085844,9,Untitled,0:13,Exos,0,0,1771423770241,0
+859,7085844,10,"Listen To My Voice",5:59,Exos,0,0,1771423770241,0
+860,7085844,11,Untitled,0:20,Exos,0,0,1771423770242,0
+861,7085844,12,W.e.,7:42,Exos,0,0,1771423770242,0
+862,7085844,13,Untitled,0:16,Exos,0,0,1771423770242,0
+863,7085844,14,"The One And Only",6:10,Exos,0,0,1771423770243,0
+864,7085844,15,Untitled,0:29,Exos,0,0,1771423770244,0
+865,7085844,16,Felx,5:11,Exos,0,0,1771423770244,0
+866,7085844,17,Untitled,0:08,Exos,0,0,1771423770244,0
+867,7085844,18,Eastwood,5:25,Exos,0,0,1771423770245,0
+868,7085844,19,Untitled,0:05,Exos,0,0,1771423770245,0
+869,7085844,20,Svali,6:37,Exos,0,0,1771423770256,0
+870,7085844,21,Untitled,0:20,Exos,0,0,1771423770257,0
+871,7085844,22,"Live Guides",7:12,Exos,0,0,1771423770257,0
+872,7085844,23,"Frodi Ambience",1:59,Exos,0,0,1771423770257,0
+873,7185316,A1,Glideslope,,Conforce,0,0,1771423772755,0
+874,7185316,A2,Realtime,,Conforce,0,0,1771423772755,0
+875,7185316,B1,"Blue Note",,Conforce,0,0,1771423772755,0
+876,7185316,B2,"Artefact From A Higher Dimension",,Conforce,0,0,1771423772755,0
+877,7185316,C1,"Time Space Continuum",,Conforce,0,0,1771423772755,0
+878,7185316,C2,"Erased Connections With The Past",,Conforce,0,0,1771423772755,0
+879,7185316,D1,"Motion Sequence",,Conforce,0,0,1771423772755,0
+880,7185316,D2,"Sequence Of Subcult",,Conforce,0,0,1771423772755,0
+881,7185316,E1,Monomorphic,,Conforce,0,0,1771423772755,0
+882,7185316,E2,"Ocean Lab",,Conforce,0,0,1771423772756,0
+883,7185316,F1,Hydrosphere,,Conforce,0,0,1771423772756,0
+884,7185316,F2,"Predictive Flow",,Conforce,0,0,1771423772756,0
+885,7208364,A1,Glideslope,,Conforce,0,0,1771423775039,0
+886,7208364,A2,Realtime,,Conforce,0,0,1771423775039,0
+887,7208364,B1,"Blue Note",,Conforce,0,0,1771423775040,0
+888,7208364,B2,"Artefact From A Higher Dimension",,Conforce,0,0,1771423775040,0
+889,7208364,C1,"Time Space Continuum",,Conforce,0,0,1771423775040,0
+890,7208364,C2,"Erased Connections With The Past",,Conforce,0,0,1771423775040,0
+891,7208364,D1,"Motion Sequence",,Conforce,0,0,1771423775040,0
+892,7208364,D2,"Sequence Of Sub",,Conforce,0,0,1771423775041,0
+893,7208364,E1,Monomorphic,,Conforce,0,0,1771423775041,0
+894,7208364,E2,"Ocean Lab",,Conforce,0,0,1771423775044,0
+895,7208364,F1,Hydrosphere,,Conforce,0,0,1771423775044,0
+896,7208364,F2,"Predictive Flow",,Conforce,0,0,1771423775044,0
+897,7213874,1,Glideslope,5:58,Conforce,0,0,1771423777325,0
+898,7213874,2,Realtime,5:20,Conforce,0,0,1771423777325,0
+899,7213874,3,"Blue Note",6:53,Conforce,0,0,1771423777325,0
+900,7213874,4,"Artefact From A Higher Dimension",6:49,Conforce,0,0,1771423777326,0
+901,7213874,5,"Time Space Continuum",5:37,Conforce,0,0,1771423777326,0
+902,7213874,6,"Erased Connections With The Past",6:44,Conforce,0,0,1771423777326,0
+903,7213874,7,"Motion Sequence",5:53,Conforce,0,0,1771423777326,0
+904,7213874,8,"Sequence Of Subcult",6:33,Conforce,0,0,1771423777327,0
+905,7213874,9,Monomorphic,5:56,Conforce,0,0,1771423777327,0
+906,7213874,10,"Ocean Lab",6:05,Conforce,0,0,1771423777327,0
+907,7213874,11,Hydrosphere,7:00,Conforce,0,0,1771423777327,0
+908,7213874,12,"Predictive Flow",6:08,Conforce,0,0,1771423777328,0
+909,7247155,1,Intro,1:33,"John Beltran",0,0,1771423779699,0
+910,7247155,2,Espais,3:03,"John Beltran",0,0,1771423779699,0
+911,7247155,3,"Many Moments To Come",3:02,"John Beltran",0,0,1771423779700,0
+912,7247155,4,"Přestávka",1:57,"John Beltran",0,0,1771423779700,0
+913,7247155,5,"A Child's Place",3:29,"John Beltran",0,0,1771423779700,0
+914,7247155,6,"Love Suspended",2:28,"John Beltran",0,0,1771423779700,0
+915,7247155,7,"Music For Machines",3:28,"John Beltran",0,0,1771423779701,0
+916,7247155,8,"Orange Background",2:53,"John Beltran",0,0,1771423779701,0
+917,7247155,9,Descorazonador,2:26,"John Beltran",0,0,1771423779701,0
+918,7247155,10,Raume,2:53,"John Beltran",0,0,1771423779701,0
+919,7247155,11,Interlude,2:05,"John Beltran",0,0,1771423779702,0
+920,7247155,12,"White Space Poetry",3:20,"John Beltran",0,0,1771423779702,0
+921,7247155,13,Muse,6:09,"John Beltran",0,0,1771423779703,0
+922,7247155,14,Ruimten,3:26,"John Beltran",0,0,1771423779703,0
+923,7247155,15,"Heavy Weather",3:59,"John Beltran",0,0,1771423779703,0
+924,7247155,16,"Dreams Triangle",4:30,"John Beltran",0,0,1771423779706,0
+925,7247155,17,"The Warning Storm (Outro)",5:45,"John Beltran",0,0,1771423779707,0
+926,7269169,1,Intro,1:33,"John Beltran",0,0,1771423782266,0
+927,7269169,2,Espais,3:03,"John Beltran",0,0,1771423782267,0
+928,7269169,3,"Many Moments To Come",3:02,"John Beltran",0,0,1771423782267,0
+929,7269169,4,"Přestávka",1:57,"John Beltran",0,0,1771423782267,0
+930,7269169,5,"A Child's Place",3:29,"John Beltran",0,0,1771423782267,0
+931,7269169,6,"Love Suspended",2:28,"John Beltran",0,0,1771423782267,0
+932,7269169,7,"Music For Machines",3:28,"John Beltran",0,0,1771423782267,0
+933,7269169,8,"Orange Background",2:53,"John Beltran",0,0,1771423782267,0
+934,7269169,9,Descorazonador,2:26,"John Beltran",0,0,1771423782267,0
+935,7269169,10,Raume,2:53,"John Beltran",0,0,1771423782267,0
+936,7269169,11,Interlude,2:05,"John Beltran",0,0,1771423782267,0
+937,7269169,12,"White Space Poetry",3:20,"John Beltran",0,0,1771423782268,0
+938,7269169,13,Muse,6:09,"John Beltran",0,0,1771423782268,0
+939,7269169,14,Ruimten,3:26,"John Beltran",0,0,1771423782268,0
+940,7269169,15,"Heavy Weather",3:59,"John Beltran",0,0,1771423782268,0
+941,7269169,16,"Dreams Tangle",4:30,"John Beltran",0,0,1771423782268,0
+942,7269169,17,"The Warming Storm (Outro)",5:45,"John Beltran",0,0,1771423782268,0
+943,7499317,1,Intro,1:16,"Mike Dehnert",0,0,1771423784648,0
+944,7499317,2,Infix,5:17,"Mike Dehnert",0,0,1771423784648,0
+945,7499317,3,Framework,5:16,"Mike Dehnert",0,0,1771423784648,0
+946,7499317,4,Palindrome,11:07,"Mike Dehnert",0,0,1771423784649,0
+947,7499317,5,Quattro,6:24,"Mike Dehnert",0,0,1771423784649,0
+948,7499317,6,Klartext,5:56,"Mike Dehnert",0,0,1771423784649,0
+949,7499317,7,Teilfolge,5:44,"Mike Dehnert",0,0,1771423784649,0
+950,7499317,8,Inversion,5:50,"Mike Dehnert",0,0,1771423784649,0
+951,7499317,9,Kontextfrei,3:37,"Mike Dehnert",0,0,1771423784650,0
+952,7499317,10,Beatmatching,6:06,"Mike Dehnert",0,0,1771423784651,0
+953,7499317,11,Outro,3:26,"Mike Dehnert",0,0,1771423784651,0
+954,7651711,A1,"Downhearted Holidays",7:08,Voiski,0,0,1771423786914,0
+955,7651711,A2,"Galaxy Call",5:33,Voiski,0,0,1771423786914,0
+956,7651711,B1,"Mathematical Park",5:28,Voiski,0,0,1771423786914,0
+957,7651711,B2,"Answer Silently",5:24,Voiski,0,0,1771423786915,0
+958,7851727,A1,"Run ",,D5,0,0,1771423789284,0
+959,7851727,A2," Lab Work ",,D5,0,0,1771423789285,0
+960,7851727,B1,"Moderna ",,D5,0,0,1771423789285,0
+961,7851727,B2," Transglide ",,D5,0,0,1771423789285,0
+962,7851727,C1," The Deep ",,D5,0,0,1771423789285,0
+963,7851727,C2," Floatation Tank ",,D5,0,0,1771423789286,0
+964,7851727,D1,"Aquenatec ",,D5,0,0,1771423789286,0
+965,7851727,D2," Stem Cell",,D5,0,0,1771423789287,0
+966,7851727,E1," Sides Of Space ",,D5,0,0,1771423789287,0
+967,7851727,E2,"Sequensa ",,D5,0,0,1771423789288,0
+968,7851727,F1," Future Sense ",,D5,0,0,1771423789289,0
+969,7851727,F2,Compumotion,,D5,0,0,1771423789289,0
+970,7908909,1,"Run ",6:57,D5,0,0,1771423791778,0
+971,7908909,2,"Lab Work ",5:57,D5,0,0,1771423791778,0
+972,7908909,3,"Moderna ",8:15,D5,0,0,1771423791778,0
+973,7908909,4,"Transglide ",6:53,D5,0,0,1771423791779,0
+974,7908909,5,"The Deep ",6:32,D5,0,0,1771423791779,0
+975,7908909,6,"Floatation Tank ",7:29,D5,0,0,1771423791779,0
+976,7908909,7,"Aquenatec ",7:13,D5,0,0,1771423791779,0
+977,7908909,8,"Stem Cell",6:57,D5,0,0,1771423791779,0
+978,7908909,9,"Sides Of Space ",8:22,D5,0,0,1771423791780,0
+979,7908909,10,"Sequensa ",3:09,D5,0,0,1771423791780,0
+980,7908909,11,"Future Sense ",7:02,D5,0,0,1771423791780,0
+981,7908909,12,Compumotion,5:09,D5,0,0,1771423791780,0
+982,8150869,1,"Winterfall Winds",5:56,"Winter Flags",0,0,1771423794237,0
+983,8150869,2,Lung,5:46,Reinehr,0,0,1771423794238,0
+984,8150869,3,"Trust And Faith",3:43,"Sons Of Melancholia",0,0,1771423794238,0
+985,8150869,4,"Before Mornings Arrival",2:58,"Blair French",0,0,1771423794238,0
+986,8150869,5,"Music For Machines",3:35,"John Beltran",0,0,1771423794239,0
+987,8150869,6,Brisa,3:27,"David Elpezs",0,0,1771423794239,0
+988,8150869,7,"High Tide",4:41,"Kirk Degiorgio",0,0,1771423794239,0
+989,8150869,8,"Nineteen Eighty Seven",3:03,"Dennis Clifford",0,0,1771423794239,0
+990,8150869,9,5291989,4:21,"Robert Perry (5)",0,0,1771423794239,0
+991,8150869,10,"The Veldt",4:32,"Merrin Karras",0,0,1771423794239,0
+992,8150869,11,"Winter Boredom",3:40,"Natalie Beridze",0,0,1771423794239,0
+993,8150869,12,"Dashboard Angels",5:20,"Greg Chin",0,0,1771423794240,0
+994,8150869,13,"For Val",4:59,"Sons Of Melancholia",0,0,1771423794240,0
+995,8150869,14,"Only In My Dreams",6:30,"Mick Chillage",0,0,1771423794240,0
+996,8150869,15,"Subway Arp",3:34,"Vincent Volt",0,0,1771423794240,0
+997,8150869,16,1993,4:11,"Winter Flags",0,0,1771423794241,0
+998,8150869,17,Stereometry,2:55,A2B2C2,0,0,1771423794241,0
+999,8150869,18,Mississipi,5:01,"Gacha Bakradze",0,0,1771423794241,0
+1000,8260458,A1,"Nocturnal Passions Part II",,"Area Forty_One",0,0,1771423796516,0
+1001,8260458,A2,Voyage,,"Area Forty_One",0,0,1771423796517,0
+1002,8260458,B1,Consolation,,"Area Forty_One",0,0,1771423796517,0
+1003,8260458,B2,Orbiting,,"Area Forty_One",0,0,1771423796518,0
+1004,8267943,A1,"Nocturnal Passions Part II",,"Area Forty_One",0,0,1771423798885,0
+1005,8267943,A2,Voyage,,"Area Forty_One",0,0,1771423798885,0
+1006,8267943,B1,Consolation,,"Area Forty_One",0,0,1771423798885,0
+1007,8267943,B2,Orbiting,,"Area Forty_One",0,0,1771423798885,0
+1008,8559382,A1,"In Absentia (Feat. PVNV)",,"Shlømo",0,0,1771423801314,0
+1009,8559382,A2,"Escape From The Void",,"Shlømo",0,0,1771423801314,0
+1010,8559382,B1,"Poison River",,"Shlømo",0,0,1771423801315,0
+1011,8559382,B2,"Escape From The Poison River (Artefakt Collage)",,"Shlømo",0,0,1771423801315,0
+1012,8572351,A1,"In Absentia (Feat. PVNV)",,"Shlømo",0,0,1771423804336,0
+1013,8572351,A2,"Escape From The Void",,"Shlømo",0,0,1771423804336,0
+1014,8572351,B1,"Poison River",,"Shlømo",0,0,1771423804336,0
+1015,8572351,B2,"Escape From The Poison River (Artefakt Collage)",,"Shlømo",0,0,1771423804336,0
+1016,8689405,1,"Seduce Me",,Redshape,0,0,1771423806553,0
+1017,8689405,2,"Garage GT",,Redshape,0,0,1771423806554,0
+1018,8689405,3,"Bound (Part 1 & 2)",,Redshape,0,0,1771423806554,0
+1019,8689405,4,"Man Out Of Time",,Redshape,0,0,1771423806554,0
+1020,8689405,5,Globe,,Redshape,0,0,1771423806554,0
+1021,8689405,6,"Rorschach's Game",,Redshape,0,0,1771423806554,0
+1022,8689405,7,"Dead Space Mix (Edit)",,Redshape,0,0,1771423806554,0
+1023,8689405,8,"Dark & Sticky",,Redshape,0,0,1771423806555,0
+1024,8807511,A1,"Two Stories 	  ",5:47,B12,0,0,1771423808819,0
+1025,8807511,A2,"Nautilus Horizon 	",5:33,B12,0,0,1771423808820,0
+1026,8807511,B1,"It's My Blood 	 ",4:47,B12,0,0,1771423808820,0
+1027,8807511,B2,"Nothing 	",5:35,B12,0,0,1771423808820,0
+1028,8807511,B3,"Universal Alignment",4:34,B12,0,0,1771423808821,0
+1029,9405588,A1,TKY,,Conforce,0,0,1771423811068,0
+1030,9405588,A2,Reverse,,Conforce,0,0,1771423811068,0
+1031,9405588,B1,P.O.D.,,Conforce,0,0,1771423811069,0
+1032,9405588,B2,"Similar Twinkling Lights",,Conforce,0,0,1771423811069,0
+1033,9417379,1,"Under This Sky",1:41,"John Beltran",0,0,1771423813602,0
+1034,9417379,2,Faux,7:32,"John Beltran",0,0,1771423813603,0
+1035,9417379,3,"Everything At Once",5:41,"John Beltran",0,0,1771423813603,0
+1036,9417379,4,"S i n e M",6:57,"John Beltran",0,0,1771423813603,0
+1037,9417379,5,Lift,5:30,"John Beltran",0,0,1771423813604,0
+1038,9417379,6,Tennis,2:01,"John Beltran",0,0,1771423813604,0
+1039,9417379,7,Mother,5:13,"John Beltran",0,0,1771423813604,0
+1040,9417379,8,"Gentle Boxes",3:41,"John Beltran",0,0,1771423813604,0
+1041,9417379,9,"Hurry Home The Trees Are Finally Green",5:56,"John Beltran",0,0,1771423813605,0
+1042,9417379,10,Tanzmusik,4:49,"John Beltran",0,0,1771423813605,0
+1043,9417379,11,"She Dwells With Beauty",4:16,"John Beltran",0,0,1771423813605,0
+1044,9417379,12,"White Rainbows",5:21,"John Beltran",0,0,1771423813605,0
+1045,9417379,13,"Nine Sun",2:21,"John Beltran",0,0,1771423813605,0
+1046,9417379,14,"A New Room",4:27,"John Beltran",0,0,1771423813606,0
+1047,9417379,15,"Dream Lover!",5:16,"John Beltran",0,0,1771423813606,0
+1048,9417379,16,"Spring Affects Him",2:03,"John Beltran",0,0,1771423813606,0
+1049,9417379,17,"Bursting Bloom",4:56,"John Beltran",0,0,1771423813606,0
+1050,9496477,1,"Train Station's Dustlight",6:18,Yagya,0,0,1771423816059,0
+1051,9496477,2,"Crepuscular Rays Over The Horizon",6:28,Yagya,0,0,1771423816059,0
+1052,9496477,3,"Motes In The Moonlight",5:15,Yagya,0,0,1771423816059,0
+1053,9496477,4,"Substorms On A Winter Night",5:11,Yagya,0,0,1771423816059,0
+1054,9496477,5,"Through The Zodiacal Cloud",3:11,Yagya,0,0,1771423816060,0
+1055,9496477,6,"Young Suns Of NGC 7129",5:12,Yagya,0,0,1771423816060,0
+1056,9496477,7,"The Great Attractor",5:16,Yagya,0,0,1771423816060,0
+1057,9496477,8,"Through The Sculptor Group",5:49,Yagya,0,0,1771423816060,0
+1058,9496477,9,"Laniakea's Redshift",5:51,Yagya,0,0,1771423816060,0
+1059,9496477,10,"The Observable Universe",6:06,Yagya,0,0,1771423816060,0
+1060,9533339,A1,"Train Station's Dustlight",,Yagya,0,0,1771423818291,0
+1061,9533339,A2,"Crepuscular Rays Over The Horizon",,Yagya,0,0,1771423818292,0
+1062,9533339,B1,"Motes In The Moonlight",,Yagya,0,0,1771423818292,0
+1063,9533339,B2,"Substorms On A Winter Night",,Yagya,0,0,1771423818292,0
+1064,9533339,B3,"Through The Zodiacal Cloud",,Yagya,0,0,1771423818292,0
+1065,9533339,C1,"Young Suns Of NGC 7129",,Yagya,0,0,1771423818292,0
+1066,9533339,C2,"The Great Attractor",,Yagya,0,0,1771423818292,0
+1067,9533339,C3,"Through The Sculptor Group",,Yagya,0,0,1771423818292,0
+1068,9533339,D1,"Laniakea's Redshift",,Yagya,0,0,1771423818292,0
+1069,9533339,D2,"The Observable Universe",,Yagya,0,0,1771423818292,0
+1070,9533339,X1,"Sleepygirl Outtake 04",,Yagya,0,0,1771423818292,0
+1071,9533339,X2,"Sleepygirl Outtake 14",,Yagya,0,0,1771423818293,0
+1072,9533339,Y1,"Sleepygirl Outtake 16",,Yagya,0,0,1771423818293,0
+1073,9533339,Y2,"Sleepygirl Outtake 20",,Yagya,0,0,1771423818293,0
+1074,10044749,1,"In Absentia (Feat. PVNV)",5:25,"Shlømo",0,0,1771423820629,0
+1075,10044749,2,"Escape From The Void",6:13,"Shlømo",0,0,1771423820629,0
+1076,10044749,3,"Poison River",5:58,"Shlømo",0,0,1771423820629,0
+1077,10044749,4,"Escape From The Poison River (Artefakt Collage)",7:04,"Shlømo",0,0,1771423820629,0
+1078,10165993,A1,"Relative Solace",,Sentomea,0,0,1771423822928,0
+1079,10165993,B1,Wander,,Sentomea,0,0,1771423822928,0
+1080,10165993,B2,"Fortitude Boogie",,Sentomea,0,0,1771423822928,0
+1081,10165993,C1,Fluid,,Sentomea,0,0,1771423822929,0
+1082,10165993,D1,Matter,,Sentomea,0,0,1771423822929,0
+1083,10165993,D2,Reminiscent,,Sentomea,0,0,1771423822929,0
+2116,10398922,A,"Brilliant Flood (Kassem Mosse & Mix Mup Remix)",6:30,"John Beltran",0,0,1771441851681,0
+2117,10398922,AA,"Nephila's Oneiric (Sven's Glorify Tribute To John Beltran)",9:16,"John Beltran",0,0,1771441851681,0
+2118,10331243,A,"Cycles Of Life",,"Ray Castoldi",0,0,1771441851967,0
+2119,10331243,B1,Condensation,,"Ray Castoldi",0,0,1771441851967,0
+2120,10331243,B2,"Feel The Rhythm",,"Ray Castoldi",0,0,1771441851967,0
+2121,10331243,C1,"Feel The Piano",,"Ray Castoldi",0,0,1771441851967,0
+2122,10331243,C2,"And God Made A Woman",,"Ray Castoldi",0,0,1771441851968,0
+2123,10331243,D1,"The Solo",,"Ray Castoldi",0,0,1771441851968,0
+2124,10331243,D2,"In Orbit ",,"Ray Castoldi",0,0,1771441851969,0
+2125,10331243,E1,"The Nightflight",,"Ray Castoldi",0,0,1771441851969,0
+2126,10331243,E2,"Tone Poem",,"Ray Castoldi",0,0,1771441851969,0
+2127,10331243,F1,"The Deep And Slo",,"Ray Castoldi",0,0,1771441851969,0
+2128,10331243,F2,"Absolute Time",,"Ray Castoldi",0,0,1771441851970,0
+2129,18611755,A,"Dārukā",,"Invisible Menders",1,1,1771441852556,1
+2130,18611755,B1,"Dārukā (SYO Remix)",,"Invisible Menders",1,1,1771441852557,1
+2131,18611755,B2,"Weather Obsessives (Eversines Remix)",,"Invisible Menders",1,1,1771441852557,1
+2132,14981047,"","That Side",,"Paradise City Breakers",1,0,1771441852673,0
+2133,14981047,A1,"Andromeda Is A Lie",,"Paradise City Breakers",1,0,1771441852673,0
+2134,14981047,A2,"The Pacman Effect",,"Paradise City Breakers",1,0,1771441852673,0
+2135,14981047,"","This Side",,"Paradise City Breakers",1,0,1771441852673,0
+2136,14981047,B1,"I've Seen The World",,"Paradise City Breakers",0,0,1771441852673,0
+2137,14981047,B2,"Paradise City Breakers",,"Paradise City Breakers",1,0,1771441852673,0
+2138,29526781,A1,"Psy Dance ",6:25,"Matthias (52)",0,0,1771441852683,0
+2139,29526781,A2,"Robot Axe ",6:38,"Matthias (52)",0,0,1771441852683,0
+2140,29526781,B1,"Fender Strato",7:02,"Matthias (52)",0,0,1771441852683,0
+2141,29526781,B2,"Les Rythmes Sont Robotiques",7:39,"Matthias (52)",0,0,1771441852683,0
+2142,22613111,A1,013.1,,Romar,1,0,1771441852693,0
+2143,22613111,B1,013.2,,Romar,1,0,1771441852693,0
+2144,22613111,B2,013.3,,Romar,1,0,1771441852694,0
+2145,33397700,A1,"Serpentine 1",,"OK EG, Priori (2)",0,0,1771441854980,0
+2146,33397700,A2,"Serpentine 2",,"OK EG, Priori (2)",0,0,1771441854980,0
+2147,33397700,B1,"Serpentine 3",,"OK EG, Priori (2)",0,0,1771441854980,0
+2148,33397700,B2,"Serpentine 4",,"OK EG, Priori (2)",0,0,1771441854980,0
+2149,24445211,A1,"Higher Planes",,"Anatolian Weapons",0,0,1771441856158,0
+2150,24445211,A2,"Into The Void",,"Anatolian Weapons",0,0,1771441856159,0
+2151,24445211,B1,Lost,,"Anatolian Weapons",0,0,1771441856159,0
+2152,24445211,B2,Cloud,,"Anatolian Weapons",0,0,1771441856160,0
+2153,21099343,1,"Strange Objects",,"Cassie Wieland",0,0,1771441856192,0
+2154,21099343,2,Weeds,,"Cassie Wieland",0,0,1771441856192,0
+2155,21099343,3," The Veneer Melts",,"Erich Barganier",0,0,1771441856192,0
+2156,21099343,4,"Калі Я Адкрыў Вочы",,"Erich Barganier",0,0,1771441856193,0
+2157,12863054,A1,"Let There Be Drums",5:23,"La Batterie",0,0,1771441856279,0
+2158,12863054,A2,"Let There Be Drums (Max Abysmal's Spooky Remix)",6:47,"La Batterie",0,0,1771441856279,0
+2159,12863054,B1,Shogun,4:24,"La Batterie",0,0,1771441856279,0
+2160,12863054,B2,"Let There Be Drums (Benedikt Frey Remix)",6:46,"La Batterie",0,0,1771441856280,0
+2161,31632496,A1,"Chicago Babussa",,"AI Robot",0,0,1771441857377,0
+2162,31632496,A2,"Desert Earth",,"AI Robot",0,0,1771441857377,0
+2163,31632496,B1,Dynamic,,"AI Robot",0,0,1771441857377,0
+2164,31632496,B2,"Electric Love",,"AI Robot",0,0,1771441857377,0
+2165,34105114,A1,"Syncrosonix (Part I)",,"Eyes Of Goa, The",0,0,1771441857428,0
+2166,34105114,A2,"Syncrosonix (Part II)",,"Eyes Of Goa, The",0,0,1771441857428,0
+2167,34105114,B1,"Goagoa (Part I)",,"Eyes Of Goa, The",0,0,1771441857429,0
+2168,34105114,B2,"Goagoa (Part II)",,"Eyes Of Goa, The",0,0,1771441857429,0
+2169,28679023,A1,Initialization,,"Christopher Ledger",0,0,1771441858926,0
+2170,28679023,A2,"Lunar Empathy",,"Christopher Ledger",0,0,1771441858926,0
+2171,28679023,B1,"A Deeper Thought",,"Christopher Ledger",0,0,1771441858927,0
+2172,28679023,B2,"A Deeper Thought (C.K's 5AM REMIX)",,"Christopher Ledger",0,0,1771441858927,0
+2173,18766900,1,"Fading Paths",6:00,Purplehands,0,0,1771441859804,0
+2174,18766900,2,Polypodiopsida,4:27,Purplehands,0,0,1771441859804,0
+2175,18766900,3,Sunvibe,6:20,Purplehands,0,0,1771441859805,0
+2176,18766900,4,"Washaway Day",5:32,Purplehands,0,0,1771441859805,0
+2177,18766900,5,"We Will Have To Leave",5:58,Purplehands,0,0,1771441859806,0
+2178,18766900,6,"When I'm Gone",7:41,Purplehands,0,0,1771441859806,0
+2179,14595012,A1,"Boaty Banger",,"Alec Falconer",0,0,1771441861011,0
+2180,14595012,A2,FFFF,,"Alec Falconer",0,0,1771441861011,0
+2181,14595012,B1,"Heck Of A Neck",,"Alec Falconer",0,0,1771441861011,0
+2182,14595012,B2,Four,,"Alec Falconer",0,0,1771441861011,0
+2183,14363946,A1,"Lán",6:44,"Alan Backdrop",0,0,1771441861016,0
+2184,14363946,A2,Dr_c_,6:14,"Alan Backdrop",0,0,1771441861016,0
+2185,14363946,B1,Delwa,6:21,"Alan Backdrop",0,0,1771441861016,0
+2186,14363946,B2,"Dr_c_ (Feral Acid Jungle Remix)",6:29,"Alan Backdrop",0,0,1771441861016,0
+2187,13272164,A1,"Acid Eater",,Textasy,0,0,1771441862340,0
+2188,13272164,B1,"Burning Diesel",,Textasy,0,0,1771441862340,0
+2189,14926862,1,"Big Trance",8:09,"Big Zen",0,0,1771441862712,0
+2190,14926862,2,Weo,6:23,"Big Zen",0,0,1771441862712,0
+2191,14926862,3,"Tip Sonic",7:07,"Big Zen",0,0,1771441862713,0
+2192,14926862,4,Buddons,5:39,"Big Zen",0,0,1771441862713,0
+2193,32481222,A1,"Conscious ",,"Unknown Artist",0,0,1771441864646,0
+2194,32481222,A2,Lookfor,,"Unknown Artist",0,0,1771441864646,0
+2195,32481222,B1,"Rebalance ",,"Unknown Artist",0,0,1771441864646,0
+2196,32481222,"B2 ","This Control",,"Unknown Artist",0,0,1771441864646,0
+2197,7036708,A1,Bells,6:10,"Xen (9)",0,0,1771441864682,0
+2198,7036708,A2,"All Of The Sun",6:36,"Xen (9)",0,0,1771441864682,0
+2199,7036708,B1,"Bells (Red Axes Remix)",7:59,"Xen (9)",0,0,1771441864683,0
+2200,7036708,B2,"All Of The Sun (Voodoo)",5:28,"Xen (9)",0,0,1771441864683,0
+2201,10513742,A,Sun,10:33,"Ross 154",0,0,1771441867227,0
+2202,10513742,B1,Sniper,5:45,"Ross 154",0,0,1771441867228,0
+2203,10513742,B2,Apricot,5:53,"Ross 154",0,0,1771441867228,0
+2204,10513742,C,Abrighterday,6:56,"Ross 154",0,0,1771441867228,0
+2205,10513742,D1,Strike,4:09,"Ross 154",0,0,1771441867228,0
+2206,10513742,D2,Themurderpeople,8:05,"Ross 154",0,0,1771441867228,0
+2207,35623822,1,1978,,"Les Rallizes Denudes",0,0,1771441867231,0
+2208,35623822,2,"1980 Enter The Mirror",,"Les Rallizes Denudes",0,0,1771441867232,0
+2209,35623822,3,1981,,"Les Rallizes Denudes",0,0,1771441867232,0
+2210,35623822,4,"1981 The Last One",,"Les Rallizes Denudes",0,0,1771441867232,0
+2211,35623822,5,1982,,"Les Rallizes Denudes",0,0,1771441867232,0
+2212,19780768,A1,"New Era",3:14,"Planet Love",0,0,1771441867237,0
+2213,19780768,A2,Flowers,4:24,"Planet Love",0,0,1771441867237,0
+2214,19780768,B,"Bird Song",4:09,"Planet Love",0,0,1771441867237,0
+2215,30535864,1,Comportment,4:59,"Decoder (9)",0,0,1771441867244,0
+2216,30535864,2,Inaction,5:51,"Decoder (9)",0,0,1771441867244,0
+2217,30535864,3,"Non Dualistic",5:47,"Decoder (9)",0,0,1771441867244,0
+2218,30535864,4,"4 Stub (Auspicious)",6:37,"Decoder (9)",0,0,1771441867244,0
+2219,30535864,5,"Tenuous Sentiment",4:23,"Decoder (9)",0,0,1771441867244,0
+2220,30535864,6,Visionary,7:33,"Decoder (9)",0,0,1771441867244,0
+2221,30535864,7,"7th Ritual",5:56,"Decoder (9)",0,0,1771441867244,0
+2222,30535864,8,"All I Have",8:00,"Decoder (9)",0,0,1771441867244,0
+2223,8048441,1,"Main Title",2:39,"Nick Glennie-Smith",0,0,1771441867251,0
+2224,8048441,2,"Time Safari Inc.",0:36,"Nick Glennie-Smith",0,0,1771441867251,0
+2225,8048441,3,Security,0:36,"Nick Glennie-Smith",0,0,1771441867251,0
+2226,8048441,4,Ancestor,3:58,"Nick Glennie-Smith",0,0,1771441867251,0
+2227,8048441,5,"Rules / Time Jump",2:41,"Nick Glennie-Smith",0,0,1771441867251,0
+2228,8048441,6,"Major Problem",3:12,"Nick Glennie-Smith",0,0,1771441867251,0
+2229,8048441,7,"Lights Out",1:10,"Nick Glennie-Smith",0,0,1771441867252,0
+2230,8048441,8,"Morning News / Eruption",1:51,"Nick Glennie-Smith",0,0,1771441867252,0
+2231,8048441,9,"Time Wave",0:33,"Nick Glennie-Smith",0,0,1771441867252,0
+2232,8048441,10,"Jumping Alone / Another Time Wave",2:28,"Nick Glennie-Smith",0,0,1771441867252,0
+2233,8048441,11,"Access Denied",5:19,"Nick Glennie-Smith",0,0,1771441867252,0
+2234,8048441,12,"Cab Ride",3:16,"Nick Glennie-Smith",0,0,1771441867252,0
+2235,8048441,13,"Seeking Eckels",1:53,"Nick Glennie-Smith",0,0,1771441867252,0
+2236,8048441,14,"Payne / Spota's Market / Apt. 7A",6:28,"Nick Glennie-Smith",0,0,1771441867252,0
+2237,8048441,15,"Middleton / Butterfly",3:09,"Nick Glennie-Smith",0,0,1771441867252,0
+2238,8048441,16,"Tami's Hard Drive",5:43,"Nick Glennie-Smith",0,0,1771441867252,0
+2239,8048441,17,"University / Butterfly Saved",4:56,"Nick Glennie-Smith",0,0,1771441867252,0
+2240,8048441,18,"Look At This / End Titles A",2:55,"Nick Glennie-Smith",0,0,1771441867252,0
+2241,8048441,19,"End Titles B / End Roller Suite",8:28,"Nick Glennie-Smith",0,0,1771441867252,0
+2242,10232021,A1,003.1,,"Andu Simion",1,1,1771441867816,1
+2243,10232021,A2,003.2,,"Andu Simion",1,1,1771441867816,1
+2244,10232021,B1,003.3,,"Andu Simion",1,1,1771441867817,1
+2245,10232021,B2,003.4,,"Andu Simion",1,1,1771441867817,1
+2246,8568045,A.,"The Genie",,"Invisible Menders",1,1,1771441870162,1
+2247,8568045,B1.,"Midnight Drive (Menders' Re-Stitch) ",,"Invisible Menders",0,1,1771441870162,0
+2248,18074002,A1,seq_microA,,"Views (4)",1,0,1771441871438,0
+2249,18074002,A2,2044,,"Views (4)",1,0,1771441871439,0
+2250,18074002,B1,"Tribute To The Channel",,"Views (4)",1,0,1771441871439,0
+2251,18074002,B2,"Last Rain",,"Views (4)",1,0,1771441871439,0
+2252,11738813,A1,Einstellung,,"Rony & Suzy",0,0,1771441871556,0
+2253,11738813,A2,"Shampoo Smile ",,"Puma & The Dolphin",0,0,1771441871557,0
+2254,11738813,A3,"Camel Express",,Zatua,0,0,1771441871558,0
+2255,11738813,B1,"Jabrojo ",,"Bear Bones, Lay Low",0,0,1771441871558,0
+2256,11738813,B2,"Embarking Once More, Upon That Dark Voyage ",,Khidja,0,0,1771441871559,0
+2257,11738813,C1,"Ill Wheel",,"Föhn (3)",0,0,1771441871560,0
+2258,11738813,C2,"Cosmotrop ",,"Velvet C",0,0,1771441871569,0
+2259,11738813,C3,"Healthy People In Space  ",,Konsistent,0,0,1771441871570,0
+2260,11738813,D1,"Play Loud ",,Twoonky,0,0,1771441871570,0
+2261,11738813,D2,Ensoniq,,"Weird Dust",0,0,1771441871570,0
+2262,11738813,D3,"Top Sausage ",,T-woc,0,0,1771441871572,0
+2263,12443151,A1,"DTRT Dream During A Cold Winter ",5:59,"Matthias (52)",0,0,1771441872642,0
+2264,12443151,A2,"Time Of Freedom",6:27,"Matthias (52)",0,0,1771441872642,0
+2265,12443151,B1,"Meleficium Spectralis",6:21,"Matthias (52)",0,0,1771441872642,0
+2266,12443151,B2,"False Gods Among Legends",5:56,"Matthias (52)",0,0,1771441872643,0
+2267,11307852,A1,"Portal Vision (Kali)",6:53,Ex-Terrestrial,0,0,1771441872717,0
+2268,11307852,A2,"Portal Vision (Plain)",6:15,Ex-Terrestrial,0,0,1771441872717,0
+2269,11307852,B1,2DS,6:44,Ex-Terrestrial,0,0,1771441872717,0
+2270,11307852,B2,"Vanilight (Rezoned)",6:04,Ex-Terrestrial,0,0,1771441872717,0
+2271,17915680,A1,"Fox Mcmuldercloud",2:03,"This Place Is Actually The Worst",0,0,1771441872769,0
+2272,17915680,A2,"Biggest Secrets On Planet Earth",3:26,"This Place Is Actually The Worst",0,0,1771441872769,0
+2273,17915680,A3,"Village Lantern",1:18,"This Place Is Actually The Worst",0,0,1771441872769,0
+2274,17915680,A4,"¯\_(ツ)_/¯",1:28,"This Place Is Actually The Worst",0,0,1771441872769,0
+2275,17915680,A5,"Pure Bliss Fullness",3:35,"This Place Is Actually The Worst",0,0,1771441872769,0
+2276,17915680,B1,"Evil Grimace",2:37,"This Place Is Actually The Worst",0,0,1771441872769,0
+2277,17915680,B2,Girasol,6:02,"This Place Is Actually The Worst",0,0,1771441872769,0
+2278,17915680,B3,"Remembering Palace",1:31,"This Place Is Actually The Worst",0,0,1771441872769,0
+2279,17915680,B4,Residential,3:03,"This Place Is Actually The Worst",0,0,1771441872769,0
+2280,17915680,B5,"Deep River Waterpark",3:29,"This Place Is Actually The Worst",0,0,1771441872769,0
+2281,13503400,A1,"Tikitaka (Highland Mix)",,Tambura,0,0,1771441873777,0
+2282,13503400,A2,"Tikitaka (Instrumental)",,Tambura,0,0,1771441873777,0
+2283,13503400,A3,"Tikitaka (Tabla Mix)",,Tambura,0,0,1771441873777,0
+2284,13503400,B1,"Tikitaka (Tornado Wallace Remix)",,Tambura,0,0,1771441873777,0
+2285,13503400,B2,"Tikitaka (Dazion Remix)",,Tambura,0,0,1771441873777,0
+2286,28103485,A1,"Northern Lights",,Shjva,0,0,1771441873804,0
+2287,28103485,A2,Traect,,Shjva,0,0,1771441873804,0
+2288,28103485,B,Betatron,,Shjva,0,0,1771441873804,0
+2289,31658063,A1,"Escape From Reality (Alternate Take)",5:17,"System (8)",0,0,1771441874988,0
+2290,31658063,A2,"Our Program (Edit)",4:31,"System (8)",0,0,1771441874989,0
+2291,31658063,A3,Synchrony,4:32,"System (8)",0,0,1771441874989,0
+2292,31658063,B1,"Teknikens Takt (Edit)",6:04,"System (8)",0,0,1771441874989,0
+2293,31658063,B2,"Your Machine (Hydraulic Mix)",4:43,"System (8)",0,0,1771441874989,0
+2294,31658063,B3,Robotics,4:12,"System (8)",0,0,1771441874990,0
+2295,35723503,A1,"Larch (Acid Mix) ",,"Francesco Carvetta",0,0,1771441875541,0
+2296,35723503,A2,503,,"Francesco Carvetta",0,0,1771441875541,0
+2297,35723503,B1,Supaline,,"Francesco Carvetta",0,0,1771441875542,0
+2298,35723503,"B2 ","That Wakes Me",,"Francesco Carvetta",0,0,1771441875542,0
+2299,30428156,A1,Haunt,2:15,"Excelsior Ruth",0,0,1771441875577,0
+2300,30428156,A2,"Dream Of Night (166BPM)",5:00,"Excelsior Ruth",0,0,1771441875578,0
+2301,30428156,A3,"Dream Of Night (Drinkwater's Dawn Return Mix) (136BPM) ",5:09,"Excelsior Ruth",0,0,1771441875578,0
+2302,30428156,B1,"Dream Of You",8:15,"Excelsior Ruth",0,0,1771441875578,0
+2303,30428156,B2,"Sleepy Hollow",5:42,"Excelsior Ruth",0,0,1771441875578,0
+2304,34761374,1,Initialization,5:17,"Christopher Ledger",0,0,1771441876711,0
+2305,34761374,2,"Lunar Empathy",5:43,"Christopher Ledger",0,0,1771441876711,0
+2306,34761374,3,"Logical Form",5:41,"Christopher Ledger",0,0,1771441876711,0
+2307,34761374,4,"A Deeper Thought",5:15,"Christopher Ledger",0,0,1771441876711,0
+2308,34761374,5,"A Deeper Thought (C.K's 5AM REMIX)",5:56,"Christopher Ledger",0,0,1771441876711,0
+2309,13829339,A1,Spasm,,"Maelstrom (2)",0,0,1771441877812,0
+2310,13829339,B1,Turbulence,,"Maelstrom (2)",0,0,1771441877812,0
+2311,34025028,A1,Opcion1,,Juaan,0,0,1771441877867,0
+2312,34025028,A2,"El Primer Dia Del Resto de mi Vida",,Juaan,0,0,1771441877867,0
+2313,34025028,B1,"Art de Aft",,Juaan,0,0,1771441877867,0
+2314,34025028,B2,A.S,,Juaan,0,0,1771441877867,0
+2315,34025028,B3,"Mai Miand",,Juaan,0,0,1771441877868,0
+2316,33448751,A1,"Align Align",,Jamida,0,0,1771441878151,0
+2317,33448751,A2,"Align Align (Alfred Czital Remix)",,Jamida,0,0,1771441878152,0
+2318,33448751,B1,"Warm Blue",,Jamida,0,0,1771441878152,0
+2319,33448751,B2,DHDD,,Jamida,0,0,1771441878152,0
+2320,12174875,A1,"World Off",,"Roza Terenzi, DJ Zozi",0,0,1771441879022,0
+2321,12174875,A2,"Half Moon Bay",,"Roza Terenzi, DJ Zozi",0,0,1771441879022,0
+2322,12174875,B1,"Strobe Fountain",,"Roza Terenzi, DJ Zozi",0,0,1771441879022,0
+2323,12174875,B2,"G Step",,"Roza Terenzi, DJ Zozi",0,0,1771441879022,0
+2324,7829306,A1,"Racheta El Fadaa",8:03,Khidja,0,0,1771441879044,0
+2325,7829306,A2,"Drums Of Taksim (Original Mix)",12:31,Khidja,0,0,1771441879045,0
+2326,7829306,B1,"Monkey Tiger",9:01,Khidja,0,0,1771441879045,0
+2327,7829306,B2,"Drums Of Taksim (Baris K & Mehmet Aslan Remix)",9:35,Khidja,0,0,1771441879045,0
+2328,34777334,1,Comportment,4:59,"Decoder (9)",0,0,1771441880235,0
+2329,34777334,2,Inaction,5:51,"Decoder (9)",0,0,1771441880235,0
+2330,34777334,3,"Non Dualistic",5:47,"Decoder (9)",0,0,1771441880236,0
+2331,34777334,4,"4 Stub (Auspicious)",6:37,"Decoder (9)",0,0,1771441880236,0
+2332,34777334,5,"Tenuous Sentiment",4:23,"Decoder (9)",0,0,1771441880236,0
+2333,34777334,6,Visionary,7:33,"Decoder (9)",0,0,1771441880237,0
+2334,34777334,7,"7th Ritual",5:56,"Decoder (9)",0,0,1771441880237,0
+2335,34777334,8,"All I Have",8:00,"Decoder (9)",0,0,1771441880237,0
+2336,29430034,A1,"Break A Leg",,Kurilo,0,0,1771441880277,0
+2337,29430034,A2,Wrong,,C.ru.z,0,0,1771441880277,0
+2338,29430034,B1,"Phase Lock",,Jeku,0,0,1771441880277,0
+2339,29430034,B2,"The Nightmare",,"JJ Fortune",0,0,1771441880277,0
+2340,8391417,1,"Shy People (vocal)",7:59,"Tangerine Dream",0,0,1771441881425,0
+2341,8391417,2,"Joe’s Place ",2:10,"Tangerine Dream",0,0,1771441881425,0
+2342,8391417,3,"The Harbor",4:04,"Tangerine Dream",0,0,1771441881425,0
+2343,8391417,4,Nightfall,4:07,"Tangerine Dream",0,0,1771441881425,0
+2344,8391417,5,"Dancing On A White Moon",3:05,"Tangerine Dream",0,0,1771441881425,0
+2345,8391417,6,"Civilized Illusions ",3:51,"Tangerine Dream",0,0,1771441881426,0
+2346,8391417,7,"Swamp Voices",3:14,"Tangerine Dream",0,0,1771441881426,0
+2347,8391417,8,"Transparent Days",3:00,"Tangerine Dream",0,0,1771441881426,0
+2348,8391417,9,"Shy People (Instrumental)",5:01,"Tangerine Dream",0,0,1771441881426,0
+2349,8391417,"","Bonus Tracks",,"Tangerine Dream",0,0,1771441881427,0
+2350,8391417,10,Swamp,3:45,"Tangerine Dream",0,0,1771441881427,0
+2351,8391417,11,Nature,1:07,"Tangerine Dream",0,0,1771441881427,0
+2352,8391417,12,"Going To Town",2:51,"Tangerine Dream",0,0,1771441881427,0
+2353,1313590,1,"Le Champ Des Fleurs Artificielles",7:10,"Les Rallizes Denudes",0,0,1771441881431,0
+2354,1313590,2,"De Plus Intense Que La Nuit",16:20,"Les Rallizes Denudes",0,0,1771441881431,0
+2355,1313590,3,"Sans Titre",6:42,"Les Rallizes Denudes",0,0,1771441881431,0
+2356,1313590,4,"Le Nuit D'Assassins / Improvisation Sans La Confusion",16:19,"Les Rallizes Denudes",0,0,1771441881431,0
+2357,36460854,A1,"New Era",3:14,"Planet Love",0,0,1771441884965,0
+2358,36460854,A2,Flowers,4:24,"Planet Love",0,0,1771441884965,0
+2359,36460854,B,"Bird Song",4:09,"Planet Love",0,0,1771441884965,0
+2360,10536334,A,Sun,10:33,"Ross 154",0,0,1771441891868,0
+2361,10536334,B1,Sniper,5:45,"Ross 154",0,0,1771441891869,0
+2362,10536334,B2,Apricot,5:53,"Ross 154",0,0,1771441891869,0
+2363,10536334,C,Abrighterday,6:56,"Ross 154",0,0,1771441891869,0
+2364,10536334,D1,Strike,4:09,"Ross 154",0,0,1771441891869,0
+2365,10536334,D2,Themurderpeople,8:05,"Ross 154",0,0,1771441891869,0
+2366,14712441,A1,"3rd Moon",6:44,"Red Shift (3)",0,0,1771441892821,0
+2367,14712441,A2,Audity,5:55,"Red Shift (3)",0,0,1771441892822,0
+2368,14712441,A3,Himalayas,3:46,"Red Shift (3)",0,0,1771441892822,0
+2369,14712441,B1,Detonator,8:08,Ether,0,0,1771441892822,0
+2370,14712441,B2,"Rain Eternal",5:09,"Escape Artist",0,0,1771441892822,0
+2371,14712441,B3,"Slow Symmetry Breaking",6:18,"Constants Of Nature",0,0,1771441892822,0
+2372,13300305,A1,"Human Computer Interaction",6:43,"Crew One",0,0,1771441892940,0
+2373,13300305,A2,"Viper's Creed",7:39,"Crew One",0,0,1771441892940,0
+2374,13300305,A3,"Blank Identity Recognition	",6:37,"Crew One",0,0,1771441892940,0
+2375,13300305,A4,"Witness From The Last Resistance",7:20,"Crew One",0,0,1771441892940,0
+2376,13300305,B1,"Micro Trade",6:37,"Crew One",0,0,1771441892940,0
+2377,13300305,B2,"Alter Nexus ",6:43,"Crew One",0,0,1771441892940,0
+2378,13300305,B3,"Ultimate Mind Hacking",7:25,"Crew One",0,0,1771441892940,0
+2379,13300305,B4,"Neural Network",7:33,"Crew One",0,0,1771441892940,0
+2380,13300305,B5,"No Future Designed",6:39,"Crew One",0,0,1771441892940,0
+2387,12629679,A,006.1,,"Alexis Cabrera",0,0,1771443513801,0
+2388,12629679,B1,006.2,,"Alexis Cabrera",0,0,1771443513801,0
+2389,12629679,B2,006.3,,"Alexis Cabrera",0,0,1771443513803,0
+2392,7984620,A,001.1,9:39,"Adrian Niculae",0,0,1771443518013,0
+2393,7984620,B,001.2,11:36,"Adrian Niculae",0,0,1771443518015,0
+2397,9190021,A1,002.1,,VincentIulian,0,0,1771444077314,0
+2398,9190021,B1,002.2,,VincentIulian,0,0,1771444077314,0
+2399,9190021,B2,002.3,,VincentIulian,0,0,1771444077315,0
+2407,10679839,A,"""This Is Not A Butter, Carolin""",6:11,"Miro SundayMusiq",0,0,1771444083305,0
+2408,10679839,B,"Creamy Dreams",6:40,"Miro SundayMusiq",0,0,1771444083306,0
+2409,11009550,A,004.1,,"Jorge Savoretti",0,0,1771444083319,0
+2410,11009550,B1,004.2,,"Jorge Savoretti",0,0,1771444083319,0
+2411,11009550,B2,004.3,,"Jorge Savoretti",0,0,1771444083319,0
+2417,11978456,A,005.1,,"Vlad Arapașu",0,0,1771444118313,0
+2418,11978456,B1,005.2,,"Vlad Arapașu",0,0,1771444118313,0
+2419,11978456,B2,005.3,,"Vlad Arapașu",0,0,1771444118313,0
+2420,33843876,A,"""This Is Not A Butter, Carolin""",6:11,"Miro SundayMusiq",0,0,1771444118515,0
+2421,33843876,B,"Creamy Dreams",6:40,"Miro SundayMusiq",0,0,1771444118515,0
+2427,11706288,A1,Mutual,,"Memphis (3)",0,0,1771444123629,0
+2428,11706288,B1,"Mūsh-té-lā-ké",,"Memphis (3)",0,0,1771444123629,0
+2429,11706288,B2,"More Colour",,"Memphis (3)",0,0,1771444123629,0
+2430,13251425,A,007.1,,Romar,0,0,1771444124502,0
+2431,13251425,B,007.2,,Romar,0,0,1771444124502,0
+2435,34894301,A1,Mutual,,"Memphis (3)",0,0,1771444126928,0
+2436,34894301,B1,"Mūsh-té-lā-ké",,"Memphis (3)",0,0,1771444126928,0
+2437,34894301,B2,"More Colour",,"Memphis (3)",0,0,1771444126928,0
+2438,15795327,A1,"Die Nag",,"Volodymyr Gnatenko",0,0,1771444128371,0
+2439,15795327,B1,"Puma Stert",,"Volodymyr Gnatenko",0,0,1771444128371,0
+2440,15795327,B2,Maanlig,,"Volodymyr Gnatenko",0,0,1771444128371,0
+2441,13989685,1,"008 1",,ardb,0,0,1771444128493,0
+2442,13989685,2,"008 2",,ardb,0,0,1771444128493,0
+2443,13989685,3,"008 3",,ardb,0,0,1771444128493,0
+2444,13989685,4,"008 4",,ardb,0,0,1771444128494,0
+2445,14536514,A1,"009 1",,"Jorge Savoretti",0,0,1771444129299,0
+2446,14536514,A2,"009 2",,"Jorge Savoretti",0,0,1771444129299,0
+2447,14536514,B1,"009 3",,"Jorge Savoretti",0,0,1771444129300,0
+2448,14536514,B2,"009 4",,"Jorge Savoretti",0,0,1771444129300,0
+2449,24415952,A1,Bakeneko,7:00,"Volodymyr Gnatenko",0,0,1771444129325,0
+2450,24415952,A2,"Noppera-bō",6:22,"Kai Noob, Volodymyr Gnatenko",0,0,1771444129325,0
+2451,24415952,B1,"Umibōzu",7:02,"Volodymyr Gnatenko",0,0,1771444129325,0
+2452,24415952,B2,Zashiki-warashi,5:37,"Kai Noob, Volodymyr Gnatenko",0,0,1771444129326,0
+2453,15198919,A,010.1,,"Adrian Niculae & Dinu (4)",0,0,1771444132934,0
+2454,15198919,B1,010.2,,"Adrian Niculae & Dinu (4)",0,0,1771444132934,0
+2455,15198919,B2,010.3,,"Adrian Niculae & Dinu (4)",0,0,1771444132934,0
+2458,29947963,A,"The Genie",,"Invisible Menders",0,0,1771444134074,0
+2459,29947963,B,"Midnight Drive (Menders' Re-Stitch)",,"Invisible Menders",0,0,1771444134074,0
+2460,16116709,A1,011.1,,"Franco Cinelli & Esteban Gutierrez featuring Lux Z",0,0,1771444135571,0
+2461,16116709,B1,011.2,,"Franco Cinelli & Esteban Gutierrez featuring Lux Z",0,0,1771444135572,0
+2462,18311980,A1,012.1,,"Joren Edwards",0,0,1771444137698,0
+2463,18311980,B1,012.2,,"Joren Edwards",0,0,1771444137698,0
+2464,12807898,A1,"Liza On Clouds",6:20,BPMF,1,1,1771444139255,1
+2465,12807898,A2,"Three On Three",9:10,"Invisible Menders",0,1,1771444139255,1
+2466,12807898,B1,"Altered States",7:03,"Memphis (3)",0,1,1771444139255,1
+2467,12807898,B3,"From Behind The Corner",8:39,"Miro SundayMusiq",0,1,1771444139256,1
+2468,34894295,A1,"Liza On Clouds",6:20,BPMF,0,0,1771444140122,0
+2469,34894295,A2,"Three On Three",9:10,"Invisible Menders",0,0,1771444140122,0
+2470,34894295,B1,"Altered States",7:03,"Memphis (3)",0,0,1771444140123,0
+2471,34894295,B3,"From Behind The Corner",8:39,"Miro SundayMusiq",0,0,1771444140123,0
+2472,24109565,A1,"014.1 Feat. The Magic Olives",,"Alexis Cabrera",0,0,1771444140299,0
+2473,24109565,A2,014.2,,"Alexis Cabrera",0,0,1771444140300,0
+2474,24109565,B1,014.3,,"Alexis Cabrera",0,0,1771444140300,0
+2475,24109565,B2,014.4,,"Alexis Cabrera",0,0,1771444140300,0
+2476,26106343,A1,015.1,,"Costin Rp",0,0,1771444141351,0
+2477,26106343,A2,015.2,,"Costin Rp",0,0,1771444141352,0
+2478,26106343,B1,015.3,,"Costin Rp",0,0,1771444141352,0
+2479,26106343,B2,015.4,,"Costin Rp",0,0,1771444141352,0
+2480,28701127,A1,016.1,,ardb,0,0,1771444143567,0
+2481,28701127,A2,016.2,,ardb,0,0,1771444143567,0
+2482,28701127,B1,016.3,,ardb,0,0,1771444143567,0
+2483,28701127,B2,016.4,,ardb,0,0,1771444143567,0
+2484,29132263,A1,017.1,,"Lazăr Cezar",0,0,1771444144776,0
+2485,29132263,B1,017.2,,"Lazăr Cezar",0,0,1771444144777,0
+2486,29132263,B2,017.3,,"Lazăr Cezar",0,0,1771444144777,0
+2490,28494139,A1,Mercurial,,"Matthew Dexter",0,0,1771444146090,0
+2491,28494139,B1,"Pro Nobis",,"Matthew Dexter",0,0,1771444146090,0
+2492,28494139,B2,Uplink,,"Matthew Dexter",0,0,1771444146091,0
+2493,29731267,A1,018.1,,"Christopher Ledger",0,0,1771444147183,0
+2494,29731267,A2,018.2,,"Christopher Ledger",0,0,1771444147183,0
+2495,29731267,B1,018.3,,"Christopher Ledger",0,0,1771444147183,0
+2496,29731267,B2,018.4,,"Christopher Ledger",0,0,1771444147184,0
+2500,31299845,A1,"The Mind Is A Labyrinth",,"Ish (25)",0,0,1771444148462,0
+2501,31299845,B1,"Humans & Robots",,"Ish (25)",0,0,1771444148462,0
+2502,31299845,B2,Timewalk,,"Ish (25)",0,0,1771444148462,0
+2503,31241581,A1,"019 1",,DumitrEscu,0,0,1771444148625,0
+2504,31241581,A2,"019 2",,DumitrEscu,0,0,1771444148625,0
+2505,31241581,B1,"019 3",,DumitrEscu,0,0,1771444148625,0
+2506,31241581,B2,"019 4",,DumitrEscu,0,0,1771444148625,0
+2507,34988522,A,020.1,,Sublee,0,0,1771444150722,0
+2508,34988522,B,020.2,,Sublee,0,0,1771444150722,0
+2509,35067209,A,020.1,,Sublee,0,0,1771444151873,0
+2510,35067209,B,020.2,,Sublee,0,0,1771444151874,0
+2515,34281835,A1,"Cloning Procedures",,Krijka,0,0,1771444152703,0
+2516,34281835,A2,E-Tribes,,Krijka,0,0,1771444152704,0
+2517,34281835,B1,"Mad Caps",,Krijka,0,0,1771444152704,0
+2518,34281835,B2,Datura,,Krijka,0,0,1771444152704,0
+2523,35492083,A1,"021 1",,Lizz,0,0,1771444155345,0
+2524,35492083,A2,"021 2",,Lizz,0,0,1771444155345,0
+2525,35492083,B1,"021 3",,Lizz,0,0,1771444155345,0
+2526,35492083,B2,"021 4",,Lizz,0,0,1771444155345,0
+2529,12509486,A,Slower,,Arapu,0,0,1771444159250,0
+2530,12509486,B,Blues,,Arapu,0,0,1771444159251,0
+2534,12931113,A1,"Stereo Quartz",,Faster,0,0,1771444204900,0
+2535,12931113,B1,Pfer,,Faster,0,0,1771444204901,0
+2536,12931113,B2,Diciotto,,Faster,0,0,1771444204901,0
+2537,13135961,A1,"On The Go",,Floog,0,0,1771444207356,0
+2538,13135961,A2,Bind,,Floog,0,0,1771444207359,0
+2539,13135961,B1,"Break & After",,Floog,0,0,1771444207359,0
+2540,13135961,B2,Suborbit,,Floog,0,0,1771444207360,0
+2541,13326006,A,"See The Sun",,Cosmjn,0,0,1771444208484,0
+2542,13326006,B,Heberg,,Cosmjn,0,0,1771444208484,0
+2546,13943057,A1,"Basic Moves",12:11,"Vlad Arapașu",0,0,1771444323647,0
+2547,13943057,B1,Vandab,7:25,"Vlad Arapașu",0,0,1771444323647,0
+2548,13943057,B2,"Pitch Mode",7:37,"Vlad Arapașu",0,0,1771444323647,0
+2552,14228145,A1,Agera,,VincentIulian,0,0,1771444326745,0
+2553,14228145,B1,"I Don't Wonder",,VincentIulian,0,0,1771444326746,0
+2554,14228145,B2,Ultrak,,VincentIulian,0,0,1771444326746,0
+2557,15339005,A,Guidance,,"Aparte (3), Dan Blatov",0,0,1771444572114,0
+2558,15339005,B,"Distant Thunder",,"Aparte (3)",0,0,1771444572114,0
+2562,15433217,A,Jjj,,"Direkt (3)",0,0,1771444574861,0
+2563,15433217,B1,Liquid,,"Direkt (3)",0,0,1771444574862,0
+2564,15433217,B2,"End Credits",,"Direkt (3)",0,0,1771444574862,0
+2565,82805,"",Claire,,Audiomat,0,1,1771445244032,1
+2566,10415059,"",Powerline,,"PLO Man",0,1,1771445244032,1
+2567,10645661,"","Corporate Karma",,"Money Morning",0,1,1771445244032,1
+2568,10645755,"",Surplus,,Accelera,0,1,1771445244032,1
+2569,14777230,"",Aqueduct,,INTe*ra,0,1,1771445244032,1
+2570,80603,"","Urban Static",,Ortus,0,1,1771445244032,1
+2571,12636412,"","Åter",,Ebende,0,1,1771445244032,1
+2572,31883824,"","The Serious Cousin",,"Al Dente (11)",0,1,1771445244032,1
+2573,113247,"","From Classical Composers To Hippy Explorers EP",,"Mono Now",0,1,1771445244032,1
+2574,40652,"","Fracturhythms Vol 2",,"Nico Awtsventin",0,1,1771445244032,1
+2575,4579756,"","Fracturhythms Vol 2",,"Nico Awtsventin",0,1,1771445244032,1
+2576,1732153,"","Fracturhythms Vol 2",,"Nico Awtsventin",0,1,1771445244032,1
+2577,129762,"","Housefisher EP",,"Christian Linder",0,1,1771445244032,1
+2578,7676339,"","Entron EP",,"Nimbus (2)",0,1,1771445244032,1
+2579,317070,"","Entron EP",,"Nimbus (2)",0,1,1771445244032,1
+2580,131853,"","Awaken Abyss / Opera North",,"The Unknown (5)",0,1,1771445244032,1
+2581,33796983,"","Contact In the Zone",,"Sweater (7)",0,1,1771445244032,1
+2582,392491,"","Bad Girls / Our Love",,"Donna Summer",0,1,1771445244032,1
+2583,25891,"",Preview,,Ratio,0,1,1771445244032,1
+2584,2632557,"",Preview,,Ratio,0,1,1771445244032,1
+2585,5020355,"","Yellow Sky Over Reykjavik",,Thor,0,1,1771445244032,1
+2586,256696,"","Gas EP",,"Armin Ascari",0,1,1771445244032,1
+2587,34646215,"","Temple Ov Ghosts",,"Tyler Ov Gaia",0,1,1771445244032,1
+2588,25682902,"","Unreleased Territory vol. 4",,Various,0,1,1771445244032,1
+2589,17128167,"","Broxburn Funk",,Being,0,1,1771445244032,1
+2590,7030290,"","Thirstin'",,"Jack Jutson",0,1,1771445244032,1
+2591,17692669,"",Turning,,Edward,0,1,1771445244032,1
+2592,24886,"","West On 27th",,Killahurtz,0,1,1771445244032,1
+2593,30222734,"","Ancient Avenues",,"Square City",0,1,1771445244032,1
+2594,10536873,"","False Awakening / Scumbag Unity",,"Chaos In The Cbd",0,1,1771445244032,1
+2595,12327618,"","Alishan Forest Railway / Housework",,"Jon Sable",0,1,1771445244032,1
+2596,13251390,"","Orange Blank / Green Dove",,"Chaos In The Cbd",0,1,1771445244032,1
+2597,18177652,"","Te Puke Thunder EP",,"Chaos In The Cbd",0,1,1771445244032,1
+2598,35983177,"","Peaking In Parallel",,"Paddy Lee (2)",0,1,1771445244032,1
+2599,30933414,"",Duality,,"Forest Witches",0,1,1771445244032,1
+2600,32648355,"","The Medusa Hunter",,"Caim (10)",0,1,1771445244032,1
+2601,27789825,"","Yesterday, Tomorrow EP",,Ramu,0,1,1771445244032,1
+2602,105524,"","Electric Nite / Atmospheric",,"Yoogie Van Bellen",0,1,1771445244032,1
+2603,2060,"",Ploy,,Maurizio,0,1,1771445244032,1
+2604,5351693,"","Soul Sounds",,Sasse,0,1,1771445244032,1
+2605,11119033,"","The Compilation",,Bigeneric,0,1,1771445244032,1
+2606,14325240,"","And Then We Planned Our Escape / Organa (Remastered)",,"Robert Hood",0,1,1771445244032,1
+2607,32934399,"","V.A. Vol.1",,Various,0,1,1771445244032,1
+2608,31906,"","Chip II",,Microbots,0,1,1771445244032,1
+2609,23659307,"",P12_02,,"Pavilion (5)",0,1,1771445244032,1
+2610,143037,"",Toranaga,,"Holger Flinsch",0,1,1771445244032,1
+2611,10523851,"",Toranaga,,"Holger Flinsch",0,1,1771445244032,1
+2612,24761,"",Sorceror,,Megalon,0,1,1771445244032,1
+2613,440583,"",Burning,,Maddoxx,0,1,1771445244032,1
+2614,9529127,"","Untitled (1996) / Untitled (1997)",,J.S.Zeiter,0,1,1771445244032,1
+2615,14054342,"","Tears / D.U.N.E",,S.O.N.S,0,1,1771445244032,1
+2616,13155148,"","The Far Center EP",,Metamatics,0,1,1771445244032,1
+2617,13673119,"","One Who Can See In The Dark",,Barac,0,1,1771445244032,1
+2618,153679,"","The Sound",,"Plasma (3)",0,1,1771445244032,1
+2619,8946301,"",Re-Melted,,Merv,0,1,1771445244032,1
+2620,7440002,"",Re-Melted,,Merv,0,1,1771445244032,1
+2621,7439907,"",Re-Melted,,Merv,0,1,1771445244032,1
+2622,13139301,"",Re-Melted,,Merv,0,1,1771445244032,1
+2623,13119457,"",Re-Melted,,Merv,0,1,1771445244032,1
+2624,29884132,"",Re-Melted,,Merv,0,1,1771445244032,1
+2625,463888,"","The Final Techture EP",,"Nico Awtsventin",0,1,1771445244032,1
+2626,16153213,"","Nobody Cares Till Everybody Does",,"Kofi Stone",0,1,1771445244032,1
+2627,33055125,"","Nobody Cares Till Everybody Does",,"Kofi Stone",0,1,1771445244032,1
+2628,34100077,"","Nobody Cares Till Everybody Does",,"Kofi Stone",0,1,1771445244032,1
+2629,49845,"","Paraiso Obscuro",,"Sean Cusick",0,1,1771445244032,1
+2630,21382951,"","In Bloom",,Facta,0,1,1771445244032,1
+2634,15497467,A,How,,Lizz,0,0,1771446269612,0
+2635,15497467,B1,Definition,,Lizz,0,0,1771446269613,0
+2636,15497467,B2,Ex,,Lizz,0,0,1771446269613,0
+2637,15603090,A1,"Lunar Eclipse",,DumitrEscu,0,0,1771446272497,0
+2638,15603090,B1,Electrinsekta,,DumitrEscu,0,0,1771446272497,0
+2639,16157723,A1,Reki,,"Livio & Roby",0,0,1771446273618,0
+2640,16157723,B1,"Re Viens",,"Livio & Roby",0,0,1771446273618,0
+2641,16835247,A,"The 90's Generation",,Cosmjn,0,0,1771446275841,0
+2642,16835247,B,"Cold Touch",,Cosmjn,0,0,1771446275841,0
+2643,18929083,A1,Drops,,"Dinu (4)",0,0,1771446277122,0
+2644,18929083,B1,"80'revam",,"Dinu (4)",0,0,1771446277123,0
+2645,18929083,B2,Cc,,"Dinu (4)",0,0,1771446277123,0
+2646,19749748,A1,Egold,,Sublee,0,0,1771446279048,0
+2647,19749748,B1,"New Earth",,Sublee,0,0,1771446279048,0
+2648,23084681,A1,Gangurescu,,Floog,0,0,1771446280590,0
+2649,23084681,A2,Enyo,,Floog,0,0,1771446280590,0
+2650,23084681,B1,"Love Poem",,Floog,0,0,1771446280590,0
+2651,23084681,B2,"Love Poem (Priku Remix)",,Floog,0,0,1771446280591,0
+2652,23932550,A1,"Gradient Raccoon",,"Andu Simion",0,0,1771446282744,0
+2653,23932550,A2,"Better Place",,"Andu Simion",0,0,1771446282744,0
+2654,23932550,B1,"Endless Acid",,"Andu Simion",0,0,1771446282744,0
+2655,23932550,B2,"Super Sun",,"Andu Simion",0,0,1771446282744,0
+2656,25319530,A1,Acoustic,,Arapu,0,0,1771446283797,0
+2657,25319530,B1,Replacement,,Arapu,0,0,1771446283797,0
+2658,27850878,A1,Southwest,,"Mihai Pol",0,0,1771446286015,0
+2659,27850878,B1,"Granular Lullaby",,"Mihai Pol",0,0,1771446286015,0
+2660,10816306,1,"Tidal Gateway",3:51,Conforce,0,0,1771447941763,0
+2661,10816306,2,"Fauna Of Estuaries",6:37,Conforce,0,0,1771447941763,0
+2662,10816306,3,"Inland Current",4:30,Conforce,0,0,1771447941764,0
+2663,10816306,4,"ECCV Quay",7:10,Conforce,0,0,1771447941764,0
+2664,10816306,5,"Harnessed Life In Programmed Form",6:34,Conforce,0,0,1771447941764,0
+2665,10816306,6,"Autonomously Surpassed",6:24,Conforce,0,0,1771447941764,0
+2666,10816306,7,Meuse-Plain,7:18,Conforce,0,0,1771447941764,0
+2667,10816306,8,"Seasonal Erosion",5:23,Conforce,0,0,1771447941764,0
+2668,10816306,9,"Stimulation & Emulation",6:15,Conforce,0,0,1771447941764,0
+2669,22381225,A,Overseas,,"A.T. (13)",0,0,1771447949506,0
+2670,22381225,B1,Bluephonic,,"A.T. (13)",0,0,1771447949507,0
+2671,22381225,B2,"Bluephonic (Dub Mix)",,"A.T. (13)",1,0,1771447949511,0
+2672,24597473,A1,Yupi,,"Yaroslav Lenzyak",1,0,1771447952484,0
+2673,24597473,A2,Flicker,,"Yaroslav Lenzyak",1,0,1771447952484,0
+2674,24597473,B1,"Trippy Land",,"Yaroslav Lenzyak",1,0,1771447952484,0
+2675,24597473,B2,Sirius,,"Yaroslav Lenzyak",0,0,1771447952484,0
+2676,28031088,A1,"Televised Justice",,"Paradise City Breakers",0,0,1771447958253,0
+2677,28031088,A2,Lekkerbit,,"Paradise City Breakers",0,0,1771447958254,0
+2678,28031088,B1,"P City Vice",,"Paradise City Breakers",0,0,1771447958256,0
+2679,28031088,B2,"Seeking Justice",,"Paradise City Breakers",0,0,1771447958257,0
+2680,31127996,A1,"Another Destination",,"Yu (33)",0,0,1771447963738,0
+2681,31127996,A2,"Beautiful Moment",,"Yu (33)",0,0,1771447963738,0
+2682,31127996,B1,"Tropical Led",,"Yu (33)",0,0,1771447963740,0
+2683,31127996,B2,"Robotik Hunter",,"Yu (33)",0,0,1771447963740,0
+2684,35559607,A1,"Majin Bu",,M.O.H,0,0,1771447965657,0
+2685,35559607,A2,Momonkai,,M.O.H,0,0,1771447965657,0
+2686,35559607,B1,Reason,,M.O.H,1,0,1771447965658,0
+2687,35559607,B2,Rugg,,M.O.H,0,0,1771447965660,0
+2688,23894882,1,"Five Reasons",6:22,"Paradise City Breakers",0,0,1771447968822,0
+2689,23894882,2,Connectivity,6:32,Ancut,0,0,1771447968822,0
+2690,23894882,3,1000,5:32,"Views (4)",0,0,1771447968823,0
+2691,23894882,4,"Canis Canem",4:59,"Pontiff Ordric",0,0,1771447968823,0
+2692,8778040,A1,"Own Cut",,"Marco Pellegrino",0,0,1771447973862,0
+2693,8778040,A2,"Own Cut (Lucretio Remix)",,"Marco Pellegrino",0,0,1771447973862,0
+2694,8778040,B1,"Freddie Tribute",,"Marco Pellegrino",0,0,1771447973863,0
+2695,8778040,B2,"Night Walk",,"Marco Pellegrino",0,0,1771447973863,0
+2696,10366568,A1,Tubejazz,,"OCP (6) aka Analogue Cops, The",0,0,1771447992865,0
+2697,10366568,A2,"SIck Boy",,"OCP (6) aka Analogue Cops, The",0,0,1771447992865,0
+2698,10366568,B1,701,,"OCP (6) aka Analogue Cops, The",1,0,1771447992867,0
+2699,10366568,B2,Thieftakers,,"OCP (6) aka Analogue Cops, The",0,0,1771447992868,0
+2700,12087395,A1,"Steppin'",6:22,Ancut,0,0,1771447994672,0
+2701,12087395,A2,"Down Move",5:59,Ancut,0,0,1771447994673,0
+2702,12087395,B1,"Still Walking",6:35,Ancut,0,0,1771447994674,0
+2703,12087395,B2,"Roma 1999",5:38,Ancut,0,0,1771447994674,0
+2704,13493379,A1,"Slayers Revenge",6:47,"Matthias (52)",0,0,1771447999926,0
+2705,13493379,A2,"Redemption ",6:15,"Matthias (52)",0,0,1771447999926,0
+2706,13493379,B1,"Attempt To Fail",6:28,Ancut,0,0,1771447999926,0
+2707,13493379,B2,"Lights Over The City",6:44,Ancut,0,0,1771447999926,0
+2708,13775286,A1,"Slayers Revenge",,"Matthias (52)",0,0,1771448003848,0
+2709,13775286,A2,"Redemption ",,"Matthias (52)",0,0,1771448003848,0
+2710,13775286,B1,"Attempt To Fail",,Ancut,0,0,1771448003848,0
+2711,13775286,B2,"Lights Over The City",,Ancut,0,0,1771448003849,0
+2712,15024463,A1,T.O.A.,6:58,"Ménage (2)",1,0,1771449571796,1
+2713,15024463,A2,"Run Out Groove",7:00,"Sam Brickel, Dashiell (3)",1,0,1771449571796,0
+2714,15024463,B1,Resurgence,7:49,"Sam Brickel, Jack Brickel",1,0,1771449571796,1
+2715,15024463,B2,Xhale,5:16,"iota (15)",0,0,1771449571796,1
+2716,30196610,1,SyklUra,,"Volodymyr Gnatenko",0,0,1771449573831,0
+2717,30196610,2,"Usu (Volodymyr Gnatenko Remix) ",,Shjva,0,0,1771449573831,0
+2718,30196610,3,"QurOp ",,"Volodymyr Gnatenko",0,0,1771449573838,0
+2719,30196610,4,"tUxie ",,"Volodymyr Gnatenko",0,0,1771449573840,0
+2720,30196610,5,AbiaA,,"Volodymyr Gnatenko",0,0,1771449573840,0
+2721,30196610,6,"lUan ",,"Volodymyr Gnatenko, Ilya Semaskevich",0,0,1771449573840,0
+2722,30580876,1,Minerality,,"Zara (26)",0,0,1771449577436,0
+2723,30580876,2,"Tree World",,"Zara (26)",0,0,1771449577436,0
+2724,30580876,3,"S E Dream",,"Zara (26)",0,0,1771449577436,0
+2725,30580876,4,Whirl,,"Zara (26)",0,0,1771449577436,0
+2726,30580876,5,"Whirl (Steppers Version)",,"Zara (26)",0,0,1771449577436,0
+2727,30879483,A1,"Beat Seeker",,"Ulo S.",1,0,1771449579623,0
+2728,30879483,A2,"It's Phizzy In Here",,"Ulo S.",1,0,1771449579624,0
+2729,30879483,B1,Uphoria,,"Ulo S.",1,0,1771449579624,0
+2730,30879483,B2,"Uphoria (Last Bean Of The Night Dub)",,"Ulo S.",1,0,1771449579624,0
+2731,33066594,A1,Evaporation,6:30,o.utlier,1,0,1771450721058,0
+2732,33066594,A2,"Crop Rotation",5:38,o.utlier,1,0,1771450721059,0
+2733,33066594,B1,Ionic,8:06,o.utlier,1,0,1771450721059,0
+2734,33066594,B2,Pulse,7:19,o.utlier,1,0,1771450721059,0
+2735,33840246,A1,"Temporal Blend ",5:46,Shoal,1,0,1771451141827,0
+2736,33840246,A2,Median,5:31,Shoal,1,0,1771451141827,0
+2737,33840246,B1,"Wazzawa ",6:12,Shoal,1,0,1771451141827,0
+2738,33840246,B2,"Last Piece",6:37,Shoal,1,0,1771451141827,0
+2739,34987385,A1,Residual,,"Sub Basics",0,0,1771451145783,0
+2740,34987385,A2,Signal,,"Sub Basics",0,0,1771451145783,0
+2741,34987385,B1,Falling,,"Sub Basics",0,0,1771451145784,0
+2742,34987385,B2,Radius,,"Sub Basics",0,0,1771451145784,0
+2743,36276853,A1,Saense,,Aedis,1,0,1771451150752,1
+2744,36276853,A2,Extarnel,,Aedis,0,0,1771451150752,0
+2745,36276853,B1,Ortogon,,Aedis,1,0,1771451150752,1
+2746,36276853,B2,Vaen,,Aedis,1,0,1771451150752,0
+2747,15820544,A1,Aeiro,5:50,"iota (15)",1,0,1771451154672,1
+2748,15820544,A2,Timelink,5:19,"iota (15)",1,0,1771451154672,1
+2749,15820544,B1,"Kissed by the Spiral",6:36,"iota (15), Ménage (2)",0,0,1771451154674,0
+2750,15820544,B2,Interzone,7:13,"iota (15), Sam Brickel",1,0,1771451154674,0
+2751,16353615,1,Aeiro,5:50,"iota (15)",1,0,1771451157254,1
+2752,16353615,2,Timelink,5:19,"iota (15)",1,0,1771451157254,1
+2753,16353615,3,"Kissed by the Spiral",6:36,"iota (15), Ménage (2)",0,0,1771451157255,0
+2754,16353615,4,Interzone,7:13,"iota (15), Sam Brickel",1,0,1771451157255,0
+2755,16484577,A1,Alkaline,4:37,"OK EG",1,0,1771451158986,0
+2756,16484577,A2,"Prismatic Spring",6:33,"OK EG",1,0,1771451158988,0
+2757,16484577,B1,"Phase Transition",6:37,"OK EG",1,0,1771451158989,0
+2758,16484577,B2,"Triple Point",4:43,"OK EG",1,0,1771451158990,0
+2759,21824347,A1,"Bass Xertz",7:26,"Dolly (37)",1,0,1771451163220,0
+2760,21824347,A2,"Organ Lab",6:42,"Dolly (37)",1,0,1771451163221,0
+2761,21824347,B1,"Don't Forget the Moonscreen",6:58,"Dolly (37)",1,0,1771451163224,0
+2762,21824347,B2,"Mellow Fellow (Slo Mix)",8:14,"Dolly (37)",1,0,1771451163224,1
+2763,22746380,A1,LSB,,"Sam Brickel, Jack Brickel",1,0,1771451165798,0
+2764,22746380,A2,Recoil,,"Dashiell (3)",1,0,1771451165798,0
+2765,22746380,B1,"Logic Eclipse",,"Eugene Pascal",1,0,1771451165798,1
+2766,22746380,B2,"Under The Ice",,"Dashiell (3)",0,0,1771451165798,0
+2767,22746380,C1,Skeptic,,"Ebbs N Flow",0,0,1771451165799,0
+2768,22746380,C2,"Spy Kids",,"Ebbs N Flow",1,0,1771451165799,0
+2769,22746380,D1,Cici,,"Eugene Pascal",1,0,1771451165799,0
+2770,22746380,D2,Mars,,"Sam Brickel, Dashiell (3)",1,0,1771451165800,0
+2771,25116100,A1,"Shifting Sands",6:20,Billus,1,0,1771451169978,1
+2772,25116100,A2,Splay,6:28,Billus,1,0,1771451169978,0
+2773,25116100,B1,Cubic,6:48,Billus,0,0,1771451169978,0
+2774,25116100,B2,"Under the Canopy",5:12,Billus,1,0,1771451169979,1
+2775,26341760,A1,Plunge,6:13,LOIF,0,0,1771451174950,0
+2776,26341760,A2,"Depth Charge",7:54,LOIF,0,0,1771451174950,0
+2777,26341760,B1,Stealth,7:24,LOIF,0,0,1771451174951,0
+2778,26341760,B2,"Gloom Rider ",6:41,LOIF,0,0,1771451174951,0
+2779,27169398,1,"The Mind Flayer",,"Sam Brickel",0,0,1771451179162,0
+2780,27169398,2,"Hit 'Em Up (ft. Eugene Pascal)",,"Sam Brickel",0,0,1771451179163,0
+2781,27169398,3,"Neo Cortex",,"Sam Brickel",0,0,1771451179163,0
+2782,27169398,4,"Second Moon (ft. Dashiell)",,"Sam Brickel",0,0,1771451179163,0
+2783,27169398,5,"The Pulse Of Life",,"Sam Brickel",0,0,1771451179163,0
+2784,27169398,6,"Like Minded Machines (ft. Eugene Pascal)",,"Sam Brickel",0,0,1771451179163,0
+2785,27169398,7,Ansible,,"Sam Brickel",0,0,1771451179163,0
+2786,27169398,8,"Sunset On Freeside",,"Sam Brickel",0,0,1771451179164,0
+2787,29846647,A1,0-Zone,4:59,"Command D",0,0,1771451183763,0
+2788,29846647,A2,Cycles,4:58,"Command D",0,0,1771451183763,0
+2789,29846647,B1,Esc,5:32,"Command D",0,0,1771451183763,0
+2790,29846647,B2,"Stat Point",5:35,"Command D",0,0,1771451183763,0

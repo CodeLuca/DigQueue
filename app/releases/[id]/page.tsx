@@ -90,10 +90,11 @@ export default async function ReleasePage({
                       type="submit"
                       size="sm"
                       variant={release.wishlist ? "secondary" : "ghost"}
+                      className="h-9 w-9 p-0"
                       title={release.wishlist ? "Remove record from Discogs Wishlist" : "Add record to Discogs Wishlist"}
                       aria-label={release.wishlist ? "Remove record from Discogs Wishlist" : "Add record to Discogs Wishlist"}
                     >
-                      <Bookmark className="h-3.5 w-3.5" />
+                      <Bookmark className="h-5 w-5 stroke-[2.25]" />
                     </Button>
                   </form>
                 </div>

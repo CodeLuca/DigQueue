@@ -51,6 +51,14 @@ function parseLabelIdFromResourceUrl(value: string | undefined) {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
+function parseReleaseIdFromDiscogsUrl(value: string | undefined) {
+  if (!value) return null;
+  const match = value.match(/\/release\/(\d+)/i);
+  if (!match) return null;
+  const id = Number(match[1]);
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+
 async function resolveWantLabel(
   item: Awaited<ReturnType<typeof fetchDiscogsWantItems>>[number],
 ) {
@@ -115,11 +123,26 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean }) {
   const tracksScope = eq(tracks.userId, userId);
 
   const wantedItems = await fetchDiscogsWantItems();
-  const wantedReleaseIds = wantedItems.map((item) => toStoredDiscogsId(userId, item.releaseId, "release"));
-  const wantedSet = new Set(wantedReleaseIds);
-  const allReleaseRows = await db.query.releases.findMany({ where: releasesScope, columns: { id: true } });
+  const wantedExternalSet = new Set(wantedItems.map((item) => item.releaseId));
+  const allReleaseRows = await db.query.releases.findMany({
+    where: releasesScope,
+    columns: { id: true, discogsUrl: true },
+  });
   const allReleaseIds = allReleaseRows.map((item) => item.id);
-  const loadedWantedReleaseIds = allReleaseIds.filter((id) => wantedSet.has(id));
+  const existingReleaseIdsByExternal = new Map<number, number[]>();
+  for (const row of allReleaseRows) {
+    const externalId = parseReleaseIdFromDiscogsUrl(row.discogsUrl);
+    if (!externalId) continue;
+    const existing = existingReleaseIdsByExternal.get(externalId) ?? [];
+    existing.push(row.id);
+    existingReleaseIdsByExternal.set(externalId, existing);
+  }
+  const loadedWantedReleaseIds = allReleaseRows
+    .filter((row) => {
+      const externalId = parseReleaseIdFromDiscogsUrl(row.discogsUrl);
+      return externalId ? wantedExternalSet.has(externalId) : false;
+    })
+    .map((row) => row.id);
 
   const releaseIdChunks = chunk(allReleaseIds, 500);
   for (const ids of releaseIdChunks) {
@@ -133,24 +156,25 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean }) {
     await db.update(releases).set({ wishlist: true }).where(and(inArray(releases.id, ids), releasesScope));
   }
 
-  const releaseRowsById = new Set(allReleaseIds);
-  const missingWanted = wantedItems.filter((item) => !releaseRowsById.has(toStoredDiscogsId(userId, item.releaseId, "release")));
+  const missingWanted = wantedItems.filter((item) => (existingReleaseIdsByExternal.get(item.releaseId) ?? []).length === 0);
   const now = new Date();
 
   for (const item of wantedItems) {
     const resolvedLabel = await resolveWantLabel(item);
     if (!resolvedLabel) continue;
     await ensureLabelForWantedRelease(userId, resolvedLabel.labelId, resolvedLabel.labelName);
-    const storedReleaseId = toStoredDiscogsId(userId, item.releaseId, "release");
+    const matchedReleaseIds = existingReleaseIdsByExternal.get(item.releaseId) ?? [];
     const storedLabelId = toStoredDiscogsId(userId, resolvedLabel.labelId, "label");
 
-    await db
-      .update(releases)
-      .set({
-        labelId: storedLabelId,
-        importSource: "discogs_want",
-      })
-      .where(and(eq(releases.id, storedReleaseId), eq(releases.labelId, DISCOGS_WANTS_LABEL_ID), releasesScope));
+    if (matchedReleaseIds.length > 0) {
+      await db
+        .update(releases)
+        .set({
+          labelId: storedLabelId,
+          importSource: "discogs_want",
+        })
+        .where(and(inArray(releases.id, matchedReleaseIds), eq(releases.labelId, DISCOGS_WANTS_LABEL_ID), releasesScope));
+    }
   }
 
   for (const [idx, item] of missingWanted.entries()) {
@@ -214,7 +238,7 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean }) {
   await touchAutoSyncCache(userId);
   return {
     synced: true as const,
-    wantedCount: wantedReleaseIds.length,
+    wantedCount: wantedItems.length,
     loadedWantedCount: loadedWantedReleaseIds.length,
     importedMissingCount: missingWanted.length,
   };
