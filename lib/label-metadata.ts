@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { labels } from "@/db/schema";
 import { db } from "@/lib/db";
-import { fetchDiscogsLabelProfile, fetchDiscogsLabelReleases } from "@/lib/discogs";
+import { fetchDiscogsArtistProfile, fetchDiscogsArtistReleases, fetchDiscogsLabelProfile, fetchDiscogsLabelReleases } from "@/lib/discogs";
 
 function normalizeReleaseTitle(raw: string) {
   const trimmed = raw.trim();
@@ -14,11 +14,12 @@ function normalizeReleaseTitle(raw: string) {
   return `${artist} - ${title}`;
 }
 
-export async function refreshLabelMetadata(labelId: number, userId?: string) {
-  const [profile, releasePage] = await Promise.all([
-    fetchDiscogsLabelProfile(labelId),
-    fetchDiscogsLabelReleases(labelId, 1, 24),
-  ]);
+export async function refreshSourceMetadata(sourceId: number, kind: "label" | "artist", userId?: string) {
+  const [profile, releasePage] = await Promise.all(
+    kind === "artist"
+      ? [fetchDiscogsArtistProfile(sourceId), fetchDiscogsArtistReleases(sourceId, 1, 24)]
+      : [fetchDiscogsLabelProfile(sourceId), fetchDiscogsLabelReleases(sourceId, 1, 24)],
+  );
 
   const notable = releasePage.releases
     .map((item) => normalizeReleaseTitle(item.title))
@@ -34,5 +35,9 @@ export async function refreshLabelMetadata(labelId: number, userId?: string) {
       notableReleasesJson: JSON.stringify(notable),
       updatedAt: new Date(),
     })
-    .where(userId ? and(eq(labels.id, labelId), eq(labels.userId, userId)) : eq(labels.id, labelId));
+    .where(userId ? and(eq(labels.id, sourceId), eq(labels.userId, userId)) : eq(labels.id, sourceId));
+}
+
+export async function refreshLabelMetadata(labelId: number, userId?: string) {
+  return refreshSourceMetadata(labelId, "label", userId);
 }

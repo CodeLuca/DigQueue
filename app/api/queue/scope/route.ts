@@ -4,6 +4,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 
@@ -14,6 +15,13 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "queue/scope",
+    limit: 30,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });

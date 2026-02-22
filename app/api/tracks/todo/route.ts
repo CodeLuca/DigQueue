@@ -4,6 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { queueItems, releases, tracks } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -23,6 +24,13 @@ async function recomputeReleaseListened(releaseId: number, userId: string) {
 
 export async function POST(request: Request) {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "tracks/todo",
+    limit: 80,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

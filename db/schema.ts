@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { bigint, boolean, customType, doublePrecision, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, customType, doublePrecision, integer, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
 
 const timestampMs = customType<{ data: Date; driverData: number }>({
   dataType() {
@@ -16,6 +16,8 @@ const timestampMs = customType<{ data: Date; driverData: number }>({
 export const labels = pgTable("labels", {
   id: bigint("id", { mode: "number" }).primaryKey(),
   userId: uuid("user_id"),
+  entityKind: text("entity_kind").notNull().default("label"),
+  externalDiscogsId: bigint("external_discogs_id", { mode: "number" }),
   name: text("name").notNull(),
   discogsUrl: text("discogs_url").notNull(),
   blurb: text("blurb"),
@@ -120,6 +122,20 @@ export const releaseSignals = pgTable("release_signals", {
   updatedAt: timestampMs("updated_at").notNull(),
 });
 
+export const sourceReleases = pgTable(
+  "source_releases",
+  {
+    sourceId: bigint("source_id", { mode: "number" }).notNull().references(() => labels.id, { onDelete: "cascade" }),
+    releaseId: bigint("release_id", { mode: "number" }).notNull().references(() => releases.id, { onDelete: "cascade" }),
+    userId: uuid("user_id"),
+    releaseOrder: integer("release_order").notNull().default(0),
+    discoveredAt: timestampMs("discovered_at").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.sourceId, table.releaseId] }),
+  }),
+);
+
 export const apiCache = pgTable("api_cache", {
   key: text("key").primaryKey(),
   userId: uuid("user_id"),
@@ -133,17 +149,44 @@ export const appSecrets = pgTable("app_secrets", {
   userId: uuid("user_id"),
   discogsToken: text("discogs_token"),
   youtubeApiKey: text("youtube_api_key"),
+  youtubeOauthRefreshToken: text("youtube_oauth_refresh_token"),
+  youtubeOauthAccessToken: text("youtube_oauth_access_token"),
+  youtubeOauthExpiresAt: bigint("youtube_oauth_expires_at", { mode: "number" }),
+  youtubeOauthScope: text("youtube_oauth_scope"),
+  youtubeOauthChannelId: text("youtube_oauth_channel_id"),
+  youtubeOauthChannelTitle: text("youtube_oauth_channel_title"),
+  updatedAt: timestampMs("updated_at").notNull(),
+});
+
+export const workerLocks = pgTable("worker_locks", {
+  lockKey: text("lock_key").primaryKey(),
+  userId: uuid("user_id").notNull(),
+  sourceId: bigint("source_id", { mode: "number" }).notNull(),
+  leaseToken: text("lease_token").notNull(),
+  lockedUntil: timestampMs("locked_until").notNull(),
+  updatedAt: timestampMs("updated_at").notNull(),
+});
+
+export const apiRateLimits = pgTable("api_rate_limits", {
+  bucketKey: text("bucket_key").primaryKey(),
+  userId: uuid("user_id").notNull(),
+  endpoint: text("endpoint").notNull(),
+  requestCount: integer("request_count").notNull().default(0),
+  windowStartedAt: timestampMs("window_started_at").notNull(),
+  resetAt: timestampMs("reset_at").notNull(),
   updatedAt: timestampMs("updated_at").notNull(),
 });
 
 export const labelsRelations = relations(labels, ({ many }) => ({
   releases: many(releases),
+  sourceReleases: many(sourceReleases),
 }));
 
 export const releasesRelations = relations(releases, ({ one, many }) => ({
   label: one(labels, { fields: [releases.labelId], references: [labels.id] }),
   tracks: many(tracks),
   signals: one(releaseSignals, { fields: [releases.id], references: [releaseSignals.releaseId] }),
+  sourceReleases: many(sourceReleases),
 }));
 
 export const tracksRelations = relations(tracks, ({ one, many }) => ({
@@ -169,4 +212,9 @@ export const feedbackEventsRelations = relations(feedbackEvents, ({ one }) => ({
 
 export const releaseSignalsRelations = relations(releaseSignals, ({ one }) => ({
   release: one(releases, { fields: [releaseSignals.releaseId], references: [releases.id] }),
+}));
+
+export const sourceReleasesRelations = relations(sourceReleases, ({ one }) => ({
+  source: one(labels, { fields: [sourceReleases.sourceId], references: [labels.id] }),
+  release: one(releases, { fields: [sourceReleases.releaseId], references: [releases.id] }),
 }));

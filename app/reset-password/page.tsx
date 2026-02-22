@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, KeyRound } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { completePasswordResetAction } from "@/app/auth-actions";
 
 const tertiaryLinkClass =
@@ -16,10 +16,6 @@ export default async function ResetPasswordPage({
     <main className="mx-auto min-h-[calc(100vh-11rem)] max-w-[760px] px-4 py-8 md:px-8">
       <section className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-low)] reveal sm:p-6 md:p-8">
         <div className="pointer-events-none absolute right-[-110px] top-[-90px] h-[220px] w-[220px] rounded-full bg-[radial-gradient(circle,_rgba(216,169,96,0.2),_transparent_66%)]" />
-        <p className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
-          <KeyRound className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-          Account Recovery
-        </p>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">Set a new password</h1>
         <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)] md:text-base">
           Choose a new password for your account.

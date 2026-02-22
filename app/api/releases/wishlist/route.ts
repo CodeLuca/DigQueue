@@ -4,6 +4,7 @@ import { and, eq, inArray, like, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { releases, tracks } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { setDiscogsReleaseWishlist } from "@/lib/discogs";
@@ -26,6 +27,13 @@ function parseDiscogsReleaseId(value: string | null | undefined) {
 
 export async function POST(request: Request) {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "releases/wishlist",
+    limit: 60,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

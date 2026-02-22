@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { ArrowRight, Music2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { getCurrentAppUserId } from "@/lib/app-user";
 
 export default async function ConnectDiscogsPage({
@@ -16,11 +16,7 @@ export default async function ConnectDiscogsPage({
   return (
     <main className="mx-auto max-w-[900px] px-4 py-8 md:px-8">
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-low)] reveal sm:p-6">
-        <p className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs uppercase tracking-wide text-[var(--color-muted)]">
-          <Music2 className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-          Step 2 · Connect Discogs
-        </p>
-        <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">Connect your Discogs account</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Connect your Discogs account</h1>
         <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)]">Authenticate once, then DigQueue can pull wants and sync wishlist actions for your Discogs account.</p>
         {!userId ? (
           <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">

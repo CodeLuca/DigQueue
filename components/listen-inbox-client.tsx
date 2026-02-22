@@ -83,7 +83,6 @@ const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
 const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
 const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
-const STATE_VIEW_STORAGE_KEY = "digqueue:listen-state-view";
 const ENQUEUE_TIMEOUT_MS = 6000;
 type PlaybackMode = "in_order" | "shuffle";
 type QueueStateView = "all" | "needs_review" | "reviewed" | "played";
@@ -96,11 +95,6 @@ type ReleaseWishlistApiResponse = {
   affectedTrackCount?: number;
   localConfirmedAll?: boolean;
   discogsSynced?: boolean;
-};
-type ReleaseReviewedApiResponse = {
-  ok?: boolean;
-  tracks?: Array<{ trackId: number; listened: boolean; saved: boolean }>;
-  error?: string;
 };
 
 async function updateTracks(payload: {
@@ -135,28 +129,6 @@ async function updateTracks(payload: {
         }),
       );
     }
-  }
-
-  return body.tracks ?? [];
-}
-
-async function markReleaseReviewed(releaseId: number) {
-  const response = await fetch("/api/releases/reviewed", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ releaseId }),
-  });
-  const body = (await response.json().catch(() => null)) as ReleaseReviewedApiResponse | null;
-  if (!response.ok || !body?.ok) {
-    throw new Error(body?.error || "Unable to mark release reviewed.");
-  }
-
-  for (const track of body.tracks ?? []) {
-    window.dispatchEvent(
-      new CustomEvent(TRACK_TODO_UPDATED_EVENT, {
-        detail: { trackId: track.trackId, field: "listened", value: Boolean(track.listened) },
-      }),
-    );
   }
 
   return body.tracks ?? [];
@@ -317,34 +289,15 @@ export function ListenInboxClient({
   const [hideReviewed, setHideReviewed] = useState(defaultHideReviewed);
   const [hideAlreadyPlayed, setHideAlreadyPlayed] = useState(defaultHideAlreadyPlayed);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
-  const [stateView, setStateView] = useState<QueueStateView>(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.localStorage.getItem(STATE_VIEW_STORAGE_KEY);
-      if (stored === "all" || stored === "needs_review" || stored === "reviewed" || stored === "played") {
-        return stored;
-      }
-    }
-    if (defaultHideReviewed && !defaultHideAlreadyPlayed) return "needs_review";
-    if (!defaultHideReviewed && defaultHideAlreadyPlayed) return "played";
-    if (defaultHideReviewed && defaultHideAlreadyPlayed) return "needs_review";
-    return "all";
-  });
+  const [stateView, setStateView] = useState<QueueStateView>("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "saved" | "wishlisted" | "saved_or_wishlisted">("all");
   const [videoFilter, setVideoFilter] = useState<"all" | "playable" | "no_video_or_private">("all");
-  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(() => {
-    if (typeof window === "undefined") return "in_order";
-    const stored = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
-    return stored === "shuffle" ? "shuffle" : "in_order";
-  });
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>("in_order");
   const [addingLabelReleaseId, setAddingLabelReleaseId] = useState<number | null>(null);
-  const [togglingLabelId, setTogglingLabelId] = useState<number | null>(null);
   const [wishlistReleaseIdLoading, setWishlistReleaseIdLoading] = useState<number | null>(null);
   const [reviewingReleaseId, setReviewingReleaseId] = useState<number | null>(null);
   const [addedLabelReleaseIds, setAddedLabelReleaseIds] = useState<number[]>([]);
-  const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem(YOUTUBE_QUOTA_STORAGE_KEY) === "1";
-  });
+  const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
   const router = useRouter();
 
   const sourceFilteredRows = useMemo(
@@ -446,7 +399,7 @@ export function ListenInboxClient({
           if (stateView === "needs_review" && !needsReview) return false;
           if (stateView === "reviewed" && !item.listened) return false;
           if (stateView === "played" && !alreadyPlayed) return false;
-          if (hideReviewed && item.listened) return false;
+          if (hideReviewed && (item.listened || item.saved)) return false;
           if (hideAlreadyPlayed && alreadyPlayed) return false;
         }
         return true;
@@ -478,12 +431,16 @@ export function ListenInboxClient({
     () => visibleRows.filter((row) => selectedSet.has(row.trackId)),
     [selectedSet, visibleRows],
   );
-  const visibleTrackIds = useMemo(() => visibleRows.map((row) => row.trackId), [visibleRows]);
+  const scopedTrackIds = useMemo(() => scopedRows.map((row) => row.trackId), [scopedRows]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(STATE_VIEW_STORAGE_KEY, stateView);
-  }, [stateView]);
+    const storedPlaybackMode = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
+    if (storedPlaybackMode === "shuffle" || storedPlaybackMode === "in_order") {
+      setPlaybackMode(storedPlaybackMode);
+    }
+    setYoutubeQuotaExceeded(window.sessionStorage.getItem(YOUTUBE_QUOTA_STORAGE_KEY) === "1");
+  }, []);
 
   const moveLabel = useCallback((direction: -1 | 1) => {
     if (effectiveLabelOptions.length === 0) {
@@ -642,35 +599,34 @@ export function ListenInboxClient({
     router.refresh();
   }, [playRow, playingTrackId, router, visibleRows]);
 
-  const markRowReleaseListened = useCallback(async (releaseId: number, trackId: number) => {
+  const markRowReleaseListened = useCallback(async (releaseId: number, trackId: number, releaseDiscogsUrl: string) => {
     if (reviewingReleaseId === releaseId) return;
-    const wasPlayingRelease = rows.some((row) => row.releaseId === releaseId && row.trackId === playingTrackId);
+    const normalizedReleaseUrl = releaseDiscogsUrl.trim().toLowerCase();
+    const releaseGroupRows = visibleRows.filter((row) => row.releaseDiscogsUrl.trim().toLowerCase() === normalizedReleaseUrl);
+    const targetTrackIds = [...new Set((releaseGroupRows.length > 0 ? releaseGroupRows : [{ trackId }]).map((row) => row.trackId))];
+    const targetTrackIdSet = new Set(targetTrackIds);
+    const wasPlayingRelease = playingTrackId !== null && targetTrackIdSet.has(playingTrackId);
     const rowIndex = visibleRows.findIndex((row) => row.trackId === trackId);
     let nextTrackId: number | null = null;
     if (rowIndex >= 0) {
       for (let i = rowIndex + 1; i < visibleRows.length; i += 1) {
-        if (visibleRows[i]?.releaseId !== releaseId) {
+        if (!targetTrackIdSet.has(visibleRows[i]?.trackId ?? -1)) {
           nextTrackId = visibleRows[i]?.trackId ?? null;
           break;
-        }
-      }
-      if (!nextTrackId) {
-        for (let i = rowIndex - 1; i >= 0; i -= 1) {
-          if (visibleRows[i]?.releaseId !== releaseId) {
-            nextTrackId = visibleRows[i]?.trackId ?? null;
-            break;
-          }
         }
       }
     }
     setReviewingReleaseId(releaseId);
     try {
-      await markReleaseReviewed(releaseId);
+      await updateTracks({ trackIds: targetTrackIds, field: "listened", mode: "set", value: true });
       setRows((prev) => {
-        const next = prev.map((row) => (row.releaseId === releaseId ? { ...row, listened: true, isUpNext: false } : row));
+        const next = prev.map((row) => (targetTrackIdSet.has(row.trackId) ? { ...row, listened: true, isUpNext: false } : row));
         return showQueueFilters ? next : next.filter((row) => row.saved);
       });
       setPendingFocusTrackId(nextTrackId);
+      if (!nextTrackId) {
+        setFeedback("Release marked reviewed. End of queue reached.");
+      }
       if (wasPlayingRelease && nextTrackId) {
         void playRow(nextTrackId);
       } else if (wasPlayingRelease) {
@@ -682,7 +638,7 @@ export function ListenInboxClient({
     } finally {
       setReviewingReleaseId(null);
     }
-  }, [playRow, playingTrackId, reviewingReleaseId, router, rows, showQueueFilters, visibleRows]);
+  }, [playRow, playingTrackId, reviewingReleaseId, router, showQueueFilters, visibleRows]);
 
   const toggleRowSaved = useCallback(async (trackId: number) => {
     const updated = await updateTracks({ trackIds: [trackId], field: "saved", mode: "toggle" });
@@ -747,27 +703,6 @@ export function ListenInboxClient({
       setAddingLabelReleaseId(null);
     }
   }, [addedLabelReleaseIds, addingLabelReleaseId, router]);
-
-  const setRowLabelActive = useCallback(async (labelId: number, active: boolean) => {
-    if (togglingLabelId === labelId) return;
-    setTogglingLabelId(labelId);
-    setFeedback(active ? "Activating label..." : "Deactivating label...");
-    try {
-      const response = await fetch(`/api/labels/${labelId}/active`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active }),
-      });
-      const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      if (!response.ok) throw new Error(body?.error || "Unable to update label status.");
-      setFeedback(active ? "Label activated." : "Label deactivated.");
-      router.refresh();
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to update label status.");
-    } finally {
-      setTogglingLabelId(null);
-    }
-  }, [router, togglingLabelId]);
 
   const toggleSelectTrack = useCallback((trackId: number, checked: boolean) => {
     setSelectedTrackIds((prev) => {
@@ -971,7 +906,7 @@ export function ListenInboxClient({
   }, [syncUpNextFromQueue]);
 
   useEffect(() => {
-    const trackIds = visibleTrackIds.slice(0, 1200);
+    const trackIds = scopedTrackIds.slice(0, 1200);
     const scopeKey = `${showQueueFilters ? "1" : "0"}|${activeLabelId ?? "none"}|${trackIds.join(",")}`;
     if (scopeKey === lastScopeDispatchKeyRef.current) return;
     lastScopeDispatchKeyRef.current = scopeKey;
@@ -996,7 +931,7 @@ export function ListenInboxClient({
         scopeDispatchTimerRef.current = null;
       }
     };
-  }, [activeLabelId, showQueueFilters, visibleTrackIds]);
+  }, [activeLabelId, scopedTrackIds, showQueueFilters]);
 
   useEffect(() => {
     const onPlaybackMode = (event: Event) => {
@@ -1348,7 +1283,6 @@ export function ListenInboxClient({
 
       <div className="space-y-2 outline-none">
         {visibleRows.map((item, index) => {
-          const isLegacyWant = item.importSource === "discogs_want";
           const isPlaying = item.trackId === playingTrackId && playerIsPlaying;
           const isUpNext = Boolean(item.isUpNext) && !isPlaying;
           const playedCount = item.playedCount ?? (item.wasPlayed ? 1 : 0);
@@ -1504,7 +1438,7 @@ export function ListenInboxClient({
                       </span>
                     ) : null}
                   </span>
-                  {!isLegacyWant && showQueueFilters ? (
+                  {showQueueFilters ? (
                     <>
                       <span className="group relative inline-flex">
                         <Button
@@ -1530,7 +1464,7 @@ export function ListenInboxClient({
                           type="button"
                           size="sm"
                           variant="secondary"
-                          onClick={() => void markRowReleaseListened(item.releaseId, item.trackId)}
+                          onClick={() => void markRowReleaseListened(item.releaseId, item.trackId, item.releaseDiscogsUrl)}
                           disabled={reviewingReleaseId === item.releaseId}
                           className="h-9 w-9 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-amber-100 hover:bg-amber-500/32"
                           title="Mark entire release reviewed and skip to next release"
@@ -1550,36 +1484,30 @@ export function ListenInboxClient({
                     (() => {
                       const labelIsActive = activeLabelIds.has(item.labelId);
                       const isAdding = addingLabelReleaseId === item.releaseId;
-                      const isToggling = togglingLabelId === item.labelId;
                       const isAdded = addedLabelReleaseIds.includes(item.releaseId);
-                      const isBusy = isAdding || isToggling;
-                      const wantsDeactivate = labelIsActive && !isAdding;
+                      const isBusy = isAdding;
+                      const canAddLabel = !labelIsActive;
                       return (
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        if (wantsDeactivate) {
-                          void setRowLabelActive(item.labelId, false);
-                          return;
-                        }
+                        if (!canAddLabel) return;
                         void addRowLabel(item.releaseId);
                       }}
-                      disabled={isBusy || (!wantsDeactivate && isAdded)}
-                      title={wantsDeactivate ? "Deactivate this label for processing." : "Add this release label to DigQueue and activate it for processing."}
-                      aria-label={wantsDeactivate ? "Deactivate label" : "Add and activate label"}
+                      disabled={isBusy || !canAddLabel || isAdded}
+                      title="Add this release label to DigQueue and activate it for processing."
+                      aria-label="Add and activate label"
                       className="col-span-2 w-full justify-center border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100 sm:col-span-3 sm:w-full sm:justify-center"
                     >
                       <PlusCircle className="h-3.5 w-3.5" />
-                      {isToggling
-                        ? "Updating..."
-                        : isAdding
+                      {isAdding
                         ? "Adding..."
-                        : !wantsDeactivate && isAdded
+                        : isAdded
                           ? "Added"
-                          : wantsDeactivate
-                            ? "Deactivate label"
+                          : !canAddLabel
+                            ? "Label active"
                             : "Add + activate label"}
                     </Button>
                       );

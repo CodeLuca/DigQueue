@@ -2,15 +2,15 @@
 
 import { and, desc, eq, inArray, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { apiCache, labels, queueItems, releases, tracks } from "@/db/schema";
+import { apiCache, labels, queueItems, releases, sourceReleases, tracks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
-import { parseLabelIdFromInput, searchDiscogsLabels } from "@/lib/discogs";
+import { parseArtistIdFromInput, parseLabelIdFromInput, searchDiscogsArtists, searchDiscogsLabels } from "@/lib/discogs";
 import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
 import { toExternalDiscogsId, toStoredDiscogsId } from "@/lib/discogs-id";
-import { refreshLabelMetadata } from "@/lib/label-metadata";
-import { chooseTrackMatch, processSingleReleaseForLabel, toggleReleaseWishlist, toggleTrackTodo } from "@/lib/processing";
+import { refreshSourceMetadata } from "@/lib/label-metadata";
+import { chooseTrackMatch, processSingleReleaseForSource, toggleReleaseWishlist, toggleTrackTodo } from "@/lib/processing";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
 
@@ -66,18 +66,22 @@ function scoreLabelName(query: string, candidate: string) {
 
 type LocalLabelCandidate = { id: number; title: string; score: number };
 
-async function findBestLocalLabelCandidate(userId: string, query: string): Promise<LocalLabelCandidate | null> {
+async function findBestLocalLabelCandidate(
+  userId: string,
+  query: string,
+  kind: "label" | "artist" = "label",
+): Promise<LocalLabelCandidate | null> {
   const q = query.trim();
   if (q.length < 2) return null;
   const scope = userScope(userId);
   const candidateMap = new Map<number, LocalLabelCandidate>();
 
   const knownLabels = await db.query.labels.findMany({
-    where: scope.labels,
-    columns: { id: true, name: true },
+    where: and(scope.labels, eq(labels.entityKind, kind)),
+    columns: { id: true, name: true, externalDiscogsId: true },
   });
   for (const label of knownLabels) {
-    const externalId = toExternalDiscogsId(label.id);
+    const externalId = label.externalDiscogsId ?? toExternalDiscogsId(label.id);
     if (!externalId || externalId <= 0) continue;
     const score = scoreLabelName(q, label.name);
     if (score <= 0) continue;
@@ -93,7 +97,7 @@ async function findBestLocalLabelCandidate(userId: string, query: string): Promi
     .where(
       and(
         eq(apiCache.userId, userId),
-        like(apiCache.key, `discogs:${userId}:/database/search?%type=label%`),
+        like(apiCache.key, `discogs:${userId}:/database/search?%type=${kind}%`),
       ),
     )
     .orderBy(desc(apiCache.fetchedAt))
@@ -127,7 +131,38 @@ async function findBestLocalLabelCandidate(userId: string, query: string): Promi
   return top;
 }
 
-async function upsertLabelById(userId: string, id: number, fallbackName?: string) {
+async function resolveBestSourceCandidate(userId: string, query: string) {
+  const [bestLabel, bestArtist] = await Promise.all([
+    findBestLocalLabelCandidate(userId, query, "label"),
+    findBestLocalLabelCandidate(userId, query, "artist"),
+  ]);
+
+  if (bestLabel && bestArtist) {
+    return bestArtist.score > bestLabel.score
+      ? { kind: "artist" as const, candidate: bestArtist }
+      : { kind: "label" as const, candidate: bestLabel };
+  }
+  if (bestLabel) return { kind: "label" as const, candidate: bestLabel };
+  if (bestArtist) return { kind: "artist" as const, candidate: bestArtist };
+
+  const [labelSearch, artistSearch] = await Promise.all([
+    searchDiscogsLabels(query).catch(() => ({ results: [] as Array<{ id: number; title: string }> })),
+    searchDiscogsArtists(query).catch(() => ({ results: [] as Array<{ id: number; title: string }> })),
+  ]);
+
+  const ranked = [
+    ...labelSearch.results.slice(0, 6).map((item) => ({ kind: "label" as const, id: item.id, title: item.title, score: scoreLabelName(query, item.title) })),
+    ...artistSearch.results.slice(0, 6).map((item) => ({ kind: "artist" as const, id: item.id, title: item.title, score: scoreLabelName(query, item.title) })),
+  ]
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const top = ranked[0];
+  if (!top) return null;
+  return { kind: top.kind, candidate: { id: top.id, title: top.title, score: top.score } };
+}
+
+async function upsertSourceById(userId: string, kind: "label" | "artist", id: number, fallbackName?: string) {
   const storedLabelId = toStoredDiscogsId(userId, id, "label");
   const now = new Date();
   await db
@@ -135,8 +170,10 @@ async function upsertLabelById(userId: string, id: number, fallbackName?: string
     .values({
       id: storedLabelId,
       userId,
-      name: fallbackName || `Label ${id}`,
-      discogsUrl: `https://www.discogs.com/label/${id}`,
+      entityKind: kind,
+      externalDiscogsId: id,
+      name: fallbackName || `${kind === "artist" ? "Artist" : "Label"} ${id}`,
+      discogsUrl: `https://www.discogs.com/${kind}/${id}`,
       sourceType: "workspace",
       active: false,
       status: "queued",
@@ -150,6 +187,10 @@ async function upsertLabelById(userId: string, id: number, fallbackName?: string
     .onConflictDoUpdate({
       target: labels.id,
       set: {
+        entityKind: kind,
+        externalDiscogsId: id,
+        name: fallbackName || `${kind === "artist" ? "Artist" : "Label"} ${id}`,
+        discogsUrl: `https://www.discogs.com/${kind}/${id}`,
         updatedAt: now,
         sourceType: "workspace",
         status: "queued",
@@ -174,7 +215,7 @@ async function seedLabelsInternal() {
   for (const label of seedLabels) {
     const id = parseLabelIdFromInput(label.discogs_url);
     if (!id) continue;
-    await upsertLabelById(userId, id, label.name);
+    await upsertSourceById(userId, "label", id, label.name);
   }
 
   if (hasDiscogsToken) {
@@ -183,7 +224,7 @@ async function seedLabelsInternal() {
         const search = await searchDiscogsLabels(searchName);
         const first = search.results[0];
         if (!first) continue;
-        await upsertLabelById(userId, first.id, searchName);
+        await upsertSourceById(userId, "label", first.id, searchName);
       } catch {
         // Best-effort: skip unresolved search labels so direct-ID seeds still succeed.
       }
@@ -191,35 +232,80 @@ async function seedLabelsInternal() {
   }
 }
 
-export async function addLabelAction(formData: FormData) {
+export async function addSourceAction(formData: FormData) {
   const userId = await requireCurrentAppUserId();
-  const raw = String(formData.get("label") || "").trim();
+  const scope = userScope(userId);
+  const raw = String(formData.get("source") ?? formData.get("label") ?? "").trim();
   if (!raw) return;
 
-  let id = parseLabelIdFromInput(raw);
+  const requestedKindRaw = String(formData.get("entityKind") || "").toLowerCase();
+  const requestedKind: "label" | "artist" | null =
+    requestedKindRaw === "artist" ? "artist" : requestedKindRaw === "label" ? "label" : null;
+
+  const explicitArtistUrl = /\/artist\/\d+/i.test(raw);
+  const explicitLabelUrl = /\/label\/\d+/i.test(raw);
+  const parsedArtistId = parseArtistIdFromInput(raw);
+  const parsedLabelId = parseLabelIdFromInput(raw);
+
+  let entityKind: "label" | "artist" =
+    requestedKind ??
+    (explicitArtistUrl && !explicitLabelUrl
+      ? "artist"
+      : explicitLabelUrl && !explicitArtistUrl
+        ? "label"
+        : "label");
+  let id = entityKind === "artist" ? parsedArtistId : parsedLabelId;
   let name = raw;
 
-  if (!id) {
-    const cachedMatch = await findBestLocalLabelCandidate(userId, raw);
-    if (cachedMatch) {
-      id = cachedMatch.id;
-      name = cachedMatch.title;
-    } else {
-      const search = await searchDiscogsLabels(raw);
-      const first = search.results[0];
-      if (!first) throw new Error("No label found from search.");
-      id = first.id;
-      name = first.title;
+  if (!id && !requestedKind && /^\d+$/.test(raw)) {
+    const numericId = Number(raw);
+    const existingByExternalId = await db.query.labels.findFirst({
+      where: and(scope.labels, eq(labels.externalDiscogsId, numericId)),
+      columns: { entityKind: true, name: true },
+    });
+    if (existingByExternalId) {
+      entityKind = existingByExternalId.entityKind === "artist" ? "artist" : "label";
+      id = numericId;
+      name = existingByExternalId.name;
     }
   }
 
-  const storedLabelId = await upsertLabelById(userId, id, name);
+  if (!id) {
+    if (!requestedKind) {
+      const best = await resolveBestSourceCandidate(userId, raw);
+      if (!best) throw new Error("No source found from search.");
+      entityKind = best.kind;
+      id = best.candidate.id;
+      name = best.candidate.title;
+    } else {
+      const cachedMatch = await findBestLocalLabelCandidate(userId, raw, entityKind);
+      if (cachedMatch) {
+        id = cachedMatch.id;
+        name = cachedMatch.title;
+      } else {
+        const search = entityKind === "artist" ? await searchDiscogsArtists(raw) : await searchDiscogsLabels(raw);
+        const first = search.results[0];
+        if (!first) throw new Error(`No ${entityKind} found from search.`);
+        id = first.id;
+        name = first.title;
+      }
+    }
+  }
+
+  const storedLabelId = await upsertSourceById(userId, entityKind, id, name);
   try {
-    await refreshLabelMetadata(storedLabelId, userId);
+    await refreshSourceMetadata(storedLabelId, entityKind, userId);
   } catch {
     // Non-blocking: metadata enrichment should not block adding labels.
   }
   revalidatePath("/");
+}
+
+export async function addLabelAction(formData: FormData) {
+  const cloned = new FormData();
+  for (const [key, value] of formData.entries()) cloned.append(key, value);
+  if (!cloned.get("entityKind")) cloned.set("entityKind", "label");
+  return addSourceAction(cloned);
 }
 
 export async function refreshLabelMetadataAction(formData: FormData) {
@@ -231,7 +317,7 @@ export async function refreshLabelMetadataAction(formData: FormData) {
   if (!label) return;
 
   try {
-    await refreshLabelMetadata(labelId, userId);
+    await refreshSourceMetadata(labelId, label.entityKind === "artist" ? "artist" : "label", userId);
   } catch {
     // Keep current label data when Discogs metadata lookup fails.
   }
@@ -250,7 +336,7 @@ export async function refreshMissingLabelMetadataAction() {
 
   for (const label of missingMetadata) {
     try {
-      await refreshLabelMetadata(label.id, userId);
+      await refreshSourceMetadata(label.id, label.entityKind === "artist" ? "artist" : "label", userId);
     } catch {
       // Keep existing values and continue with the next label.
     }
@@ -303,7 +389,7 @@ export async function retryLabelAction(formData: FormData) {
     .where(and(eq(labels.id, labelId), scope.labels));
 
   // Kick one processing step immediately so "Reload tracks" has visible progress without requiring queue runner.
-  await processSingleReleaseForLabel(labelId, userId);
+  await processSingleReleaseForSource(labelId, userId);
 
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);
@@ -320,6 +406,21 @@ export async function deleteLabelAction(formData: FormData) {
     columns: { id: true },
   });
   const releaseIds = labelReleases.map((item) => item.id);
+
+  for (const releaseId of releaseIds) {
+    const fallbackMappings = await db.query.sourceReleases.findMany({
+      where: and(eq(sourceReleases.releaseId, releaseId), eq(sourceReleases.userId, userId)),
+      orderBy: [desc(sourceReleases.discoveredAt)],
+      limit: 4,
+    });
+    const fallback = fallbackMappings.find((item) => item.sourceId !== labelId);
+    if (fallback && fallback.sourceId !== labelId) {
+      await db
+        .update(releases)
+        .set({ labelId: fallback.sourceId })
+        .where(and(eq(releases.id, releaseId), scope.releases));
+    }
+  }
 
   await db
     .delete(queueItems)
@@ -342,7 +443,7 @@ export async function clearPlayedQueueAction() {
 }
 
 export async function pullDiscogsWantsAction() {
-  await syncDiscogsWantsToLocal({ force: true });
+  await syncDiscogsWantsToLocal({ force: true, maxItems: 200 });
   revalidatePath("/");
 }
 
@@ -360,7 +461,7 @@ export async function oneClickFirstRunAction() {
   const firstLabel = await db.query.labels.findFirst({ where: and(eq(labels.status, "queued"), eq(labels.active, true), scope.labels) });
   if (firstLabel) {
     await db.update(labels).set({ status: "processing", updatedAt: new Date(), lastError: null }).where(and(eq(labels.id, firstLabel.id), scope.labels));
-    await processSingleReleaseForLabel(firstLabel.id, userId);
+  await processSingleReleaseForSource(firstLabel.id, userId);
   }
 
   revalidatePath("/");
@@ -373,7 +474,7 @@ export async function processLabelAction(formData: FormData) {
   if (!labelId) return;
 
   await db.update(labels).set({ status: "processing", updatedAt: new Date() }).where(and(eq(labels.id, labelId), scope.labels));
-  await processSingleReleaseForLabel(labelId, userId);
+  await processSingleReleaseForSource(labelId, userId);
 
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);

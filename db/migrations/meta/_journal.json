@@ -71,6 +71,20 @@
       "when": 1760494200000,
       "tag": "0009_queue_priority",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "0010",
+      "when": 1763852400000,
+      "tag": "0010_sources_and_source_releases",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "0011",
+      "when": 1763856600000,
+      "tag": "0011_youtube_oauth_playlist_export",
+      "breakpoints": true
     }
   ]
 }

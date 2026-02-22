@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   Bookmark,
   CheckCheck,
@@ -21,6 +22,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
+function NativeTooltip({ text, children }: { text: string; children: ReactNode }) {
+  return (
+    <span className="group relative inline-flex">
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute -top-2 left-1/2 z-20 hidden w-max max-w-[260px] -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-2 py-1 text-[11px] leading-tight text-[var(--color-text)] shadow-[var(--shadow-low)] group-hover:block group-focus-within:block"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 export default function HowToUsePage() {
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8 md:py-8">
@@ -31,19 +46,26 @@ export default function HowToUsePage() {
           This page uses the same controls you see in the app so you can recognize them quickly during real use.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Badge><Disc3 className="mr-1 h-3 w-3" />Labels loaded</Badge>
-          <Badge><PlayCircle className="mr-1 h-3 w-3" />Tracks played</Badge>
-          <Badge><CheckCircle2 className="mr-1 h-3 w-3" />Reviewed</Badge>
-          <Badge><Heart className="mr-1 h-3 w-3" />Saved tracks</Badge>
+          <NativeTooltip text="Disc icon = source ingestion progress across label and artist sources">
+            <Badge><Disc3 className="mr-1 h-3 w-3" />Sources loaded</Badge>
+          </NativeTooltip>
+          <NativeTooltip text="Play icon = queue playback activity">
+            <Badge><PlayCircle className="mr-1 h-3 w-3" />Tracks played</Badge>
+          </NativeTooltip>
+          <NativeTooltip text="Single check icon = reviewed track">
+            <Badge><CheckCircle2 className="mr-1 h-3 w-3" />Reviewed</Badge>
+          </NativeTooltip>
+          <NativeTooltip text="Heart icon = locally saved track">
+            <Badge><Heart className="mr-1 h-3 w-3" />Saved tracks</Badge>
+          </NativeTooltip>
         </div>
         <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
           Demo page note: sample controls below are disabled and shown for orientation only.
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/?tab=step-1"><Button size="sm" variant="outline">Open Labels</Button></Link>
+          <Link href="/?tab=step-1"><Button size="sm" variant="outline">Open Sources</Button></Link>
           <Link href="/?tab=step-2"><Button size="sm" variant="outline">Open Listening Station</Button></Link>
           <Link href="/?tab=library"><Button size="sm" variant="outline">Open Library</Button></Link>
-          <Link href="/?tab=recommendations"><Button size="sm" variant="outline">Open Recommendations</Button></Link>
         </div>
       </section>
 
@@ -51,23 +73,42 @@ export default function HowToUsePage() {
         <Card>
           <CardHeader className="flex items-center gap-2">
             <Disc3 className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Labels: Source Intake</CardTitle>
+            <CardTitle>Sources: Intake</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-[var(--color-muted)]">This is where queue content starts.</p>
-            <Badge>Demo controls (disabled)</Badge>
+            <p className="text-sm text-[var(--color-muted)]">
+              This is where queue content starts. One input handles both source types and auto-detects from URL, ID, or name.
+            </p>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Input placeholder="Paste Discogs label URL, ID, or name" disabled readOnly />
-              <Button type="button" disabled>Add</Button>
+              <NativeTooltip text="Sources accept both Discogs labels and artists. Use URL, numeric ID, or name.">
+                <span className="w-full sm:flex-1">
+                  <Input placeholder="Paste Discogs source URL, ID, or name" disabled readOnly />
+                </span>
+              </NativeTooltip>
+              <NativeTooltip text="Adds and queues a source for ingestion (works for both label and artist sources).">
+                <span>
+                  <Button type="button" disabled>Add Source</Button>
+                </span>
+              </NativeTooltip>
             </div>
             <div className="flex flex-wrap gap-2">
               <Badge>All (24)</Badge>
               <Badge className="border-emerald-600/60 text-emerald-300">Active (16)</Badge>
               <Badge>Inactive (8)</Badge>
+              <Badge>Any Kind (24)</Badge>
+              <NativeTooltip text="Discogs label sources">
+                <Badge>Label Sources (14)</Badge>
+              </NativeTooltip>
+              <NativeTooltip text="Discogs artist sources">
+                <Badge>Artists (10)</Badge>
+              </NativeTooltip>
             </div>
             <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/55 p-2 text-sm">
               <p className="font-medium">What to do first</p>
-              <p className="text-[var(--color-muted)]">Add 1-3 labels, activate them, then go to Listening Station.</p>
+              <p className="text-[var(--color-muted)]">Add 1-3 sources (labels or artists), activate them, then go to Listening Station.</p>
+              <p className="mt-1 text-[var(--color-muted)]">
+                Label sources focus on a label catalog. Artist sources follow one producer across multiple labels.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -79,7 +120,6 @@ export default function HowToUsePage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-[var(--color-muted)]">Use these controls repeatedly while digging.</p>
-            <Badge>Demo controls (disabled)</Badge>
             <div className="flex flex-wrap gap-2">
               <Badge>All</Badge>
               <Badge>Needs Review</Badge>
@@ -88,10 +128,26 @@ export default function HowToUsePage() {
             </div>
             <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/55 p-2">
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" size="sm" variant="secondary" disabled><Play className="h-3.5 w-3.5" />Play Now</Button>
-                <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" disabled><CheckCircle2 className="h-4 w-4" /></Button>
-                <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" disabled><CheckCheck className="h-4 w-4" /></Button>
-                <Button type="button" size="sm" variant="ghost" disabled><Heart className="h-3.5 w-3.5" />Save Track</Button>
+                <NativeTooltip text="Play now in mini-player; if queue is empty, DigQueue attempts to load from active sources.">
+                  <span>
+                    <Button type="button" size="sm" variant="secondary" disabled><Play className="h-3.5 w-3.5" />Play Now</Button>
+                  </span>
+                </NativeTooltip>
+                <NativeTooltip text="Single check icon: mark current track reviewed and advance.">
+                  <span>
+                    <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" disabled><CheckCircle2 className="h-4 w-4" /></Button>
+                  </span>
+                </NativeTooltip>
+                <NativeTooltip text="Double check icon: mark entire release reviewed.">
+                  <span>
+                    <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" disabled><CheckCheck className="h-4 w-4" /></Button>
+                  </span>
+                </NativeTooltip>
+                <NativeTooltip text="Save track locally; does not add to Discogs wantlist.">
+                  <span>
+                    <Button type="button" size="sm" variant="ghost" disabled><Heart className="h-3.5 w-3.5" />Save Track</Button>
+                  </span>
+                </NativeTooltip>
               </div>
             </div>
             <p className="text-sm text-[var(--color-muted)]">
@@ -125,13 +181,13 @@ export default function HowToUsePage() {
         <Card>
           <CardHeader className="flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Recommendations: Triage</CardTitle>
+            <CardTitle>Queue Focus: Keep It Tight</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>Treat recommendations like an inbox:</p>
-            <p><span className="font-medium">Play/Queue</span> what looks useful now.</p>
-            <p><span className="font-medium">Dismiss</span> items that do not match your direction.</p>
-            <p><span className="font-medium">Add Label/Want</span> for outside-library finds you want to track.</p>
+            <p>Keep the queue useful by tightening source quality:</p>
+            <p><span className="font-medium">Pause or deactivate</span> sources that drift away from your taste.</p>
+            <p><span className="font-medium">Review full releases</span> when you already know the catalog quality.</p>
+            <p><span className="font-medium">Use retry + error panel</span> to clear blocked sources quickly.</p>
           </CardContent>
         </Card>
       </section>
@@ -140,15 +196,15 @@ export default function HowToUsePage() {
         <Card>
           <CardHeader className="flex items-center gap-2">
             <Disc3 className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Find New Labels From Tracks You Already Like</CardTitle>
+            <CardTitle>Find New Sources From Tracks You Already Like</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>If you do not know which labels to add yet, start from music you already trust.</p>
+            <p>If you do not know which sources to add yet, start from music you already trust.</p>
             <p>1. Open a track/release you like in Listening Station or Library.</p>
-            <p>2. Use the release action to <span className="font-medium">Add + activate label</span>.</p>
-            <p>3. Go to Labels and run ingestion on that new label.</p>
+            <p>2. Use the release action to <span className="font-medium">Add + activate source</span>.</p>
+            <p>3. Go to Sources and run ingestion on that new source.</p>
             <p className="text-[var(--color-muted)]">
-              This is the fastest way to grow your label universe without guessing random labels.
+              This is the fastest way to grow your source universe without guessing random names.
             </p>
           </CardContent>
         </Card>
@@ -162,12 +218,27 @@ export default function HowToUsePage() {
             <p>1. Use <span className="font-medium">View</span> first (All/Needs Review/Reviewed/Played).</p>
             <p>2. Use <span className="font-medium">Exclude</span> to subtract noise.</p>
             <p>3. Open <span className="font-medium">More filters</span> only when needed.</p>
-            <Badge>Demo controls (disabled)</Badge>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="outline" disabled>View</Button>
-              <Button type="button" size="sm" variant="outline" disabled>Exclude</Button>
-              <Button type="button" size="sm" variant="outline" disabled><ListOrdered className="mr-1 h-3.5 w-3.5" />In Order</Button>
-              <Button type="button" size="sm" variant="outline" disabled><Shuffle className="mr-1 h-3.5 w-3.5" />Shuffle</Button>
+              <NativeTooltip text="View presets: All, Needs Review, Reviewed, Played.">
+                <span>
+                  <Button type="button" size="sm" variant="outline" disabled>View</Button>
+                </span>
+              </NativeTooltip>
+              <NativeTooltip text="Exclude filters remove noise from the current list.">
+                <span>
+                  <Button type="button" size="sm" variant="outline" disabled>Exclude</Button>
+                </span>
+              </NativeTooltip>
+              <NativeTooltip text="List icon: play queue in order.">
+                <span>
+                  <Button type="button" size="sm" variant="outline" disabled><ListOrdered className="mr-1 h-3.5 w-3.5" />In Order</Button>
+                </span>
+              </NativeTooltip>
+              <NativeTooltip text="Shuffle icon: randomize next queued item.">
+                <span>
+                  <Button type="button" size="sm" variant="outline" disabled><Shuffle className="mr-1 h-3.5 w-3.5" />Shuffle</Button>
+                </span>
+              </NativeTooltip>
             </div>
           </CardContent>
         </Card>
@@ -177,11 +248,11 @@ export default function HowToUsePage() {
             <CardTitle>First 10 Minutes Checklist</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <p>1. Add labels and activate a few.</p>
+            <p>1. Add sources and activate a few.</p>
             <p>2. Open Listening Station and press Play Now on a track.</p>
             <p>3. Use review buttons while listening.</p>
             <p>4. Check Library → Needs Review and clear leftovers.</p>
-            <p>5. Open Recommendations and triage.</p>
+            <p>5. Return to Sources and add one more high-signal source.</p>
             <div className="flex flex-wrap gap-2">
               <Link href="/settings">
                 <Button size="sm" variant="outline"><Settings className="mr-1 h-3.5 w-3.5" />Settings</Button>
@@ -190,7 +261,7 @@ export default function HowToUsePage() {
                 <Button size="sm">Start Listening</Button>
               </Link>
               <Link href="/?tab=step-1">
-                <Button size="sm" variant="outline"><ExternalLink className="mr-1 h-3.5 w-3.5" />Open Labels</Button>
+                <Button size="sm" variant="outline"><ExternalLink className="mr-1 h-3.5 w-3.5" />Open Sources</Button>
               </Link>
             </div>
           </CardContent>

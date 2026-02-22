@@ -15,7 +15,33 @@ export async function disconnectDiscogsAction() {
 }
 
 export async function clearApiKeysAction() {
-  await setApiKeys({ discogsToken: "", youtubeApiKey: "" });
+  await setApiKeys({
+    discogsToken: "",
+    youtubeApiKey: "",
+    youtubeOauthRefreshToken: "",
+    youtubeOauthAccessToken: "",
+    youtubeOauthExpiresAt: null,
+    youtubeOauthScope: "",
+    youtubeOauthChannelId: "",
+    youtubeOauthChannelTitle: "",
+  });
+  revalidatePath("/");
+  revalidatePath("/settings");
+  revalidatePath("/connect-discogs");
+}
+
+export async function disconnectYoutubeAction() {
+  const existing = await getApiKeys();
+  await setApiKeys({
+    discogsToken: existing.discogsToken || "",
+    youtubeApiKey: existing.youtubeApiKey || "",
+    youtubeOauthRefreshToken: "",
+    youtubeOauthAccessToken: "",
+    youtubeOauthExpiresAt: null,
+    youtubeOauthScope: "",
+    youtubeOauthChannelId: "",
+    youtubeOauthChannelTitle: "",
+  });
   revalidatePath("/");
   revalidatePath("/settings");
   revalidatePath("/connect-discogs");

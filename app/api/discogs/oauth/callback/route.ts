@@ -13,6 +13,20 @@ function safeNext(value: string | null) {
   return value;
 }
 
+function sanitizeDiscogsErrorMessage(message: string) {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("failed query:") ||
+    lower.includes("params:") ||
+    lower.includes("circuit breaker open") ||
+    lower.includes("unable to establish connection to upstream database") ||
+    lower.includes("getaddrinfo enotfound")
+  ) {
+    return "Temporary database connectivity issue while saving Discogs connection. Please retry.";
+  }
+  return message;
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const nextPath = safeNext(requestUrl.searchParams.get("next"));
@@ -54,7 +68,7 @@ export async function GET(request: Request) {
     revalidatePath("/connect-discogs");
     return NextResponse.redirect(new URL(`${nextPath}${nextPath.includes("?") ? "&" : "?"}discogs=connected`, requestUrl.origin));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to finish Discogs OAuth.";
+    const message = sanitizeDiscogsErrorMessage(error instanceof Error ? error.message : "Unable to finish Discogs OAuth.");
     return NextResponse.redirect(new URL(`/settings?discogs_error=${encodeURIComponent(message)}`, requestUrl.origin));
   }
 }

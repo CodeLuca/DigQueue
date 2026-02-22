@@ -13,5 +13,5 @@
 ## Next Iterations
 1. Release-mode fallback when track matches are weak.
 2. Recommendation ranking from listening history and label affinity.
-3. OAuth-based YouTube playlist export.
+3. [x] OAuth-based YouTube playlist export (saved tracks -> playlist from Library page).
 4. Better job control (batch process, retries, failure UI).

@@ -186,11 +186,8 @@ export function MiniPlayer() {
   const [releaseLinks, setReleaseLinks] = useState<FinderLinksApiResponse | null>(null);
   const [releaseLinksLoading, setReleaseLinksLoading] = useState(false);
   const [releaseLinksError, setReleaseLinksError] = useState<string | null>(null);
-  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(() => {
-    if (typeof window === "undefined") return "in_order";
-    const stored = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
-    return stored === "shuffle" ? "shuffle" : "in_order";
-  });
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>("in_order");
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent || "";
@@ -198,11 +195,12 @@ export function MiniPlayer() {
     return /iPad|iPhone|iPod/.test(ua) || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
   }, []);
 
-  const syncQueueToListeningScope = useCallback(async () => {
+  const syncQueueToListeningScope = useCallback(async (options?: { force?: boolean }) => {
     if (!isListeningStationTab || !listeningScopeEnabledRef.current) return;
     const trackIds = listeningScopeTrackIdsRef.current;
+    if (trackIds.length === 0) return;
     const scopeKey = `${trackIds.join(",")}`;
-    if (scopeKey === syncedScopeKeyRef.current) return;
+    if (!options?.force && scopeKey === syncedScopeKeyRef.current) return;
     syncedScopeKeyRef.current = scopeKey;
     try {
       await fetch("/api/queue/scope", {
@@ -328,12 +326,18 @@ export function MiniPlayer() {
     }
   }, [current]);
 
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timeoutId = window.setTimeout(() => setActionNotice(null), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [actionNotice]);
+
   const loadNext = useCallback(async (action: "played" | "listened" | null = null, currentId?: number) => {
     if (loadNextRequestRef.current) return loadNextRequestRef.current;
     const request = (async () => {
       const activeMode = "hybrid";
       const activeOrder = playbackMode;
-      void syncQueueToListeningScope();
+      await syncQueueToListeningScope();
       const activeCurrentId = currentId ?? currentRef.current?.id;
       const response = action && activeCurrentId && activeCurrentId > 0
         ? await fetch("/api/queue/next", {
@@ -344,6 +348,13 @@ export function MiniPlayer() {
         : await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
       if (!response.ok) return false;
       let item = (await response.json()) as QueueApiItem | null;
+      if (!item && isListeningStationTab && listeningScopeEnabledRef.current) {
+        await syncQueueToListeningScope({ force: true });
+        const scopedRetry = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
+        if (scopedRetry.ok) {
+          item = (await scopedRetry.json()) as QueueApiItem | null;
+        }
+      }
       if (!item && action) {
         const fallback = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
         if (fallback.ok) {
@@ -383,7 +394,7 @@ export function MiniPlayer() {
         loadNextRequestRef.current = null;
       }
     }
-  }, [playbackMode, syncQueueToListeningScope]);
+  }, [isListeningStationTab, playbackMode, syncQueueToListeningScope]);
 
   const markReviewed = useCallback(async () => {
     const trackId = current?.track?.id ?? null;
@@ -419,7 +430,17 @@ export function MiniPlayer() {
           }),
         );
       }
-      await loadNext();
+      // Skip any queued items still tied to the same release so this action
+      // consistently lands on the next release in queue.
+      let advanced = await loadNext("played");
+      let attempts = 0;
+      while (advanced && currentRef.current?.release?.id === releaseId && attempts < 8) {
+        attempts += 1;
+        advanced = await loadNext("played");
+      }
+      if (!advanced || currentRef.current?.release?.id === releaseId) {
+        setActionNotice("Release marked reviewed. End of queue reached.");
+      }
     } finally {
       setTodoLoading(null);
     }
@@ -543,6 +564,14 @@ export function MiniPlayer() {
     window.addEventListener(LISTENING_SCOPE_EVENT, onListeningScope as EventListener);
     return () => window.removeEventListener(LISTENING_SCOPE_EVENT, onListeningScope as EventListener);
   }, [fetchQueueItems, isListeningStationTab, queueOpen, syncQueueToListeningScope]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
+    if (stored === "shuffle" || stored === "in_order") {
+      setPlaybackMode(stored);
+    }
+  }, []);
 
   useEffect(() => {
     const onPlaybackMode = (event: Event) => {
@@ -1552,6 +1581,9 @@ export function MiniPlayer() {
         <p className="mx-auto mt-1 max-w-[1400px] text-[11px] text-[var(--color-muted)]">
           iOS limitation: embedded YouTube playback stops when Safari closes. Use the open-in-YouTube button for reliable background playback.
         </p>
+      ) : null}
+      {actionNotice ? (
+        <p className="mx-auto mt-1 max-w-[1400px] text-[11px] text-[var(--color-muted)]">{actionNotice}</p>
       ) : null}
     </div>
   );

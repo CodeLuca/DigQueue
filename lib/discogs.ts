@@ -24,6 +24,15 @@ export function parseLabelIdFromInput(input: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+export function parseArtistIdFromInput(input: string): number | null {
+  const trimmed = input.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+  const match = trimmed.match(/\/artist\/(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -277,6 +286,55 @@ export async function fetchDiscogsLabelReleases(labelId: number, page = 1, perPa
   );
 }
 
+type DiscogsArtistRelease = {
+  id?: number;
+  main_release?: number;
+  title?: string;
+  year?: number;
+  thumb?: string;
+  type?: string;
+  role?: string;
+};
+
+type DiscogsArtistReleasesResponse = {
+  pagination: { page: number; pages: number; per_page: number; items: number };
+  releases: DiscogsArtistRelease[];
+};
+
+export async function fetchDiscogsArtistReleases(artistId: number, page = 1, perPage = 100) {
+  const externalArtistId = toExternalDiscogsId(artistId);
+  const raw = await discogsRequest<DiscogsArtistReleasesResponse>(
+    `/artists/${externalArtistId}/releases?page=${page}&per_page=${perPage}`,
+    60 * 60 * 6,
+  );
+
+  const deduped = new Map<number, DiscogsLabelRelease>();
+  for (const row of raw.releases ?? []) {
+    const type = (row.type || "").toLowerCase();
+    if (type && !["release", "master"].includes(type)) continue;
+    const candidateId = row.main_release ?? row.id;
+    if (!candidateId || !Number.isFinite(candidateId) || candidateId <= 0) continue;
+    const title = row.title?.trim() || `Release ${candidateId}`;
+    if (!title) continue;
+    if (!deduped.has(candidateId)) {
+      deduped.set(candidateId, {
+        id: candidateId,
+        title,
+        artist: "",
+        year: typeof row.year === "number" ? row.year : 0,
+        catno: "",
+        resource_url: `https://api.discogs.com/releases/${candidateId}`,
+        thumb: row.thumb?.trim() || "",
+      });
+    }
+  }
+
+  return {
+    pagination: raw.pagination,
+    releases: [...deduped.values()],
+  };
+}
+
 type DiscogsLabelProfileResponse = {
   id: number;
   name?: string;
@@ -308,12 +366,32 @@ export async function fetchDiscogsLabelProfile(labelId: number) {
   };
 }
 
+type DiscogsArtistProfileResponse = {
+  id: number;
+  name?: string;
+  profile?: string;
+  images?: Array<{
+    uri?: string;
+    uri150?: string;
+  }>;
+};
+
+export async function fetchDiscogsArtistProfile(artistId: number) {
+  const externalArtistId = toExternalDiscogsId(artistId);
+  const profile = await discogsRequest<DiscogsArtistProfileResponse>(`/artists/${externalArtistId}`, 60 * 60 * 24 * 14);
+  const image = profile.images?.[0];
+  return {
+    blurb: cleanDiscogsProfile(profile.profile),
+    imageUrl: image?.uri150 || image?.uri || null,
+  };
+}
+
 export type DiscogsRelease = {
   id: number;
   title: string;
   tracklist: Array<{ position: string; title: string; duration?: string; artists?: Array<{ name: string }> }>;
   artists_sort?: string;
-  artists?: Array<{ name?: string }>;
+  artists?: Array<{ id?: number; name?: string }>;
   styles?: string[];
   genres?: string[];
   country?: string;
@@ -402,6 +480,14 @@ export async function getFirstDiscogsReleaseYoutubeVideoId(releaseId: number) {
 
 export async function searchDiscogsLabels(query: string) {
   const params = new URLSearchParams({ q: query, type: "label", per_page: "8" });
+  return discogsRequest<{ results: Array<{ id: number; title: string; uri: string }> }>(
+    `/database/search?${params.toString()}`,
+    60 * 60 * 6,
+  );
+}
+
+export async function searchDiscogsArtists(query: string) {
+  const params = new URLSearchParams({ q: query, type: "artist", per_page: "8" });
   return discogsRequest<{ results: Array<{ id: number; title: string; uri: string }> }>(
     `/database/search?${params.toString()}`,
     60 * 60 * 6,

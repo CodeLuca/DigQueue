@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Chrome, KeyRound } from "lucide-react";
+import { ArrowRight, Chrome } from "lucide-react";
 import { loginWithGoogleAction, loginWithPasswordAction, registerWithPasswordAction, requestPasswordResetAction } from "@/app/auth-actions";
 
 const tertiaryLinkClass =
@@ -19,10 +19,6 @@ export default async function LoginPage({
     <main className="mx-auto min-h-[calc(100vh-11rem)] max-w-[980px] px-4 py-8 md:px-8">
       <section className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-low)] reveal sm:p-6 md:p-8">
         <div className="pointer-events-none absolute right-[-110px] top-[-90px] h-[220px] w-[220px] rounded-full bg-[radial-gradient(circle,_rgba(216,169,96,0.2),_transparent_66%)]" />
-        <p className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
-          <KeyRound className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-          Step 1 · Account Access
-        </p>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">Login or Create Account</h1>
         <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)] md:text-base">
           Use one page for sign in and sign up, with Google available in both flows.
@@ -53,7 +49,7 @@ export default async function LoginPage({
               />
               <button
                 type="submit"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2.5 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2.5 text-sm text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
               >
                 Login with Email
                 <ArrowRight className="h-4 w-4" />
@@ -106,7 +102,7 @@ export default async function LoginPage({
               />
               <button
                 type="submit"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2.5 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2.5 text-sm text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
               >
                 Create account with Email
                 <ArrowRight className="h-4 w-4" />

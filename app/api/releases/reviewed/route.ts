@@ -4,6 +4,7 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { queueItems, releases, tracks } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -15,6 +16,13 @@ const MAX_TRACK_FEEDBACK_EVENTS = 120;
 
 export async function POST(request: Request) {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "releases/reviewed",
+    limit: 45,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

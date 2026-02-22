@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 
@@ -11,6 +12,13 @@ const schema = z.object({ active: z.boolean() });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "labels/active",
+    limit: 60,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const { id } = await params;
   const labelId = Number(id);
   if (!Number.isFinite(labelId) || labelId <= 0) {

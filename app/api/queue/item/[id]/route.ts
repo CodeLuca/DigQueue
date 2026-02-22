@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { queueItems } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 
@@ -16,6 +17,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "queue/item-delete",
+    limit: 120,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const id = parseId((await params).id);
   if (!id) return NextResponse.json({ error: "Invalid queue item id." }, { status: 400 });
 

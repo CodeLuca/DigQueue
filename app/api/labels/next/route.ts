@@ -38,6 +38,7 @@ export async function GET() {
 
   return NextResponse.json({
     nextLabelId,
+    nextSourceId: nextLabelId,
     counts,
     activeCount: activeLabels.length,
     blocker:

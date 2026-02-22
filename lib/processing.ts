@@ -1,10 +1,17 @@
-import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
-import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
+import { and, asc, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
+import { labels, queueItems, releases, sourceReleases, tracks, youtubeMatches } from "@/db/schema";
 import { db } from "@/lib/db";
-import { extractYoutubeVideoId, fetchDiscogsLabelReleases, fetchDiscogsRelease, setDiscogsReleaseWishlist } from "@/lib/discogs";
+import {
+  extractYoutubeVideoId,
+  fetchDiscogsArtistReleases,
+  fetchDiscogsLabelReleases,
+  fetchDiscogsRelease,
+  setDiscogsReleaseWishlist,
+} from "@/lib/discogs";
 import { toStoredDiscogsId } from "@/lib/discogs-id";
 import { captureReleaseSignals } from "@/lib/release-signals";
 import { logFeedbackEvent } from "@/lib/recommendations";
+import { clearSyncTelemetry, writeSyncTelemetry } from "@/lib/sync-telemetry";
 import { getBandcampTrackVideosForRelease, getDiscogsTrackVideos } from "@/lib/track-video-sources";
 import { isYoutubeFatalConfigError, searchYoutube } from "@/lib/youtube";
 
@@ -43,35 +50,45 @@ function userScope(userId: string) {
   return {
     labels: eq(labels.userId, userId),
     releases: eq(releases.userId, userId),
+    sourceReleases: eq(sourceReleases.userId, userId),
     tracks: eq(tracks.userId, userId),
     youtubeMatches: eq(youtubeMatches.userId, userId),
     queueItems: eq(queueItems.userId, userId),
   };
 }
 
-export async function ensureLabelReleasePage(labelId: number, userId: string) {
+export async function ensureSourceReleasePage(sourceId: number, userId: string) {
   const scope = userScope(userId);
-  const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), scope.labels) });
-  if (!label) throw new Error("Label not found.");
-  if (!label.active) return;
+  const source = await db.query.labels.findFirst({ where: and(eq(labels.id, sourceId), scope.labels) });
+  if (!source) throw new Error("Source not found.");
+  if (!source.active) return;
 
-  const pendingRelease = await db.query.releases.findFirst({
-    where: and(eq(releases.labelId, labelId), eq(releases.detailsFetched, false), scope.releases),
+  const pendingMapped = await db.query.sourceReleases.findFirst({
+    where: and(eq(sourceReleases.sourceId, sourceId), scope.sourceReleases),
+    with: {
+      release: true,
+    },
   });
-  if (pendingRelease) return;
-  if (label.currentPage > label.totalPages) return;
+  const hasPendingMapped = Boolean(pendingMapped?.release && !pendingMapped.release.detailsFetched);
+  if (hasPendingMapped) return;
+  if (source.currentPage > source.totalPages) return;
 
-  const pageData = await fetchDiscogsLabelReleases(labelId, label.currentPage, 100);
+  const pageData =
+    source.entityKind === "artist"
+      ? await fetchDiscogsArtistReleases(sourceId, source.currentPage, 100)
+      : await fetchDiscogsLabelReleases(sourceId, source.currentPage, 100);
   const now = new Date();
 
   for (const [index, release] of pageData.releases.entries()) {
     const storedReleaseId = toStoredDiscogsId(userId, release.id, "release");
+    const existingRelease = await db.query.releases.findFirst({ where: and(eq(releases.id, storedReleaseId), scope.releases) });
+    const releaseLabelId = existingRelease?.labelId ?? sourceId;
     await db
       .insert(releases)
       .values({
         id: storedReleaseId,
         userId,
-        labelId,
+        labelId: releaseLabelId,
         title: release.title,
         artist: release.artist || "Unknown Artist",
         year: release.year || null,
@@ -79,7 +96,18 @@ export async function ensureLabelReleasePage(labelId: number, userId: string) {
         discogsUrl: `https://www.discogs.com/release/${release.id}`,
         thumbUrl: release.thumb || null,
         fetchedAt: now,
-        releaseOrder: index + (label.currentPage - 1) * 100,
+        releaseOrder: index + (source.currentPage - 1) * 100,
+      })
+      .onConflictDoNothing();
+
+    await db
+      .insert(sourceReleases)
+      .values({
+        sourceId,
+        releaseId: storedReleaseId,
+        userId,
+        releaseOrder: index + (source.currentPage - 1) * 100,
+        discoveredAt: now,
       })
       .onConflictDoNothing();
   }
@@ -87,12 +115,12 @@ export async function ensureLabelReleasePage(labelId: number, userId: string) {
   await db
     .update(labels)
     .set({
-      currentPage: label.currentPage + 1,
+      currentPage: source.currentPage + 1,
       totalPages: pageData.pagination.pages,
       updatedAt: now,
       lastError: null,
     })
-    .where(and(eq(labels.id, labelId), scope.labels));
+    .where(and(eq(labels.id, sourceId), scope.labels));
 }
 
 async function finalizeReleaseQueueing(params: {
@@ -149,28 +177,140 @@ async function finalizeReleaseQueueing(params: {
 }
 
 export async function processSingleReleaseForLabel(labelId: number, userId: string) {
+  return processSingleReleaseForSource(labelId, userId);
+}
+
+async function getNextPendingQueueItem(
+  userId: string,
+  mode: "track" | "release" | "hybrid",
+  limit: number,
+  shuffled: boolean,
+) {
   const scope = userScope(userId);
-  const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), scope.labels) });
-  if (!label) throw new Error("Label not found.");
-  if (!label.active) return { done: false, message: "Label inactive." };
+  const baseCondition = and(eq(queueItems.status, "pending"), scope.queueItems);
+  const condition =
+    mode === "track"
+      ? and(baseCondition, isNotNull(queueItems.trackId))
+      : mode === "release"
+        ? and(baseCondition, isNull(queueItems.trackId))
+        : baseCondition;
+
+  const items = await db.query.queueItems.findMany({
+    where: condition,
+    orderBy: [desc(queueItems.priority), desc(queueItems.bumpedAt), asc(queueItems.id)],
+    limit,
+    with: {
+      track: true,
+      release: true,
+      label: true,
+    },
+  });
+
+  const activeItems = items.filter((item) => item.label?.active === true);
+  if (activeItems.length === 0) return null;
+  if (!shuffled) return activeItems[0] ?? null;
+  const randomIndex = Math.floor(Math.random() * activeItems.length);
+  return activeItems[randomIndex] ?? null;
+}
+
+async function primeQueueForPlayback(userId: string, mode: "track" | "release" | "hybrid", shuffled: boolean) {
+  // Try a couple of active sources on-demand so "Play" can recover from an empty queue.
+  const scope = userScope(userId);
+  const candidateSources = await db.query.labels.findMany({
+    where: and(eq(labels.active, true), scope.labels),
+    columns: { id: true, status: true, updatedAt: true },
+    orderBy: [asc(labels.updatedAt)],
+    limit: 6,
+  });
+
+  const sourcesToTry = candidateSources
+    .filter((source) => source.status !== "paused")
+    .sort((a, b) => {
+      if (a.status === "queued" && b.status !== "queued") return -1;
+      if (b.status === "queued" && a.status !== "queued") return 1;
+      return a.updatedAt.getTime() - b.updatedAt.getTime();
+    })
+    .slice(0, 3);
+
+  for (const source of sourcesToTry) {
+    try {
+      await processSingleReleaseForSource(source.id, userId);
+    } catch {
+      // Best-effort bootstrap: continue to the next source.
+    }
+
+    const item = await getNextPendingQueueItem(
+      userId,
+      mode,
+      shuffled ? SHUFFLE_QUEUE_CANDIDATE_LIMIT : NEXT_QUEUE_CANDIDATE_LIMIT,
+      shuffled,
+    );
+    if (item) return item;
+  }
+
+  return null;
+}
+
+export async function processSingleReleaseForSource(sourceId: number, userId: string) {
+  const scope = userScope(userId);
+  const source = await db.query.labels.findFirst({ where: and(eq(labels.id, sourceId), scope.labels) });
+  if (!source) throw new Error("Source not found.");
+  if (!source.active) return { done: false, message: "Source inactive." };
 
   try {
-    await ensureLabelReleasePage(labelId, userId);
-
-    const nextRelease = await db.query.releases.findFirst({
-      where: and(eq(releases.labelId, labelId), eq(releases.detailsFetched, false), scope.releases),
-      orderBy: [asc(releases.releaseOrder)],
+    await writeSyncTelemetry(userId, {
+      sourceId,
+      sourceName: source.name,
+      sourceKind: source.entityKind === "artist" ? "artist" : "label",
+      phase: "loading_release_page",
+      message: "Loading next release page",
+      updatedAt: Date.now(),
     });
+    await ensureSourceReleasePage(sourceId, userId);
+
+    const pendingMappings = await db.query.sourceReleases.findMany({
+      where: and(eq(sourceReleases.sourceId, sourceId), scope.sourceReleases),
+      orderBy: [asc(sourceReleases.releaseOrder)],
+      limit: 200,
+      with: { release: true },
+    });
+    const nextRelease = pendingMappings.map((item) => item.release).find((item) => Boolean(item && !item.detailsFetched)) ?? null;
 
     if (!nextRelease) {
-      const refreshedLabel = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), scope.labels) });
-      if (refreshedLabel && refreshedLabel.currentPage > refreshedLabel.totalPages) {
-        await db.update(labels).set({ status: "complete", updatedAt: new Date(), lastError: null }).where(and(eq(labels.id, labelId), scope.labels));
-        return { done: true, message: "Label processing complete." };
+      const refreshedSource = await db.query.labels.findFirst({ where: and(eq(labels.id, sourceId), scope.labels) });
+      if (refreshedSource && refreshedSource.currentPage > refreshedSource.totalPages) {
+        await db.update(labels).set({ status: "complete", updatedAt: new Date(), lastError: null }).where(and(eq(labels.id, sourceId), scope.labels));
+        await writeSyncTelemetry(userId, {
+          sourceId,
+          sourceName: source.name,
+          sourceKind: source.entityKind === "artist" ? "artist" : "label",
+          phase: "complete",
+          message: "Source processing complete",
+          updatedAt: Date.now(),
+        });
+        return { done: true, message: "Source processing complete." };
       }
+      await writeSyncTelemetry(userId, {
+        sourceId,
+        sourceName: source.name,
+        sourceKind: source.entityKind === "artist" ? "artist" : "label",
+        phase: "loading_release_page",
+        message: "Fetching next release page",
+        updatedAt: Date.now(),
+      });
       return { done: false, message: "Fetching next release page..." };
     }
 
+    await writeSyncTelemetry(userId, {
+      sourceId,
+      sourceName: source.name,
+      sourceKind: source.entityKind === "artist" ? "artist" : "label",
+      phase: "processing_release",
+      releaseId: nextRelease.id,
+      releaseTitle: nextRelease.title,
+      message: `Processing release: ${nextRelease.title}`,
+      updatedAt: Date.now(),
+    });
     const releaseDetails = await fetchDiscogsRelease(nextRelease.id);
     await captureReleaseSignals(releaseDetails, nextRelease.artist, nextRelease.year, userId);
     await db.delete(tracks).where(and(eq(tracks.releaseId, nextRelease.id), scope.tracks));
@@ -203,7 +343,21 @@ export async function processSingleReleaseForLabel(labelId: number, userId: stri
     let weakMatchCount = 0;
     let matchedCount = 0;
 
-    for (const track of releaseTracks) {
+    for (const [trackIndex, track] of releaseTracks.entries()) {
+      await writeSyncTelemetry(userId, {
+        sourceId,
+        sourceName: source.name,
+        sourceKind: source.entityKind === "artist" ? "artist" : "label",
+        phase: "matching_track",
+        releaseId: nextRelease.id,
+        releaseTitle: nextRelease.title,
+        trackId: track.id,
+        trackTitle: track.title,
+        trackIndex: trackIndex + 1,
+        trackTotal: releaseTracks.length,
+        message: `Matching track ${trackIndex + 1}/${releaseTracks.length}`,
+        updatedAt: Date.now(),
+      });
       try {
         const seededMatchesRaw = [
           ...(discogsTrackMatches.get(track.id) ?? []),
@@ -247,7 +401,7 @@ export async function processSingleReleaseForLabel(labelId: number, userId: stri
               youtubeVideoId: chosenVideoId,
               trackId: track.id,
               releaseId: nextRelease.id,
-              labelId,
+              labelId: sourceId,
               source: seededMatches[0]?.source === "bandcamp" ? "bandcamp_track_video" : "discogs_track_video",
               status: "pending",
               addedAt: new Date(),
@@ -272,7 +426,7 @@ export async function processSingleReleaseForLabel(labelId: number, userId: stri
     await finalizeReleaseQueueing({
       userId,
       releaseId: nextRelease.id,
-      labelId,
+      labelId: sourceId,
       artist: nextRelease.artist,
       title: nextRelease.title,
       trackCount: releaseTracks.length,
@@ -297,8 +451,19 @@ export async function processSingleReleaseForLabel(labelId: number, userId: stri
         updatedAt: new Date(),
         lastError: null,
       })
-      .where(and(eq(labels.id, labelId), scope.labels));
+      .where(and(eq(labels.id, sourceId), scope.labels));
 
+    await writeSyncTelemetry(userId, {
+      sourceId,
+      sourceName: source.name,
+      sourceKind: source.entityKind === "artist" ? "artist" : "label",
+      phase: "queued",
+      releaseId: nextRelease.id,
+      releaseTitle: nextRelease.title,
+      trackTotal: releaseTracks.length,
+      message: `Processed ${nextRelease.title}`,
+      updatedAt: Date.now(),
+    });
     return { done: false, message: `Processed ${nextRelease.title}` };
   } catch (error) {
     if (isTransientDatabaseError(error)) {
@@ -309,8 +474,16 @@ export async function processSingleReleaseForLabel(labelId: number, userId: stri
           lastError: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(labels.id, labelId), scope.labels));
+        .where(and(eq(labels.id, sourceId), scope.labels));
 
+      await writeSyncTelemetry(userId, {
+        sourceId,
+        sourceName: source.name,
+        sourceKind: source.entityKind === "artist" ? "artist" : "label",
+        phase: "processing_release",
+        message: "Transient database contention, retrying",
+        updatedAt: Date.now(),
+      });
       return { done: false, message: "Temporary database contention. Retrying…" };
     }
 
@@ -319,13 +492,33 @@ export async function processSingleReleaseForLabel(labelId: number, userId: stri
       .update(labels)
       .set({
         status: "error",
-        retryCount: label.retryCount + 1,
+        retryCount: source.retryCount + 1,
         lastError: message,
         updatedAt: new Date(),
       })
-      .where(and(eq(labels.id, labelId), scope.labels));
+      .where(and(eq(labels.id, sourceId), scope.labels));
 
+    await writeSyncTelemetry(userId, {
+      sourceId,
+      sourceName: source.name,
+      sourceKind: source.entityKind === "artist" ? "artist" : "label",
+      phase: "error",
+      message,
+      updatedAt: Date.now(),
+    });
     return { done: false, message: `Error: ${message}` };
+  } finally {
+    const remainingWork = await db.query.labels.findFirst({
+      where: and(
+        eq(labels.userId, userId),
+        eq(labels.active, true),
+        or(eq(labels.status, "processing"), eq(labels.status, "queued")),
+      ),
+      columns: { id: true },
+    });
+    if (!remainingWork) {
+      await clearSyncTelemetry(userId);
+    }
   }
 }
 
@@ -371,25 +564,9 @@ export async function nextQueueItem(userId: string, currentId?: number, mode: "t
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), scope.queueItems));
   }
 
-  const baseCondition = and(eq(queueItems.status, "pending"), scope.queueItems);
-  const condition =
-    mode === "track"
-      ? and(baseCondition, isNotNull(queueItems.trackId))
-      : mode === "release"
-        ? and(baseCondition, isNull(queueItems.trackId))
-        : baseCondition;
-
-  const items = await db.query.queueItems.findMany({
-    where: condition,
-    orderBy: [desc(queueItems.priority), desc(queueItems.bumpedAt), asc(queueItems.id)],
-    limit: NEXT_QUEUE_CANDIDATE_LIMIT,
-    with: {
-      track: true,
-      release: true,
-      label: true,
-    },
-  });
-  return items.find((item) => item.label?.active === true) ?? null;
+  const existing = await getNextPendingQueueItem(userId, mode, NEXT_QUEUE_CANDIDATE_LIMIT, false);
+  if (existing) return existing;
+  return primeQueueForPlayback(userId, mode, false);
 }
 
 export async function nextQueueItemShuffled(userId: string, currentId?: number, mode: "track" | "release" | "hybrid" = "track") {
@@ -398,28 +575,9 @@ export async function nextQueueItemShuffled(userId: string, currentId?: number, 
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), scope.queueItems));
   }
 
-  const baseCondition = and(eq(queueItems.status, "pending"), scope.queueItems);
-  const condition =
-    mode === "track"
-      ? and(baseCondition, isNotNull(queueItems.trackId))
-      : mode === "release"
-        ? and(baseCondition, isNull(queueItems.trackId))
-        : baseCondition;
-
-  const items = await db.query.queueItems.findMany({
-    where: condition,
-    orderBy: [desc(queueItems.priority), desc(queueItems.bumpedAt), asc(queueItems.id)],
-    limit: SHUFFLE_QUEUE_CANDIDATE_LIMIT,
-    with: {
-      track: true,
-      release: true,
-      label: true,
-    },
-  });
-  const activeItems = items.filter((item) => item.label?.active === true);
-  if (activeItems.length === 0) return null;
-  const randomIndex = Math.floor(Math.random() * activeItems.length);
-  return activeItems[randomIndex] ?? null;
+  const existing = await getNextPendingQueueItem(userId, mode, SHUFFLE_QUEUE_CANDIDATE_LIMIT, true);
+  if (existing) return existing;
+  return primeQueueForPlayback(userId, mode, true);
 }
 
 export async function toggleTrackTodo(trackId: number, field: "listened" | "saved", userId: string) {

@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { deleteLabelAction } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 export function LabelDeleteButton({ labelId, labelName }: { labelId: number; labelName: string }) {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -15,7 +15,7 @@ export function LabelDeleteButton({ labelId, labelName }: { labelId: number; lab
   return (
     <form action={deleteLabelAction} onSubmit={onSubmit}>
       <input type="hidden" name="labelId" value={labelId} />
-      <Button type="submit" size="sm" variant="destructive">Delete</Button>
+      <FormSubmitButton type="submit" size="sm" variant="destructive" pendingText="Deleting...">Delete</FormSubmitButton>
     </form>
   );
 }

@@ -2,15 +2,17 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { labels } from "@/db/schema";
+import { labels, sourceReleases } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { fetchDiscogsRelease } from "@/lib/discogs";
 import { toStoredDiscogsId } from "@/lib/discogs-id";
-import { refreshLabelMetadata } from "@/lib/label-metadata";
+import { refreshSourceMetadata } from "@/lib/label-metadata";
 
 const schema = z.object({
   releaseId: z.number().int().positive(),
+  entityKind: z.enum(["label", "artist"]).optional(),
 });
 
 function parseLabelIdFromResourceUrl(value: string | undefined) {
@@ -23,16 +25,28 @@ function parseLabelIdFromResourceUrl(value: string | undefined) {
 
 export async function POST(request: Request) {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "labels/from-release",
+    limit: 20,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const parsed = schema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const entityKind = parsed.data.entityKind ?? "label";
   const release = await fetchDiscogsRelease(parsed.data.releaseId);
   const label = (release.labels ?? []).find((item) => typeof item?.id === "number" || item?.resource_url);
-  const externalLabelId = typeof label?.id === "number" ? label.id : parseLabelIdFromResourceUrl(label?.resource_url);
+  const artist = (release.artists ?? []).find((item) => typeof item?.id === "number");
+  const externalLabelId =
+    entityKind === "artist"
+      ? (typeof artist?.id === "number" ? artist.id : null)
+      : (typeof label?.id === "number" ? label.id : parseLabelIdFromResourceUrl(label?.resource_url));
   if (!externalLabelId) {
-    return NextResponse.json({ error: "No label metadata found for release." }, { status: 404 });
+    return NextResponse.json({ error: `No ${entityKind} metadata found for release.` }, { status: 404 });
   }
   const labelId = toStoredDiscogsId(userId, externalLabelId, "label");
 
@@ -42,8 +56,10 @@ export async function POST(request: Request) {
     .values({
       id: labelId,
       userId,
-      name: label?.name?.trim() || `Label ${externalLabelId}`,
-      discogsUrl: `https://www.discogs.com/label/${externalLabelId}`,
+      entityKind,
+      externalDiscogsId: externalLabelId,
+      name: entityKind === "artist" ? artist?.name?.trim() || `Artist ${externalLabelId}` : label?.name?.trim() || `Label ${externalLabelId}`,
+      discogsUrl: `https://www.discogs.com/${entityKind}/${externalLabelId}`,
       sourceType: "workspace",
       active: true,
       status: "queued",
@@ -57,8 +73,10 @@ export async function POST(request: Request) {
     .onConflictDoUpdate({
       target: labels.id,
       set: {
-        name: label?.name?.trim() || `Label ${externalLabelId}`,
-        discogsUrl: `https://www.discogs.com/label/${externalLabelId}`,
+        entityKind,
+        externalDiscogsId: externalLabelId,
+        name: entityKind === "artist" ? artist?.name?.trim() || `Artist ${externalLabelId}` : label?.name?.trim() || `Label ${externalLabelId}`,
+        discogsUrl: `https://www.discogs.com/${entityKind}/${externalLabelId}`,
         sourceType: "workspace",
         active: true,
         updatedAt: now,
@@ -68,10 +86,22 @@ export async function POST(request: Request) {
     });
 
   try {
-    await refreshLabelMetadata(labelId, userId);
+    await refreshSourceMetadata(labelId, entityKind, userId);
   } catch {
     // Non-blocking: label creation should succeed even if metadata lookup fails.
   }
+
+  const storedReleaseId = toStoredDiscogsId(userId, parsed.data.releaseId, "release");
+  await db
+    .insert(sourceReleases)
+    .values({
+      sourceId: labelId,
+      releaseId: storedReleaseId,
+      userId,
+      releaseOrder: 0,
+      discoveredAt: now,
+    })
+    .onConflictDoNothing();
 
   return NextResponse.json({ ok: true, labelId });
 }

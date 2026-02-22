@@ -39,12 +39,17 @@ Create `.env.local`:
 DISCOGS_CONSUMER_KEY=...
 DISCOGS_CONSUMER_SECRET=...
 YOUTUBE_API_KEY=...
+YOUTUBE_OAUTH_CLIENT_ID=...
+YOUTUBE_OAUTH_CLIENT_SECRET=...
+# Optional override; otherwise defaults to {origin}/api/youtube/oauth/callback
+# YOUTUBE_OAUTH_REDIRECT_URI=http://localhost:3000/api/youtube/oauth/callback
 BANDCAMP_WISHLIST_URL=...
 NEXT_PUBLIC_APP_NAME=DigQueue
 SUPABASE_DB_URL=postgresql://...
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+APP_SECRETS_ENCRYPTION_KEY=base64-32-byte-key
 ```
 
 Optional:
@@ -52,6 +57,7 @@ Optional:
 - `BANDCAMP_WISHLIST_URL` can point to a public fan wishlist page (for example `https://bandcamp.com/yourname/wishlist`).
 - Wishlist imports are cached and paged slowly to avoid hitting Bandcamp rate limits.
 - In Discogs app settings, add OAuth callback URL: `http://localhost:3000/api/discogs/oauth/callback` (and your production callback URL for deploys).
+- `APP_SECRETS_ENCRYPTION_KEY` must be a 32-byte AES key encoded as base64 (or 64-char hex). It is required for storing user API secrets.
 
 Users connect Discogs from `/connect-discogs` with one-click OAuth. `/settings` shows integration status and test results.
 
@@ -90,6 +96,9 @@ API:
 - `/api/discogs/label/[id]/releases`
 - `/api/discogs/release/[id]`
 - `/api/youtube/search`
+- `/api/youtube/oauth/start`
+- `/api/youtube/oauth/callback`
+- `/api/youtube/playlist/export`
 - `/api/queue/next`
 - `/api/finder/release/[id]`
 - `/api/worker/process`
@@ -127,9 +136,9 @@ Seed lists are included in `lib/seed-data.ts` and can be loaded with the **Load 
 
 ## Limitations (MVP)
 
-- YouTube OAuth playlist export is not implemented yet
+- YouTube playlist export is optional and requires connecting YouTube in Settings
 - Recommendation graph currently runs in-process (no background materialized graph jobs yet)
-- Discogs and YouTube quota/rate limits are respected with cache + delay, but no distributed worker system yet
+- Background workers are lease-locked in Postgres, but there is no external job queue/retry dashboard yet
 
 ## Roadmap
 

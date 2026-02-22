@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { and, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { releases, tracks } from "@/db/schema";
+import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { setDiscogsReleaseWishlist } from "@/lib/discogs";
@@ -17,6 +18,13 @@ function chunk<T>(items: T[], size: number) {
 
 export async function POST() {
   const userId = await requireCurrentAppUserId();
+  const rateLimited = await guardMutationRateLimit(userId, {
+    bucket: "wishlist/sync-saved",
+    limit: 3,
+    windowSeconds: 300,
+  });
+  if (rateLimited) return rateLimited;
+
   const savedTrackRows = await db
     .select({ releaseId: tracks.releaseId })
     .from(tracks)

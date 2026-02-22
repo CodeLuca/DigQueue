@@ -1,7 +1,7 @@
 import net from "node:net";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 function parseArgs(argv) {
   let requestedPort = Number.parseInt(process.env.PORT ?? "", 10);
@@ -70,11 +70,43 @@ function resolveDevDistDir(port) {
   return `.next-port-${port}`;
 }
 
+function readEnvLocalValue(key) {
+  const envPath = path.join(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) return undefined;
+  const raw = readFileSync(envPath, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx <= 0) continue;
+    const lineKey = trimmed.slice(0, idx).trim();
+    if (lineKey !== key) continue;
+    let value = trimmed.slice(idx + 1).trim();
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    return value || undefined;
+  }
+  return undefined;
+}
+
 function launchNextDev(port, passthrough) {
+  const fileDbUrl = readEnvLocalValue("SUPABASE_DB_URL");
   const env = {
     ...process.env,
     NEXT_DEV_DIST_DIR: resolveDevDistDir(port),
   };
+  // Keep runtime DB config deterministic in dev even if the shell exports stale values.
+  delete env.SUPABASE_DIRECT_DB_URL;
+  delete env.POSTGRES_URL;
+  delete env.DATABASE_URL;
+  if (fileDbUrl) {
+    env.SUPABASE_DB_URL = fileDbUrl;
+  }
+
   const child = spawn("yarn", ["next", "dev", "--port", String(port), ...passthrough], {
     stdio: "inherit",
     env,

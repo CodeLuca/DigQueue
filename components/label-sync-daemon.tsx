@@ -8,8 +8,9 @@ const IDLE_TICK_MS = 5000;
 const ERROR_TICK_MS = 8000;
 const REFRESH_MIN_GAP_MS = 4500;
 
-type NextLabelResponse = {
-  nextLabelId: number | null;
+type NextSourceResponse = {
+  nextSourceId?: number | null;
+  nextLabelId?: number | null;
 };
 
 export function LabelSyncDaemon() {
@@ -24,13 +25,14 @@ export function LabelSyncDaemon() {
     const tick = async () => {
       if (!runningRef.current) return;
       try {
-        const nextResponse = await fetch("/api/labels/next", { cache: "no-store" });
+        const nextResponse = await fetch("/api/sources/next", { cache: "no-store" });
         if (!nextResponse.ok) {
           window.setTimeout(tick, ERROR_TICK_MS);
           return;
         }
-        const nextData = (await nextResponse.json()) as NextLabelResponse;
-        if (!nextData.nextLabelId) {
+        const nextData = (await nextResponse.json()) as NextSourceResponse;
+        const nextSourceId = nextData.nextSourceId ?? nextData.nextLabelId ?? null;
+        if (!nextSourceId) {
           window.setTimeout(tick, IDLE_TICK_MS);
           return;
         }
@@ -38,7 +40,7 @@ export function LabelSyncDaemon() {
         await fetch("/api/worker/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ labelId: nextData.nextLabelId }),
+          body: JSON.stringify({ sourceId: nextSourceId }),
         });
 
         const now = Date.now();

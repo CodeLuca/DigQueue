@@ -5,6 +5,9 @@ const envSchema = z.object({
   DISCOGS_CONSUMER_KEY: z.string().optional(),
   DISCOGS_CONSUMER_SECRET: z.string().optional(),
   YOUTUBE_API_KEY: z.string().optional(),
+  YOUTUBE_OAUTH_CLIENT_ID: z.string().optional(),
+  YOUTUBE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  YOUTUBE_OAUTH_REDIRECT_URI: z.string().optional(),
   BANDCAMP_WISHLIST_URL: z.string().optional(),
   NEXT_PUBLIC_APP_NAME: z.string().default("DigQueue"),
   DATABASE_URL: z.string().optional(),
@@ -19,6 +22,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL_LOCAL: z.string().default("http://127.0.0.1:54321"),
   NEXT_PUBLIC_SUPABASE_ANON_KEY_LOCAL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY_LOCAL: z.string().optional(),
+  APP_SECRETS_ENCRYPTION_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -26,6 +30,9 @@ export const env = envSchema.parse({
   DISCOGS_CONSUMER_KEY: process.env.DISCOGS_CONSUMER_KEY,
   DISCOGS_CONSUMER_SECRET: process.env.DISCOGS_CONSUMER_SECRET,
   YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
+  YOUTUBE_OAUTH_CLIENT_ID: process.env.YOUTUBE_OAUTH_CLIENT_ID,
+  YOUTUBE_OAUTH_CLIENT_SECRET: process.env.YOUTUBE_OAUTH_CLIENT_SECRET,
+  YOUTUBE_OAUTH_REDIRECT_URI: process.env.YOUTUBE_OAUTH_REDIRECT_URI,
   BANDCAMP_WISHLIST_URL: process.env.BANDCAMP_WISHLIST_URL,
   NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
   DATABASE_URL: process.env.DATABASE_URL,
@@ -40,4 +47,5 @@ export const env = envSchema.parse({
   NEXT_PUBLIC_SUPABASE_URL_LOCAL: process.env.NEXT_PUBLIC_SUPABASE_URL_LOCAL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY_LOCAL: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_LOCAL,
   SUPABASE_SERVICE_ROLE_KEY_LOCAL: process.env.SUPABASE_SERVICE_ROLE_KEY_LOCAL,
+  APP_SECRETS_ENCRYPTION_KEY: process.env.APP_SECRETS_ENCRYPTION_KEY,
 });
