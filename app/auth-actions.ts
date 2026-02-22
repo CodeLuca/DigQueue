@@ -54,13 +54,13 @@ export async function registerWithPasswordAction(formData: FormData) {
   const confirmPassword = String(formData.get("confirmPassword") || "");
 
   if (!email || !password) {
-    redirect(withAuthQuery("/register", { next: nextPath, error: "Email and password are required." }));
+    redirect(withAuthQuery("/login", { mode: "register", next: nextPath, error: "Email and password are required." }));
   }
   if (password.length < 8) {
-    redirect(withAuthQuery("/register", { next: nextPath, error: "Password must be at least 8 characters." }));
+    redirect(withAuthQuery("/login", { mode: "register", next: nextPath, error: "Password must be at least 8 characters." }));
   }
   if (password !== confirmPassword) {
-    redirect(withAuthQuery("/register", { next: nextPath, error: "Passwords do not match." }));
+    redirect(withAuthQuery("/login", { mode: "register", next: nextPath, error: "Passwords do not match." }));
   }
 
   const supabase = await getSupabaseServerClient();
@@ -74,7 +74,7 @@ export async function registerWithPasswordAction(formData: FormData) {
         notice: "Account already exists. Login instead.",
       }));
     }
-    redirect(withAuthQuery("/register", { next: nextPath, email, error: message }));
+    redirect(withAuthQuery("/login", { mode: "register", next: nextPath, email, error: message }));
   }
 
   if (data.session?.user) {

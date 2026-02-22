@@ -49,7 +49,7 @@ export default async function WelcomePage() {
             >
               Login
             </Link>
-            <Link href="/register" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
+            <Link href="/login?mode=register" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
               Register
             </Link>
             <Link href="/how-to-use" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
