@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getLabelDetail } from "@/lib/queries";
-import { getVisibleLabelError } from "@/lib/utils";
+import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
 
 export default async function LabelPage({
   params,
@@ -36,9 +36,31 @@ export default async function LabelPage({
     }
   })();
   const visibleLastError = getVisibleLabelError(data.label.lastError);
+  const normalizedStatus =
+    !data.label.active && data.label.status === "processing"
+      ? "paused"
+      : data.label.status === "error" && isTransientLabelError(data.label.lastError)
+        ? "processing"
+        : data.label.status;
+  const safeTotalPages = Math.max(1, data.label.totalPages);
+  const scannedPages = Math.min(safeTotalPages, Math.max(0, data.label.currentPage - 1));
+  const hasMorePages = data.label.currentPage <= safeTotalPages;
+  const progressState = data.label.active
+    ? normalizedStatus === "processing"
+      ? hasMorePages
+        ? `Scanning Discogs pages (${scannedPages}/${safeTotalPages})`
+        : "Loading remaining release details and playable sources"
+      : normalizedStatus === "queued"
+        ? "Waiting in ingestion queue"
+        : normalizedStatus === "error"
+          ? "Stopped by error"
+          : normalizedStatus === "complete"
+            ? "Complete"
+            : normalizedStatus
+    : "Inactive";
 
   return (
-    <main className="mx-auto max-w-[1200px] px-4 py-6 md:px-8">
+    <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{data.label.name}</h1>
@@ -46,6 +68,7 @@ export default async function LabelPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge>{data.label.active ? "active" : "inactive"}</Badge>
+          <Badge>{progressState}</Badge>
           <ProcessingToggle
             key={`${data.label.id}-${data.label.active ? "1" : "0"}-${data.label.status}`}
             labelId={data.label.id}
@@ -90,6 +113,7 @@ export default async function LabelPage({
             <p className="text-sm">Releases loaded: {data.progress.processed}/{data.progress.total}</p>
             <Progress value={processedPct} className="mt-1" />
           </div>
+          <p className="text-xs text-[var(--color-muted)]">Pages scanned: {scannedPages}/{safeTotalPages}</p>
           <div>
             <p className="text-sm">Releases matched: {data.progress.matched}/{data.progress.total}</p>
             <Progress value={matchedPct} className="mt-1" />

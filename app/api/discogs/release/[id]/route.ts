@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { fetchDiscogsRelease, fetchDiscogsReleaseMarketStats } from "@/lib/discogs";
+import { fetchDiscogsRelease, fetchDiscogsReleaseMarketStats, fetchDiscogsReleasePriceSuggestions } from "@/lib/discogs";
 
 const paramsSchema = z.object({ id: z.coerce.number().int().positive() });
 
@@ -12,11 +12,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     return NextResponse.json({ error: "Invalid release id" }, { status: 400 });
   }
   try {
-    const [release, marketStats] = await Promise.all([
+    const [release, marketStats, priceSuggestions] = await Promise.all([
       fetchDiscogsRelease(parsed.data.id),
       fetchDiscogsReleaseMarketStats(parsed.data.id).catch(() => null),
+      fetchDiscogsReleasePriceSuggestions(parsed.data.id).catch(() => null),
     ]);
-    return NextResponse.json({ ...release, marketStats });
+    return NextResponse.json({ ...release, marketStats, priceSuggestions });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load Discogs release.";
     return NextResponse.json({ error: message }, { status: 502 });

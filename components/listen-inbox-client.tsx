@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BookmarkCheck,
   BookmarkPlus,
+  CheckCheck,
   CheckCircle2,
   CheckSquare,
   ChevronLeft,
@@ -17,7 +18,6 @@ import {
   Play,
   PlusCircle,
   RefreshCcw,
-  SkipForward,
   Shuffle,
   X,
 } from "lucide-react";
@@ -83,8 +83,10 @@ const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
 const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
 const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
+const STATE_VIEW_STORAGE_KEY = "digqueue:listen-state-view";
 const ENQUEUE_TIMEOUT_MS = 6000;
 type PlaybackMode = "in_order" | "shuffle";
+type QueueStateView = "all" | "needs_review" | "reviewed" | "played";
 
 type ReleaseWishlistApiResponse = {
   ok?: boolean;
@@ -308,9 +310,25 @@ export function ListenInboxClient({
   const [labelFilterTouched, setLabelFilterTouched] = useState(initialSelectedLabelId != null);
   const [didAutoSelectPlayerLabel, setDidAutoSelectPlayerLabel] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<number[]>([]);
+  const [pendingFocusTrackId, setPendingFocusTrackId] = useState<number | null>(null);
+  const lastScopeDispatchKeyRef = useRef<string>("");
+  const scopeDispatchTimerRef = useRef<number | null>(null);
   const [wishlistSourceFilter, setWishlistSourceFilter] = useState<"all" | "saved_tracks" | "wishlisted_records">("all");
   const [hideReviewed, setHideReviewed] = useState(defaultHideReviewed);
   const [hideAlreadyPlayed, setHideAlreadyPlayed] = useState(defaultHideAlreadyPlayed);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [stateView, setStateView] = useState<QueueStateView>(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem(STATE_VIEW_STORAGE_KEY);
+      if (stored === "all" || stored === "needs_review" || stored === "reviewed" || stored === "played") {
+        return stored;
+      }
+    }
+    if (defaultHideReviewed && !defaultHideAlreadyPlayed) return "needs_review";
+    if (!defaultHideReviewed && defaultHideAlreadyPlayed) return "played";
+    if (defaultHideReviewed && defaultHideAlreadyPlayed) return "needs_review";
+    return "all";
+  });
   const [sourceFilter, setSourceFilter] = useState<"all" | "saved" | "wishlisted" | "saved_or_wishlisted">("all");
   const [videoFilter, setVideoFilter] = useState<"all" | "playable" | "no_video_or_private">("all");
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(() => {
@@ -391,12 +409,14 @@ export function ListenInboxClient({
     [activeLabelId, sourceFilteredRows],
   );
   const queueFilterCounts = useMemo(() => {
-    const reviewed = scopedRows.filter((item) => item.listened || item.releaseWishlist).length;
+    const reviewed = scopedRows.filter((item) => item.listened).length;
     const played = scopedRows.filter((item) => (item.playedCount ?? 0) > 0 || Boolean(item.wasPlayed)).length;
+    const needsReview = scopedRows.filter((item) => !item.listened && ((item.playedCount ?? 0) > 0 || Boolean(item.wasPlayed))).length;
+    const all = scopedRows.length;
     const saved = scopedRows.filter((item) => item.saved).length;
     const wishlisted = scopedRows.filter((item) => item.releaseWishlist).length;
     const noVideoOrPrivate = scopedRows.filter((item) => !item.hasChosenVideo || item.videoEmbeddable === false).length;
-    return { reviewed, played, saved, wishlisted, noVideoOrPrivate };
+    return { all, reviewed, played, needsReview, saved, wishlisted, noVideoOrPrivate };
   }, [scopedRows]);
   const sourceFilterCounts = useMemo(() => ({
     all: scopedRows.length,
@@ -409,6 +429,7 @@ export function ListenInboxClient({
     playable: scopedRows.filter((item) => item.hasChosenVideo && item.videoEmbeddable !== false).length,
     noVideoOrPrivate: scopedRows.filter((item) => !item.hasChosenVideo || item.videoEmbeddable === false).length,
   }), [scopedRows]);
+  const hasAdvancedFiltersActive = sourceFilter !== "all" || videoFilter !== "all" || playbackMode !== "in_order";
   const visibleRows = useMemo(
     () =>
       scopedRows.filter((item) => {
@@ -420,21 +441,25 @@ export function ListenInboxClient({
           if (sourceFilter === "saved_or_wishlisted" && !(item.saved || item.releaseWishlist)) return false;
           if (videoFilter === "playable" && !hasPlayableVideo) return false;
           if (videoFilter === "no_video_or_private" && !isNoVideoOrPrivate) return false;
+          const alreadyPlayed = (item.playedCount ?? 0) > 0 || Boolean(item.wasPlayed);
+          const needsReview = !item.listened && alreadyPlayed;
+          if (stateView === "needs_review" && !needsReview) return false;
+          if (stateView === "reviewed" && !item.listened) return false;
+          if (stateView === "played" && !alreadyPlayed) return false;
+          if (hideReviewed && item.listened) return false;
+          if (hideAlreadyPlayed && alreadyPlayed) return false;
         }
-        if (showQueueFilters && hideReviewed && (item.listened || item.releaseWishlist)) return false;
-        const alreadyPlayed = (item.playedCount ?? 0) > 0 || Boolean(item.wasPlayed);
-        if (showQueueFilters && hideAlreadyPlayed && alreadyPlayed) return false;
         return true;
       }),
-    [hideAlreadyPlayed, hideReviewed, scopedRows, showQueueFilters, sourceFilter, videoFilter],
+    [hideAlreadyPlayed, hideReviewed, scopedRows, showQueueFilters, sourceFilter, stateView, videoFilter],
   );
   const activeCursor = Math.max(0, Math.min(cursor, Math.max(0, visibleRows.length - 1)));
   const current = visibleRows[activeCursor] ?? null;
   const filterButtonClass = (active: boolean) =>
-    `inline-flex min-h-8 items-center rounded-md border px-2 py-1 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 ${
+    `inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 ${
       active
-        ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_24%,var(--color-surface2)_76%)] text-[var(--color-text)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]"
-        : "border-[var(--color-border)] bg-[var(--color-surface)]/55 text-[var(--color-muted)] opacity-90 hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]"
+        ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface2)_80%)] text-[var(--color-text)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]"
+        : "border-[var(--color-border)] bg-[var(--color-surface)]/45 text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]"
     }`;
   const setGlobalPlaybackMode = useCallback((nextMode: PlaybackMode) => {
     setPlaybackMode(nextMode);
@@ -453,6 +478,12 @@ export function ListenInboxClient({
     () => visibleRows.filter((row) => selectedSet.has(row.trackId)),
     [selectedSet, visibleRows],
   );
+  const visibleTrackIds = useMemo(() => visibleRows.map((row) => row.trackId), [visibleRows]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(STATE_VIEW_STORAGE_KEY, stateView);
+  }, [stateView]);
 
   const moveLabel = useCallback((direction: -1 | 1) => {
     if (effectiveLabelOptions.length === 0) {
@@ -551,9 +582,7 @@ export function ListenInboxClient({
   const markCurrentListened = useCallback(async () => {
     if (!current) return;
     const wasPlaying = current.trackId === playingTrackId;
-    const nextTrackId = wasPlaying
-      ? (visibleRows[activeCursor + 1]?.trackId ?? visibleRows[activeCursor - 1]?.trackId ?? null)
-      : null;
+    const nextTrackId = visibleRows[activeCursor + 1]?.trackId ?? visibleRows[activeCursor - 1]?.trackId ?? null;
     await updateTracks({ trackIds: [current.trackId], field: "listened", mode: "set", value: true });
     setRows((prev) => {
       const next = prev.map((item) =>
@@ -564,12 +593,11 @@ export function ListenInboxClient({
       setCursor((cursorPrev) => Math.max(0, Math.min(cursorPrev, Math.max(0, next.length - 1))));
       return next;
     });
-    if (wasPlaying) {
-      if (nextTrackId) {
-        void playRow(nextTrackId);
-      } else {
-        window.dispatchEvent(new CustomEvent("digqueue:next"));
-      }
+    setPendingFocusTrackId(nextTrackId);
+    if (wasPlaying && nextTrackId) {
+      void playRow(nextTrackId);
+    } else if (wasPlaying) {
+      window.dispatchEvent(new CustomEvent("digqueue:next"));
     }
     router.refresh();
   }, [activeCursor, current, playRow, playingTrackId, router, visibleRows]);
@@ -592,7 +620,7 @@ export function ListenInboxClient({
   const markRowListened = useCallback(async (trackId: number) => {
     const wasPlaying = trackId === playingTrackId;
     const rowIndex = visibleRows.findIndex((item) => item.trackId === trackId);
-    const nextTrackId = wasPlaying && rowIndex >= 0
+    const nextTrackId = rowIndex >= 0
       ? (visibleRows[rowIndex + 1]?.trackId ?? visibleRows[rowIndex - 1]?.trackId ?? null)
       : null;
     await updateTracks({ trackIds: [trackId], field: "listened", mode: "set", value: true });
@@ -605,19 +633,36 @@ export function ListenInboxClient({
       setCursor((cursorPrev) => Math.max(0, Math.min(cursorPrev, Math.max(0, next.length - 1))));
       return next;
     });
-    if (wasPlaying) {
-      if (nextTrackId) {
-        void playRow(nextTrackId);
-      } else {
-        window.dispatchEvent(new CustomEvent("digqueue:next"));
-      }
+    setPendingFocusTrackId(nextTrackId);
+    if (wasPlaying && nextTrackId) {
+      void playRow(nextTrackId);
+    } else if (wasPlaying) {
+      window.dispatchEvent(new CustomEvent("digqueue:next"));
     }
     router.refresh();
   }, [playRow, playingTrackId, router, visibleRows]);
 
-  const markRowReleaseListened = useCallback(async (releaseId: number) => {
+  const markRowReleaseListened = useCallback(async (releaseId: number, trackId: number) => {
     if (reviewingReleaseId === releaseId) return;
     const wasPlayingRelease = rows.some((row) => row.releaseId === releaseId && row.trackId === playingTrackId);
+    const rowIndex = visibleRows.findIndex((row) => row.trackId === trackId);
+    let nextTrackId: number | null = null;
+    if (rowIndex >= 0) {
+      for (let i = rowIndex + 1; i < visibleRows.length; i += 1) {
+        if (visibleRows[i]?.releaseId !== releaseId) {
+          nextTrackId = visibleRows[i]?.trackId ?? null;
+          break;
+        }
+      }
+      if (!nextTrackId) {
+        for (let i = rowIndex - 1; i >= 0; i -= 1) {
+          if (visibleRows[i]?.releaseId !== releaseId) {
+            nextTrackId = visibleRows[i]?.trackId ?? null;
+            break;
+          }
+        }
+      }
+    }
     setReviewingReleaseId(releaseId);
     try {
       await markReleaseReviewed(releaseId);
@@ -625,7 +670,10 @@ export function ListenInboxClient({
         const next = prev.map((row) => (row.releaseId === releaseId ? { ...row, listened: true, isUpNext: false } : row));
         return showQueueFilters ? next : next.filter((row) => row.saved);
       });
-      if (wasPlayingRelease) {
+      setPendingFocusTrackId(nextTrackId);
+      if (wasPlayingRelease && nextTrackId) {
+        void playRow(nextTrackId);
+      } else if (wasPlayingRelease) {
         window.dispatchEvent(new CustomEvent("digqueue:next"));
       }
       router.refresh();
@@ -634,7 +682,7 @@ export function ListenInboxClient({
     } finally {
       setReviewingReleaseId(null);
     }
-  }, [playingTrackId, reviewingReleaseId, router, rows, showQueueFilters]);
+  }, [playRow, playingTrackId, reviewingReleaseId, router, rows, showQueueFilters, visibleRows]);
 
   const toggleRowSaved = useCallback(async (trackId: number) => {
     const updated = await updateTracks({ trackIds: [trackId], field: "saved", mode: "toggle" });
@@ -799,6 +847,17 @@ export function ListenInboxClient({
   }, [current, markCurrentListened, playRow, toggleCurrentSaved, visibleRows.length, youtubeQuotaExceeded]);
 
   useEffect(() => {
+    if (pendingFocusTrackId === null) return;
+    const nextIndex = visibleRows.findIndex((row) => row.trackId === pendingFocusTrackId);
+    if (nextIndex >= 0) {
+      setCursor(nextIndex);
+    } else {
+      setCursor((prev) => Math.max(0, Math.min(prev, Math.max(0, visibleRows.length - 1))));
+    }
+    setPendingFocusTrackId(null);
+  }, [pendingFocusTrackId, visibleRows]);
+
+  useEffect(() => {
     const onQuotaExceeded = () => {
       setYoutubeQuotaExceeded(true);
       setFeedback((prev) => prev || "YouTube quota reached. Queue/play is temporarily disabled. You can still mark tracks listened.");
@@ -912,16 +971,32 @@ export function ListenInboxClient({
   }, [syncUpNextFromQueue]);
 
   useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent(LISTENING_SCOPE_EVENT, {
-        detail: {
-          enabled: showQueueFilters,
-          trackIds: visibleRows.map((row) => row.trackId),
-          activeLabelId,
-        },
-      }),
-    );
-  }, [activeLabelId, showQueueFilters, visibleRows]);
+    const trackIds = visibleTrackIds.slice(0, 1200);
+    const scopeKey = `${showQueueFilters ? "1" : "0"}|${activeLabelId ?? "none"}|${trackIds.join(",")}`;
+    if (scopeKey === lastScopeDispatchKeyRef.current) return;
+    lastScopeDispatchKeyRef.current = scopeKey;
+    if (scopeDispatchTimerRef.current !== null) {
+      window.clearTimeout(scopeDispatchTimerRef.current);
+    }
+    scopeDispatchTimerRef.current = window.setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent(LISTENING_SCOPE_EVENT, {
+          detail: {
+            enabled: showQueueFilters,
+            trackIds,
+            activeLabelId,
+          },
+        }),
+      );
+      scopeDispatchTimerRef.current = null;
+    }, 120);
+    return () => {
+      if (scopeDispatchTimerRef.current !== null) {
+        window.clearTimeout(scopeDispatchTimerRef.current);
+        scopeDispatchTimerRef.current = null;
+      }
+    };
+  }, [activeLabelId, showQueueFilters, visibleTrackIds]);
 
   useEffect(() => {
     const onPlaybackMode = (event: Event) => {
@@ -1001,32 +1076,6 @@ export function ListenInboxClient({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1 text-xs">
-            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
-            <button
-              type="button"
-              onClick={() => setGlobalPlaybackMode("in_order")}
-              className={filterButtonClass(playbackMode === "in_order")}
-              aria-pressed={playbackMode === "in_order"}
-              title="Play one after another in queue order"
-              aria-label="Playback mode in order"
-            >
-              <ListOrdered className="mr-1 inline h-3 w-3" />
-              In Order
-            </button>
-            <button
-              type="button"
-              onClick={() => setGlobalPlaybackMode("shuffle")}
-              className={filterButtonClass(playbackMode === "shuffle")}
-              aria-pressed={playbackMode === "shuffle"}
-              title="Shuffle through pending queue items"
-              aria-label="Playback mode shuffle"
-            >
-              <Shuffle className="mr-1 inline h-3 w-3" />
-              Shuffle
-            </button>
-          </div>
-
           {showWishlistSourceFilter ? (
             <div className="flex flex-wrap items-center gap-1 text-xs">
                 <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
@@ -1078,119 +1127,121 @@ export function ListenInboxClient({
           {showQueueFilters ? (
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <div className="inline-flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">View</span>
                 <button
                   type="button"
-                  onClick={() => setSourceFilter("all")}
-                  className={filterButtonClass(sourceFilter === "all")}
-                  aria-pressed={sourceFilter === "all"}
-                  title="Show all tracks regardless of saved/wishlist status"
-                  aria-label="Source filter all tracks"
+                  onClick={() => {
+                    setStateView("all");
+                    setCursor(0);
+                  }}
+                  className={filterButtonClass(stateView === "all")}
+                  aria-pressed={stateView === "all"}
+                  title="Show all tracks in the current scope"
+                  aria-label="View all tracks"
                 >
-                  All ({sourceFilterCounts.all})
+                  All ({queueFilterCounts.all})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSourceFilter("saved")}
-                  className={filterButtonClass(sourceFilter === "saved")}
-                  aria-pressed={sourceFilter === "saved"}
-                  title="Show only tracks saved locally"
-                  aria-label="Source filter saved tracks"
+                  onClick={() => {
+                    setStateView("needs_review");
+                    setCursor(0);
+                  }}
+                  className={filterButtonClass(stateView === "needs_review")}
+                  aria-pressed={stateView === "needs_review"}
+                  title="Show only played tracks still waiting for review"
+                  aria-label="View tracks that need review"
                 >
-                  Saved ({sourceFilterCounts.saved})
+                  Needs Review ({queueFilterCounts.needsReview})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSourceFilter("wishlisted")}
-                  className={filterButtonClass(sourceFilter === "wishlisted")}
-                  aria-pressed={sourceFilter === "wishlisted"}
-                  title="Show only tracks from Discogs wishlisted records"
-                  aria-label="Source filter wishlisted tracks"
+                  onClick={() => {
+                    setStateView("reviewed");
+                    setCursor(0);
+                  }}
+                  className={filterButtonClass(stateView === "reviewed")}
+                  aria-pressed={stateView === "reviewed"}
+                  title="Show only tracks already marked reviewed"
+                  aria-label="View reviewed tracks"
                 >
-                  Wishlisted ({sourceFilterCounts.wishlisted})
+                  Reviewed ({queueFilterCounts.reviewed})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSourceFilter("saved_or_wishlisted")}
-                  className={filterButtonClass(sourceFilter === "saved_or_wishlisted")}
-                  aria-pressed={sourceFilter === "saved_or_wishlisted"}
-                  title="Show tracks that are either saved or from wishlisted records"
-                  aria-label="Source filter saved or wishlisted"
+                  onClick={() => {
+                    setStateView("played");
+                    setCursor(0);
+                  }}
+                  className={filterButtonClass(stateView === "played")}
+                  aria-pressed={stateView === "played"}
+                  title="Show only tracks with playback history"
+                  aria-label="View played tracks"
                 >
-                  Saved or Wishlisted ({sourceFilterCounts.savedOrWishlisted})
-                </button>
-                {sourceFilter !== "all" ? (
-                  <button
-                    type="button"
-                    onClick={() => setSourceFilter("all")}
-                    className="text-[11px] text-[var(--color-accent)] hover:underline"
-                    title="Reset source filter"
-                    aria-label="Reset source filter"
-                  >
-                    Source filter active: {sourceFilter.replaceAll("_", " ")} (reset)
-                  </button>
-                ) : (
-                  <span className="text-[11px] text-[var(--color-muted)]">Source filter: all</span>
-                )}
-              </div>
-
-              <div className="inline-flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
-                <button
-                  type="button"
-                  onClick={() => setVideoFilter("all")}
-                  className={filterButtonClass(videoFilter === "all")}
-                  aria-pressed={videoFilter === "all"}
-                  title="Show tracks with and without playable videos"
-                  aria-label="Video filter all tracks"
-                >
-                  Any ({videoFilterCounts.all})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVideoFilter("playable")}
-                  className={filterButtonClass(videoFilter === "playable")}
-                  aria-pressed={videoFilter === "playable"}
-                  title="Show only tracks with playable videos"
-                  aria-label="Video filter playable only"
-                >
-                  Playable ({videoFilterCounts.playable})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVideoFilter("no_video_or_private")}
-                  className={filterButtonClass(videoFilter === "no_video_or_private")}
-                  aria-pressed={videoFilter === "no_video_or_private"}
-                  title="Show only tracks missing a playable video"
-                  aria-label="Video filter no video or private"
-                >
-                  No video/private ({videoFilterCounts.noVideoOrPrivate})
+                  Played ({queueFilterCounts.played})
                 </button>
               </div>
-
               <div className="inline-flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">State</span>
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Exclude</span>
                 <button
                   type="button"
-                  onClick={() => setHideReviewed((prev) => !prev)}
+                  onClick={() => {
+                    setHideReviewed((prev) => !prev);
+                    setCursor(0);
+                  }}
                   className={filterButtonClass(hideReviewed)}
                   aria-pressed={hideReviewed}
-                  title="Hide tracks already reviewed or from wishlisted records"
-                  aria-label="Toggle hide reviewed tracks"
+                  title="Hide reviewed tracks from the current view"
+                  aria-label="Exclude reviewed tracks"
                 >
-                  Hide reviewed ({queueFilterCounts.reviewed})
+                  Reviewed ({queueFilterCounts.reviewed})
                 </button>
                 <button
                   type="button"
-                  onClick={() => setHideAlreadyPlayed((prev) => !prev)}
+                  onClick={() => {
+                    setHideAlreadyPlayed((prev) => !prev);
+                    setCursor(0);
+                  }}
                   className={filterButtonClass(hideAlreadyPlayed)}
                   aria-pressed={hideAlreadyPlayed}
-                  title="Hide tracks that already played"
-                  aria-label="Toggle hide played tracks"
+                  title="Hide played tracks from the current view"
+                  aria-label="Exclude played tracks"
                 >
-                  Hide played ({queueFilterCounts.played})
+                  Played ({queueFilterCounts.played})
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setAdvancedFiltersOpen((prev) => !prev)}
+                className="inline-flex min-h-9 items-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 px-3 py-1.5 text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                aria-expanded={advancedFiltersOpen}
+                title="Show source, video, and playback filters"
+              >
+                {advancedFiltersOpen ? "Hide" : "More"} filters
+                {hasAdvancedFiltersActive ? " (active)" : ""}
+              </button>
+              {advancedFiltersOpen ? (
+                <div className="w-full space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-2">
+                  <div className="inline-flex flex-wrap items-center gap-1">
+                    <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
+                    <button type="button" onClick={() => setSourceFilter("all")} className={filterButtonClass(sourceFilter === "all")} aria-pressed={sourceFilter === "all"}>All ({sourceFilterCounts.all})</button>
+                    <button type="button" onClick={() => setSourceFilter("saved")} className={filterButtonClass(sourceFilter === "saved")} aria-pressed={sourceFilter === "saved"}>Saved ({sourceFilterCounts.saved})</button>
+                    <button type="button" onClick={() => setSourceFilter("wishlisted")} className={filterButtonClass(sourceFilter === "wishlisted")} aria-pressed={sourceFilter === "wishlisted"}>Wishlisted ({sourceFilterCounts.wishlisted})</button>
+                    <button type="button" onClick={() => setSourceFilter("saved_or_wishlisted")} className={filterButtonClass(sourceFilter === "saved_or_wishlisted")} aria-pressed={sourceFilter === "saved_or_wishlisted"}>Saved or Wishlisted ({sourceFilterCounts.savedOrWishlisted})</button>
+                  </div>
+                  <div className="inline-flex flex-wrap items-center gap-1">
+                    <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
+                    <button type="button" onClick={() => setVideoFilter("all")} className={filterButtonClass(videoFilter === "all")} aria-pressed={videoFilter === "all"}>Any ({videoFilterCounts.all})</button>
+                    <button type="button" onClick={() => setVideoFilter("playable")} className={filterButtonClass(videoFilter === "playable")} aria-pressed={videoFilter === "playable"}>Playable ({videoFilterCounts.playable})</button>
+                    <button type="button" onClick={() => setVideoFilter("no_video_or_private")} className={filterButtonClass(videoFilter === "no_video_or_private")} aria-pressed={videoFilter === "no_video_or_private"}>No video/private ({videoFilterCounts.noVideoOrPrivate})</button>
+                  </div>
+                  <div className="inline-flex flex-wrap items-center gap-1">
+                    <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
+                    <button type="button" onClick={() => setGlobalPlaybackMode("in_order")} className={filterButtonClass(playbackMode === "in_order")} aria-pressed={playbackMode === "in_order"}><ListOrdered className="mr-1 inline h-3 w-3" />In Order</button>
+                    <button type="button" onClick={() => setGlobalPlaybackMode("shuffle")} className={filterButtonClass(playbackMode === "shuffle")} aria-pressed={playbackMode === "shuffle"}><Shuffle className="mr-1 inline h-3 w-3" />Shuffle</button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -1301,7 +1352,7 @@ export function ListenInboxClient({
           const isPlaying = item.trackId === playingTrackId && playerIsPlaying;
           const isUpNext = Boolean(item.isUpNext) && !isPlaying;
           const playedCount = item.playedCount ?? (item.wasPlayed ? 1 : 0);
-          const hasPlayedHistory = playedCount > 0 && !isUpNext;
+          const hasPlayedHistory = playedCount > 0;
           const needsMark = hasPlayedHistory && !item.listened;
           const wasPlayed = hasPlayedHistory && !needsMark;
           const playUnavailableReason = youtubeQuotaExceeded
@@ -1411,31 +1462,31 @@ export function ListenInboxClient({
                           Wishlisted
                         </Badge>
                       ) : null}
-                      {needsMark ? <Badge className="border-amber-600/50 text-amber-300">Needs Mark</Badge> : null}
+                      {needsMark ? <Badge className="border-amber-600/50 text-amber-300">Needs Review</Badge> : null}
                       {wasPlayed ? <Badge className="border-zinc-600/50 text-zinc-300">Played{playedCount > 1 ? ` x${playedCount}` : ""}</Badge> : null}
                     </div>
                   </div>
                 </div>
-                <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+                <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end">
                   <a
                     href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                     title="Open on Discogs"
                     aria-label="Open on Discogs"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                   <span
-                    className={`group relative inline-flex min-w-0 ${canPlay ? "" : "cursor-not-allowed"}`}
+                    className={`group relative inline-flex min-w-0 sm:w-[8.5rem] ${canPlay ? "" : "cursor-not-allowed"}`}
                     aria-label={playUnavailableReason ?? "Play"}
                   >
                     <Button
                       type="button"
                       size="sm"
                       variant="secondary"
-                      className="w-full justify-center sm:w-auto sm:justify-start"
+                      className="w-full justify-center sm:w-[8.5rem] sm:justify-center"
                       onClick={() => void playRow(item.trackId)}
                       disabled={!canPlay}
                       title="Play now in the mini-player"
@@ -1462,8 +1513,8 @@ export function ListenInboxClient({
                           variant="secondary"
                           className="h-9 w-9 rounded-full border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38"
                           onClick={() => void markRowListened(item.trackId)}
-                          title="Mark current track reviewed and move to next track"
-                          aria-label="Mark current track reviewed and move to next track"
+                          title="Mark this track reviewed and move to next track"
+                          aria-label="Mark this track reviewed and move to next track"
                         >
                           <CheckCircle2 className="h-4 w-4" />
                         </Button>
@@ -1471,27 +1522,27 @@ export function ListenInboxClient({
                           role="tooltip"
                           className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-64 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
                         >
-                          Mark current track reviewed and move to next track
+                          Mark this track reviewed and move to next track
                         </span>
                       </span>
                       <span className="group relative inline-flex">
                         <Button
                           type="button"
                           size="sm"
-                          variant="ghost"
-                          onClick={() => void markRowReleaseListened(item.releaseId)}
+                          variant="secondary"
+                          onClick={() => void markRowReleaseListened(item.releaseId, item.trackId)}
                           disabled={reviewingReleaseId === item.releaseId}
-                          className="h-9 w-9 rounded-full p-0"
-                          title="Mark all tracks on this release reviewed and skip to the next release"
-                          aria-label="Mark all tracks on this release reviewed and skip to the next release"
+                          className="h-9 w-9 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-amber-100 hover:bg-amber-500/32"
+                          title="Mark entire release reviewed and skip to next release"
+                          aria-label="Mark entire release reviewed and skip to next release"
                         >
-                          {reviewingReleaseId === item.releaseId ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <SkipForward className="h-4 w-4" />}
+                          {reviewingReleaseId === item.releaseId ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
                         </Button>
                         <span
                           role="tooltip"
                           className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-64 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
                         >
-                          Mark all tracks on this release reviewed and skip to next release
+                          Mark entire release reviewed and skip to next release
                         </span>
                       </span>
                     </>
@@ -1518,7 +1569,7 @@ export function ListenInboxClient({
                       disabled={isBusy || (!wantsDeactivate && isAdded)}
                       title={wantsDeactivate ? "Deactivate this label for processing." : "Add this release label to DigQueue and activate it for processing."}
                       aria-label={wantsDeactivate ? "Deactivate label" : "Add and activate label"}
-                      className="col-span-2 w-full justify-center border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100 sm:col-auto sm:w-auto sm:justify-start"
+                      className="col-span-2 w-full justify-center border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100 sm:col-span-3 sm:w-full sm:justify-center"
                     >
                       <PlusCircle className="h-3.5 w-3.5" />
                       {isToggling
@@ -1538,7 +1589,7 @@ export function ListenInboxClient({
                     type="button"
                     size="sm"
                     variant={item.saved ? "secondary" : "ghost"}
-                    className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+                    className="col-span-2 w-full justify-center sm:col-auto sm:w-[8.5rem] sm:justify-center"
                     onClick={() => void toggleRowSaved(item.trackId)}
                     title="Track save is local only and does not add to your Discogs wantlist."
                     aria-label={item.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}

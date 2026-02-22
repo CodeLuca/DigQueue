@@ -343,6 +343,10 @@ export type DiscogsReleaseMarketStats = {
   currency?: string;
 };
 
+export type DiscogsReleasePriceSuggestions = {
+  [condition: string]: { currency?: string; value?: number | null } | undefined;
+};
+
 export async function fetchDiscogsRelease(releaseId: number) {
   const externalReleaseId = toExternalDiscogsId(releaseId);
   return discogsRequest<DiscogsRelease>(`/releases/${externalReleaseId}`, 60 * 60 * 24 * 14);
@@ -351,6 +355,11 @@ export async function fetchDiscogsRelease(releaseId: number) {
 export async function fetchDiscogsReleaseMarketStats(releaseId: number) {
   const externalReleaseId = toExternalDiscogsId(releaseId);
   return discogsRequest<DiscogsReleaseMarketStats>(`/marketplace/stats/${externalReleaseId}`, 60 * 60 * 12);
+}
+
+export async function fetchDiscogsReleasePriceSuggestions(releaseId: number) {
+  const externalReleaseId = toExternalDiscogsId(releaseId);
+  return discogsRequest<DiscogsReleasePriceSuggestions>(`/marketplace/price_suggestions/${externalReleaseId}`, 60 * 60 * 12);
 }
 
 export function extractYoutubeVideoId(url: string): string | null {

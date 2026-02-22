@@ -1,6 +1,7 @@
+import { cache } from "react";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function getCurrentAppUserId() {
+export const getCurrentAppUserId = cache(async function getCurrentAppUserId() {
   try {
     const supabase = await getSupabaseServerClient();
     const { data, error } = await supabase.auth.getUser();
@@ -10,7 +11,7 @@ export async function getCurrentAppUserId() {
     // Missing Supabase config should not crash public pages at build/prerender time.
     return null;
   }
-}
+});
 
 export async function requireCurrentAppUserId() {
   const userId = await getCurrentAppUserId();

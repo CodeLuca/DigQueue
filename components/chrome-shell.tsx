@@ -2,9 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import { AppNav } from "@/components/app-nav";
+import { LabelSyncDaemon } from "@/components/label-sync-daemon";
 import { MiniPlayer } from "@/components/mini-player";
 
-const publicRoutes = new Set(["/welcome", "/login", "/register", "/reset-password", "/connect-discogs"]);
+const publicRoutes = new Set(["/welcome", "/login", "/register", "/reset-password", "/connect-discogs", "/how-to-use"]);
 
 export function ChromeShell() {
   const pathname = usePathname();
@@ -13,7 +14,12 @@ export function ChromeShell() {
   return (
     <>
       <AppNav />
-      {isPublicRoute ? null : <MiniPlayer />}
+      {isPublicRoute ? null : (
+        <>
+          <LabelSyncDaemon />
+          <MiniPlayer />
+        </>
+      )}
     </>
   );
 }

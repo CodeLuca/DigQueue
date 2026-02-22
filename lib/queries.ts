@@ -3,6 +3,7 @@ import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schem
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { buildDeepRecommendations, buildExternalRecommendations } from "@/lib/recommendations";
+import { isTransientLabelError } from "@/lib/utils";
 
 function userScope(userId: string) {
   return {
@@ -103,15 +104,45 @@ function dedupeInboxRows(rows: InboxRow[]) {
   return deduped;
 }
 
-type DashboardTab = "step-1" | "step-2" | "wishlist" | "played-reviewed" | "recommendations";
+type DashboardTab = "step-1" | "step-2" | "library" | "wishlist" | "played-reviewed" | "recommendations";
+
+async function getQueueTrackState(trackIds: number[], queueScope: ReturnType<typeof userScope>["queueItems"]) {
+  if (trackIds.length === 0) {
+    return { pendingSet: new Set<number>(), playedCountByTrack: new Map<number, number>() };
+  }
+
+  const [pendingQueueRows, playedQueueRows] = await Promise.all([
+    db
+      .select({ trackId: queueItems.trackId })
+      .from(queueItems)
+      .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), queueScope))
+      .groupBy(queueItems.trackId),
+    db
+      .select({ trackId: queueItems.trackId, value: count() })
+      .from(queueItems)
+      .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), queueScope))
+      .groupBy(queueItems.trackId),
+  ]);
+
+  const pendingSet = new Set(
+    pendingQueueRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"),
+  );
+  const playedCountByTrack = new Map<number, number>();
+  for (const row of playedQueueRows) {
+    if (typeof row.trackId !== "number") continue;
+    playedCountByTrack.set(row.trackId, Number(row.value) || 0);
+  }
+
+  return { pendingSet, playedCountByTrack };
+}
 
 export async function getDashboardData(options?: { includeRecommendations?: boolean; tab?: DashboardTab }) {
   const tab = options?.tab ?? "step-1";
   const includeRecommendations = options?.includeRecommendations ?? tab === "recommendations";
   const needsLabelProgress = tab === "step-1";
   const needsListeningMetrics = tab === "step-2";
-  const needsWishlistMetric = tab === "wishlist";
-  const needsPlayedMetrics = tab === "played-reviewed";
+  const needsWishlistMetric = tab === "wishlist" || tab === "library";
+  const needsPlayedMetrics = tab === "played-reviewed" || tab === "library";
   const needsQueueCount = tab === "step-2";
   const needsErrorSummary = tab === "step-2";
   const userId = await requireCurrentAppUserId();
@@ -275,26 +306,22 @@ export async function getDashboardData(options?: { includeRecommendations?: bool
         : Promise.resolve([{ value: 0 }]),
     ]);
 
-    const [labelsErrorCount, lowConfidenceCount] = await Promise.all([
-      needsErrorSummary
-        ? db.select({ value: count() }).from(labels).where(and(eq(labels.status, "error"), eq(labels.active, true), scope.labels))
-        : Promise.resolve([{ value: 0 }]),
-      needsErrorSummary
-        ? db
-            .select({ value: count() })
-            .from(releases)
-            .innerJoin(labels, eq(releases.labelId, labels.id))
-            .where(and(eq(releases.youtubeMatched, true), lt(releases.matchConfidence, 0.4), eq(labels.active, true), scope.releases, scope.labels))
-        : Promise.resolve([{ value: 0 }]),
-    ]);
+    const lowConfidenceCount = needsErrorSummary
+      ? await db
+          .select({ value: count() })
+          .from(releases)
+          .innerJoin(labels, eq(releases.labelId, labels.id))
+          .where(and(eq(releases.youtubeMatched, true), lt(releases.matchConfidence, 0.4), eq(labels.active, true), scope.releases, scope.labels))
+      : [{ value: 0 }];
 
-    const erroredLabels = needsErrorSummary
+    const rawErroredLabels = needsErrorSummary
       ? await db.query.labels.findMany({
           where: and(eq(labels.status, "error"), eq(labels.active, true), scope.labels),
           orderBy: [asc(labels.updatedAt)],
           limit: 20,
         })
       : [];
+    const erroredLabels = rawErroredLabels.filter((label) => !isTransientLabelError(label.lastError));
 
     let recommendations: Awaited<ReturnType<typeof buildDeepRecommendations>> = [];
     let externalRecommendations: Awaited<ReturnType<typeof buildExternalRecommendations>> = [];
@@ -348,7 +375,7 @@ export async function getDashboardData(options?: { includeRecommendations?: bool
         doneTracks: scopedTotals[2][0]?.value ?? 0,
         savedTracks: scopedTotals[3][0]?.value ?? 0,
         wishlistedRecords: scopedTotals[4][0]?.value ?? 0,
-        labelsErrored: labelsErrorCount[0]?.value ?? 0,
+        labelsErrored: erroredLabels.length,
         releasesLowConfidence: lowConfidenceCount[0]?.value ?? 0,
       },
       erroredLabels,
@@ -482,25 +509,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
     .limit(600);
 
   const trackIds = rows.map((row) => row.trackId);
-  const [pendingQueueRows, playedQueueRows] = trackIds.length
-    ? await Promise.all([
-        db
-      .select({ trackId: queueItems.trackId })
-          .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), scope.queueItems)),
-        db
-          .select({ trackId: queueItems.trackId })
-          .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), scope.queueItems)),
-      ])
-    : [[], []];
-
-  const pendingSet = new Set(pendingQueueRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"));
-  const playedCountByTrack = new Map<number, number>();
-  for (const row of playedQueueRows) {
-    if (typeof row.trackId !== "number") continue;
-    playedCountByTrack.set(row.trackId, (playedCountByTrack.get(row.trackId) ?? 0) + 1);
-  }
+  const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
   const enrichedRows = rows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =
@@ -570,25 +579,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
     .limit(600);
 
   const trackIds = rows.map((row) => row.trackId);
-  const [pendingQueueRows, playedQueueRows] = trackIds.length
-    ? await Promise.all([
-        db
-          .select({ trackId: queueItems.trackId })
-          .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), scope.queueItems)),
-        db
-          .select({ trackId: queueItems.trackId })
-          .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), scope.queueItems)),
-      ])
-    : [[], []];
-
-  const pendingSet = new Set(pendingQueueRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"));
-  const playedCountByTrack = new Map<number, number>();
-  for (const row of playedQueueRows) {
-    if (typeof row.trackId !== "number") continue;
-    playedCountByTrack.set(row.trackId, (playedCountByTrack.get(row.trackId) ?? 0) + 1);
-  }
+  const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
   const enrichedRows = rows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =
@@ -624,7 +615,8 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
     .from(queueItems)
     .innerJoin(releases, eq(queueItems.releaseId, releases.id))
     .innerJoin(labels, eq(releases.labelId, labels.id))
-    .where(and(eq(queueItems.status, "played"), eq(labels.active, true), isNotNull(queueItems.trackId), scope.queueItems, scope.releases, scope.labels));
+    .where(and(eq(queueItems.status, "played"), eq(labels.active, true), isNotNull(queueItems.trackId), scope.queueItems, scope.releases, scope.labels))
+    .groupBy(queueItems.trackId);
 
   const playedTrackIds = [
     ...new Set(
@@ -673,25 +665,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
     .limit(800);
 
   const trackIds = rows.map((row) => row.trackId);
-  const [pendingQueueRows, playedQueueRows] = trackIds.length
-    ? await Promise.all([
-        db
-          .select({ trackId: queueItems.trackId })
-          .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), scope.queueItems)),
-        db
-          .select({ trackId: queueItems.trackId })
-          .from(queueItems)
-          .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), scope.queueItems)),
-      ])
-    : [[], []];
-
-  const pendingSet = new Set(pendingQueueRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"));
-  const playedCountByTrack = new Map<number, number>();
-  for (const row of playedQueueRows) {
-    if (typeof row.trackId !== "number") continue;
-    playedCountByTrack.set(row.trackId, (playedCountByTrack.get(row.trackId) ?? 0) + 1);
-  }
+  const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
   const enrichedRows = rows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =

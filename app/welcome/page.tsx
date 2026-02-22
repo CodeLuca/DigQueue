@@ -24,11 +24,11 @@ const highlights = [
 export default async function WelcomePage() {
   const userId = await getCurrentAppUserId();
   if (userId) {
-    redirect("/?tab=step-2");
+    redirect("/");
   }
 
   return (
-    <main className="mx-auto max-w-[1200px] px-4 py-8 md:px-8">
+    <main className="mx-auto max-w-[1400px] px-4 py-8 md:px-8">
       <section className="marketing-hero reveal">
         <div className="max-w-3xl">
           <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-xs uppercase tracking-[0.14em] text-[var(--color-muted)]">
@@ -51,6 +51,9 @@ export default async function WelcomePage() {
             </Link>
             <Link href="/register" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
               Register
+            </Link>
+            <Link href="/how-to-use" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
+              How to use
             </Link>
           </div>
         </div>

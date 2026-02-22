@@ -28,6 +28,17 @@ function safeErrorMessage(error: unknown) {
   return String(error).slice(0, 1200);
 }
 
+function isTransientDatabaseError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const normalized = (error.message || "").toLowerCase();
+  return (
+    normalized.includes("maxclientsinsessionmode") ||
+    normalized.includes("failed query:") ||
+    normalized.includes("sqlite_busy") ||
+    normalized.includes("database is locked")
+  );
+}
+
 function userScope(userId: string) {
   return {
     labels: eq(labels.userId, userId),
@@ -290,6 +301,19 @@ export async function processSingleReleaseForLabel(labelId: number, userId: stri
 
     return { done: false, message: `Processed ${nextRelease.title}` };
   } catch (error) {
+    if (isTransientDatabaseError(error)) {
+      await db
+        .update(labels)
+        .set({
+          status: "processing",
+          lastError: null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(labels.id, labelId), scope.labels));
+
+      return { done: false, message: "Temporary database contention. Retrying…" };
+    }
+
     const message = safeErrorMessage(error);
     await db
       .update(labels)

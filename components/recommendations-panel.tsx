@@ -119,8 +119,17 @@ export function RecommendationsPanel({
   const [loadingTrackId, setLoadingTrackId] = useState<number | null>(null);
   const [loadingReleaseId, setLoadingReleaseId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [view, setView] = useState<"all" | "in_library" | "outside_library">("all");
 
   const canShow = useMemo(() => items.length > 0 || externalItems.length > 0, [externalItems.length, items.length]);
+  const visibleLibraryItems = useMemo(() => (view === "outside_library" ? [] : items), [items, view]);
+  const visibleExternalItems = useMemo(() => (view === "in_library" ? [] : externalItems), [externalItems, view]);
+  const viewButtonClass = (active: boolean) =>
+    `inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
+      active
+        ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
+        : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+    }`;
 
   const removeItem = (trackId: number) => setItems((prev) => prev.filter((item) => item.id !== trackId));
   const removeExternalItem = (releaseId: number) => setExternalItems((prev) => prev.filter((item) => item.releaseId !== releaseId));
@@ -263,9 +272,23 @@ export function RecommendationsPanel({
 
   return (
     <div className="space-y-4">
-      {items.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">In Library</p> : null}
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Recommendation Views</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" className={viewButtonClass(view === "all")} onClick={() => setView("all")}>
+            All ({items.length + externalItems.length})
+          </button>
+          <button type="button" className={viewButtonClass(view === "in_library")} onClick={() => setView("in_library")}>
+            In Library ({items.length})
+          </button>
+          <button type="button" className={viewButtonClass(view === "outside_library")} onClick={() => setView("outside_library")}>
+            Outside Library ({externalItems.length})
+          </button>
+        </div>
+      </div>
+      {visibleLibraryItems.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">In Library</p> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-      {items.map((track) => {
+      {visibleLibraryItems.map((track) => {
         const loading = loadingTrackId === track.id;
         const release = (track.release ?? {}) as {
           title?: string | null;
@@ -377,9 +400,9 @@ export function RecommendationsPanel({
       })}
       </div>
 
-      {externalItems.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Outside Library</p> : null}
+      {visibleExternalItems.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Outside Library</p> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        {externalItems.map((item) => {
+        {visibleExternalItems.map((item) => {
           const loading = loadingReleaseId === item.releaseId;
           return (
             <div key={item.releaseId} className="rounded-md border border-[var(--color-border)] p-3">
@@ -458,6 +481,9 @@ export function RecommendationsPanel({
           );
         })}
       </div>
+      {visibleLibraryItems.length === 0 && visibleExternalItems.length === 0 ? (
+        <p className="text-sm text-[var(--color-muted)]">No recommendations in this view.</p>
+      ) : null}
       {feedback ? <p className="text-xs text-[var(--color-muted)]">{feedback}</p> : null}
     </div>
   );

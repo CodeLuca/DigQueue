@@ -192,7 +192,7 @@ async function callBandcampWishlistApi(params: { fanId: number; olderThanToken: 
   return data;
 }
 
-export async function getBandcampWishlistData(): Promise<BandcampWishlistResult> {
+export async function getBandcampWishlistData(options?: { cachedOnly?: boolean }): Promise<BandcampWishlistResult> {
   const userId = await requireCurrentAppUserId();
   const sourceUrl = normalizeWishlistUrl(env.BANDCAMP_WISHLIST_URL);
   if (!sourceUrl) {
@@ -202,6 +202,9 @@ export async function getBandcampWishlistData(): Promise<BandcampWishlistResult>
   const cacheKey = `bandcamp:${userId}:wishlist:${sourceUrl.toLowerCase()}`;
   const cached = await fromCache<BandcampWishlistResult>(cacheKey, userId);
   if (cached) return cached;
+  if (options?.cachedOnly) {
+    return { enabled: true, sourceUrl, totalCount: 0, items: [], fetchedAt: null, partial: true };
+  }
 
   try {
     const pageResponse = await fetch(sourceUrl, { next: { revalidate: 0 } });

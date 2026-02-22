@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import {
   BookmarkCheck,
   BookmarkPlus,
+  CheckCheck,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -69,6 +70,7 @@ type QueueApiItem = {
 type ReleaseDetailsApiResponse = {
   id: number;
   title: string;
+  uri?: string;
   artists_sort?: string;
   artists?: Array<{ name?: string }>;
   styles?: string[];
@@ -90,8 +92,24 @@ type ReleaseDetailsApiResponse = {
     blocked_from_sale?: boolean;
     currency?: string;
   } | null;
+  priceSuggestions?: Record<string, { value?: number | null; currency?: string } | number | null> | null;
   tracklist?: Array<unknown>;
-  videos?: Array<unknown>;
+  videos?: Array<{ uri?: string; title?: string }>;
+};
+
+type FinderCandidate = {
+  provider: "bandcamp" | "juno" | "hardwax" | "phonica" | "discogs";
+  url: string;
+  title: string;
+  confidence: "high" | "medium" | "low";
+  score: number;
+  reason: string;
+};
+
+type FinderLinksApiResponse = {
+  bestBandcamp?: FinderCandidate | null;
+  bandcamp?: FinderCandidate[];
+  fallback?: FinderCandidate[];
 };
 
 const TRACK_TODO_UPDATED_EVENT = "digqueue:track-todo-updated";
@@ -132,7 +150,7 @@ export function MiniPlayer() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab");
   const isListeningStationTab = activeTab === "step-2" || activeTab === "step-3";
-  const isLibraryTab = searchParams.get("tab") === "wishlist";
+  const isLibraryTab = activeTab === "library" || activeTab === "wishlist" || activeTab === "played-reviewed";
   const playerRef = useRef<YTPlayer | null>(null);
   const pendingPlayItemRef = useRef<QueueApiItem | null>(null);
   const currentRef = useRef<QueueApiItem | null>(null);
@@ -145,8 +163,10 @@ export function MiniPlayer() {
   const middlePreviewSeekPendingForIdRef = useRef<number | null>(null);
   const listeningScopeTrackIdsRef = useRef<number[]>([]);
   const listeningScopeEnabledRef = useRef(false);
+  const syncedScopeKeyRef = useRef<string>("");
   const lastQueueDedupeAtRef = useRef(0);
   const releaseDetailsCacheRef = useRef(new Map<number, ReleaseDetailsApiResponse>());
+  const releaseLinksCacheRef = useRef(new Map<number, FinderLinksApiResponse>());
   const [current, setCurrent] = useState<QueueApiItem | null>(null);
   const [history, setHistory] = useState<QueueApiItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -163,6 +183,9 @@ export function MiniPlayer() {
   const [releaseDetails, setReleaseDetails] = useState<ReleaseDetailsApiResponse | null>(null);
   const [releaseDetailsLoading, setReleaseDetailsLoading] = useState(false);
   const [releaseDetailsError, setReleaseDetailsError] = useState<string | null>(null);
+  const [releaseLinks, setReleaseLinks] = useState<FinderLinksApiResponse | null>(null);
+  const [releaseLinksLoading, setReleaseLinksLoading] = useState(false);
+  const [releaseLinksError, setReleaseLinksError] = useState<string | null>(null);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(() => {
     if (typeof window === "undefined") return "in_order";
     const stored = window.localStorage.getItem(PLAYBACK_MODE_STORAGE_KEY);
@@ -178,6 +201,9 @@ export function MiniPlayer() {
   const syncQueueToListeningScope = useCallback(async () => {
     if (!isListeningStationTab || !listeningScopeEnabledRef.current) return;
     const trackIds = listeningScopeTrackIdsRef.current;
+    const scopeKey = `${trackIds.join(",")}`;
+    if (scopeKey === syncedScopeKeyRef.current) return;
+    syncedScopeKeyRef.current = scopeKey;
     try {
       await fetch("/api/queue/scope", {
         method: "POST",
@@ -307,7 +333,7 @@ export function MiniPlayer() {
     const request = (async () => {
       const activeMode = "hybrid";
       const activeOrder = playbackMode;
-      await syncQueueToListeningScope();
+      void syncQueueToListeningScope();
       const activeCurrentId = currentId ?? currentRef.current?.id;
       const response = action && activeCurrentId && activeCurrentId > 0
         ? await fetch("/api/queue/next", {
@@ -728,9 +754,76 @@ export function MiniPlayer() {
   }, [current?.release?.thumbUrl, releaseDetails]);
 
   const discogsReleaseUrl = useMemo(() => {
+    if (releaseDetails?.uri?.trim()) {
+      return `https://www.discogs.com${releaseDetails.uri.trim()}`;
+    }
     if (!current?.release?.id) return null;
     return toDiscogsWebUrl(current.release.discogsUrl ?? "", `/release/${current.release.id}`);
-  }, [current?.release?.discogsUrl, current?.release?.id]);
+  }, [current?.release?.discogsUrl, current?.release?.id, releaseDetails?.uri]);
+
+  const releaseVideoUrl = useMemo(
+    () => releaseDetails?.videos?.find((video) => video?.uri?.trim())?.uri?.trim() || null,
+    [releaseDetails?.videos],
+  );
+
+  const marketCurrency = useMemo(() => {
+    const fromStats = releaseDetails?.marketStats?.currency?.trim();
+    if (fromStats) return fromStats;
+    const suggestions = releaseDetails?.priceSuggestions;
+    if (!suggestions) return "USD";
+    for (const value of Object.values(suggestions)) {
+      if (value && typeof value === "object" && typeof value.currency === "string" && value.currency.trim()) {
+        return value.currency.trim();
+      }
+    }
+    return "USD";
+  }, [releaseDetails?.marketStats?.currency, releaseDetails?.priceSuggestions]);
+
+  const marketSpreadPercent = useMemo(() => {
+    const lowest = releaseDetails?.marketStats?.lowest_price;
+    const median = releaseDetails?.marketStats?.median_price;
+    if (typeof lowest !== "number" || !Number.isFinite(lowest) || lowest <= 0) return null;
+    if (typeof median !== "number" || !Number.isFinite(median) || median <= 0) return null;
+    return Math.max(0, Math.round(((median - lowest) / lowest) * 100));
+  }, [releaseDetails?.marketStats?.lowest_price, releaseDetails?.marketStats?.median_price]);
+
+  const priceSuggestionRows = useMemo(() => {
+    const suggestions = releaseDetails?.priceSuggestions;
+    if (!suggestions) return [] as Array<{ label: string; value: number }>;
+    const conditionOrder = [
+      "Mint (M)",
+      "Near Mint (NM or M-)",
+      "Very Good Plus (VG+)",
+      "Very Good (VG)",
+      "Good Plus (G+)",
+      "Good (G)",
+      "Fair (F)",
+      "Poor (P)",
+    ];
+    const rows = Object.entries(suggestions)
+      .map(([label, value]) => {
+        const amount =
+          typeof value === "number" ? value : value && typeof value === "object" && typeof value.value === "number" ? value.value : null;
+        if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) return null;
+        return { label, value: amount };
+      })
+      .filter((row): row is { label: string; value: number } => row !== null);
+    rows.sort((a, b) => {
+      const ai = conditionOrder.indexOf(a.label);
+      const bi = conditionOrder.indexOf(b.label);
+      if (ai === -1 && bi === -1) return a.label.localeCompare(b.label);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+    return rows.slice(0, 6);
+  }, [releaseDetails?.priceSuggestions]);
+
+  const primaryBandcampLink = useMemo(() => releaseLinks?.bestBandcamp?.url?.trim() || null, [releaseLinks?.bestBandcamp?.url]);
+  const fallbackShopLinks = useMemo(
+    () => (releaseLinks?.fallback ?? []).filter((candidate) => candidate.provider !== "discogs").slice(0, 3),
+    [releaseLinks?.fallback],
+  );
 
   const sliderMax = Math.max(1, Math.floor(duration || 0));
   const sliderValue = Math.min(sliderMax, Math.max(0, Math.floor(currentTime || 0)));
@@ -906,6 +999,56 @@ export function MiniPlayer() {
     };
   }, [currentReleaseId, expandedOpen]);
 
+  useEffect(() => {
+    if (!expandedOpen || !currentReleaseId) {
+      setReleaseLinks(null);
+      setReleaseLinksError(null);
+      setReleaseLinksLoading(false);
+      return;
+    }
+
+    const cached = releaseLinksCacheRef.current.get(currentReleaseId);
+    if (cached) {
+      setReleaseLinks(cached);
+      setReleaseLinksError(null);
+      setReleaseLinksLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setReleaseLinksLoading(true);
+    setReleaseLinksError(null);
+    setReleaseLinks(null);
+    fetch(`/api/finder/release/${currentReleaseId}`)
+      .then(async (response) => {
+        const body = (await response.json().catch(() => null)) as unknown;
+        if (!response.ok || !body || typeof body !== "object") {
+          const message =
+            body && typeof body === "object" && "error" in body && typeof (body as { error?: unknown }).error === "string"
+              ? (body as { error: string }).error
+              : "Unable to load link suggestions.";
+          throw new Error(message);
+        }
+        if (cancelled) return;
+        const parsed = body as FinderLinksApiResponse;
+        releaseLinksCacheRef.current.set(currentReleaseId, parsed);
+        setReleaseLinks(parsed);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setReleaseLinks(null);
+        setReleaseLinksError(error instanceof Error ? error.message : "Unable to load link suggestions.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setReleaseLinksLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentReleaseId, expandedOpen]);
+
   const playQueueItemNow = useCallback((item: QueueApiItem) => {
     loadSpecific(item);
     setQueueOpen(false);
@@ -995,75 +1138,133 @@ export function MiniPlayer() {
         </div>
       ) : null}
       {expandedOpen ? (
-        <div className="mx-auto mb-2 max-w-[1400px] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+        <div className="mx-auto mb-2 max-w-[1400px] rounded-xl border border-[var(--color-border)] bg-[linear-gradient(130deg,color-mix(in_oklab,var(--color-surface2)_86%,black_14%),color-mix(in_oklab,var(--color-surface)_78%,black_22%))] p-3">
           {releaseDetailsLoading ? <p className="text-xs text-[var(--color-muted)]">Loading Discogs details…</p> : null}
           {releaseDetailsError ? <p className="text-xs text-rose-300">{releaseDetailsError}</p> : null}
-          {!releaseDetailsLoading && !releaseDetailsError ? (
+          {!releaseDetailsLoading && !releaseDetailsError && releaseDetails ? (
             <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
-              <div className="rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-2">
+              <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-2.5">
                 {expandedArtworkUrl ? (
                   <img
                     src={expandedArtworkUrl}
-                    alt={`${current?.release?.title || releaseDetails?.title || "Release"} artwork`}
+                    alt={`${current?.release?.title || releaseDetails.title || "Release"} artwork`}
                     className="aspect-square w-full rounded-md border border-[var(--color-border)] object-cover"
                     loading="lazy"
                   />
                 ) : (
                   <div className="aspect-square w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]" />
                 )}
-                <div className="mt-2 space-y-1.5">
-                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Current Track</p>
-                  <p className="line-clamp-2 text-sm font-medium">{current?.track?.title || "Unknown track"}</p>
+                <div className="mt-2.5 space-y-1.5">
+                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Now Playing</p>
+                  <p className="line-clamp-2 text-sm font-semibold">{current?.track?.title || "Unknown track"}</p>
                   <p className="line-clamp-1 text-xs text-[var(--color-muted)]">{currentArtist || "Unknown artist"}</p>
-                  <p className="line-clamp-2 text-xs text-[var(--color-muted)]">Release: {current?.release?.title || releaseDetails?.title || "Unknown release"}</p>
+                  <p className="line-clamp-2 text-xs text-[var(--color-muted)]">{current?.release?.title || releaseDetails.title || "Unknown release"}</p>
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <div className="rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Record Info</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    {releaseDetails?.year || "n/a"} • {releaseDetails?.country || "n/a"}
-                  </p>
+              <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Release Snapshot</p>
+                  <p className="mt-1 text-sm font-medium">{releaseDetails.title}</p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">{releaseDetails.year || "n/a"} • {releaseDetails.country || "n/a"}</p>
                   <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{currentLabel || "Label unknown"}</p>
                   <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{currentFormats || "Format unknown"}</p>
-                  <p className="mt-1 line-clamp-3 text-xs text-[var(--color-muted)]">{currentGenreStyles || "No genre/style tags"}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{currentGenreStyles || "No genre/style tags"}</p>
                 </div>
-                <div className="rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Discogs Market</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    Median price: {formatPrice(releaseDetails?.marketStats?.median_price, releaseDetails?.marketStats?.currency)}
+                <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Market Snapshot</p>
+                  <div className="mt-1 grid grid-cols-2 gap-2">
+                    <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Median</p>
+                      <p className="text-xs font-medium">{formatPrice(releaseDetails.marketStats?.median_price, marketCurrency)}</p>
+                    </div>
+                    <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Lowest</p>
+                      <p className="text-xs font-medium">{formatPrice(releaseDetails.marketStats?.lowest_price, marketCurrency)}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-[var(--color-muted)]">
+                    {releaseDetails.marketStats?.num_for_sale ?? "n/a"} listed
+                    {marketSpreadPercent !== null ? ` • median is ${marketSpreadPercent}% above lowest` : ""}
                   </p>
                   <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    Lowest listed: {formatPrice(releaseDetails?.marketStats?.lowest_price, releaseDetails?.marketStats?.currency)}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">For sale: {releaseDetails?.marketStats?.num_for_sale ?? "n/a"}</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    Rating: {typeof releaseDetails?.community?.rating?.average === "number"
+                    Rating: {typeof releaseDetails.community?.rating?.average === "number"
                       ? `${releaseDetails.community.rating.average.toFixed(2)} (${releaseDetails.community.rating.count ?? 0})`
                       : "n/a"}
                   </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    Have {releaseDetails.community?.have ?? "n/a"} • Want {releaseDetails.community?.want ?? "n/a"}
+                  </p>
+                  {releaseDetails.marketStats?.blocked_from_sale ? (
+                    <span className="mt-2 inline-flex rounded border border-amber-500/40 px-1.5 py-0.5 text-[10px] text-amber-300">Sale blocked</span>
+                  ) : null}
                 </div>
-                <div className="rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
-                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Community</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">Have: {releaseDetails?.community?.have ?? "n/a"}</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">Want: {releaseDetails?.community?.want ?? "n/a"}</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">Tracklist: {releaseDetails?.tracklist?.length ?? "n/a"} tracks</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">Videos: {releaseDetails?.videos?.length ?? "n/a"}</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    {releaseDetails?.marketStats?.blocked_from_sale ? (
-                      <span className="rounded border border-amber-500/40 px-1.5 py-0.5 text-[10px] text-amber-300">Sale blocked</span>
-                    ) : null}
+                <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Price Guide (By Condition)</p>
+                  {priceSuggestionRows.length ? (
+                    <div className="mt-1 space-y-1.5">
+                      {priceSuggestionRows.map((row) => (
+                        <div key={row.label} className="flex items-center justify-between text-xs">
+                          <span className="text-[var(--color-muted)]">{row.label}</span>
+                          <span className="font-medium">{formatPrice(row.value, marketCurrency)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-[var(--color-muted)]">No condition pricing available from Discogs for this release.</p>
+                  )}
+                </div>
+                <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3 lg:col-span-2 2xl:col-span-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Open Links</p>
+                    {releaseLinksLoading ? <span className="text-[10px] text-[var(--color-muted)]">finding stores…</span> : null}
+                    {releaseLinksError ? <span className="text-[10px] text-rose-300">{releaseLinksError}</span> : null}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {discogsReleaseUrl ? (
                       <a
                         href={discogsReleaseUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-[var(--color-accent)] hover:underline"
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs hover:bg-[var(--color-surface)]"
                       >
-                        Open on Discogs
+                        Discogs
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     ) : null}
+                    {primaryBandcampLink ? (
+                      <a
+                        href={primaryBandcampLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-100 hover:bg-emerald-500/25"
+                      >
+                        Best Bandcamp match
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null}
+                    {releaseVideoUrl ? (
+                      <a
+                        href={releaseVideoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs hover:bg-[var(--color-surface)]"
+                      >
+                        Release video
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null}
+                    {fallbackShopLinks.map((link) => (
+                      <a
+                        key={`${link.provider}-${link.url}`}
+                        href={link.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs hover:bg-[var(--color-surface)]"
+                      >
+                        {link.provider[0].toUpperCase() + link.provider.slice(1)}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1182,20 +1383,20 @@ export function MiniPlayer() {
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
-                  className={`h-10 w-10 ${iconButtonClass}`}
+                  variant="secondary"
+                  className="h-10 w-10 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-amber-100 hover:bg-amber-500/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-0"
                   onClick={() => void markEntireReleaseReviewed()}
                   disabled={!current?.release?.id || todoLoading !== null}
-                  title="Mark all tracks on this release reviewed and skip to the next release"
-                  aria-label="Mark all tracks on this release reviewed and skip to the next release"
+                  title="Mark entire release reviewed and skip to next release"
+                  aria-label="Mark entire release reviewed and skip to next release"
                 >
                   {todoLoading === "reviewed_release" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <SkipForward className="h-5 w-5" />
+                    <CheckCheck className="h-5 w-5" />
                   )}
                 </Button>
-                <span role="tooltip" className={tooltipClass}>Mark all tracks on this release reviewed and skip to the next release</span>
+                <span role="tooltip" className={tooltipClass}>Mark entire release reviewed and skip to next release</span>
               </span>
             ) : null}
             <span className="group relative inline-flex">
@@ -1295,35 +1496,31 @@ export function MiniPlayer() {
             </span>
           </span>
         ) : null}
-        <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1">
-          <span className="group relative inline-flex">
-            <Button
-              type="button"
-              variant={playbackMode === "in_order" ? "secondary" : "ghost"}
-              size="sm"
-              className={iconButtonClass}
-              onClick={() => setGlobalPlaybackMode("in_order")}
-              aria-label="Play in order"
-              title="Play one after another in queue order"
-            >
-              <ListOrdered className="h-3.5 w-3.5" />
-            </Button>
-            <span role="tooltip" className={tooltipClass}>Play in order</span>
-          </span>
-          <span className="group relative inline-flex">
-            <Button
-              type="button"
-              variant={playbackMode === "shuffle" ? "secondary" : "ghost"}
-              size="sm"
-              className={iconButtonClass}
-              onClick={() => setGlobalPlaybackMode("shuffle")}
-              aria-label="Play shuffled"
-              title="Shuffle through pending queue items"
-            >
-              <Shuffle className="h-3.5 w-3.5" />
-            </Button>
-            <span role="tooltip" className={tooltipClass}>Shuffle playback</span>
-          </span>
+        <div className="flex shrink-0 items-center gap-1 rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1">
+          <Button
+            type="button"
+            variant={playbackMode === "in_order" ? "secondary" : "ghost"}
+            size="sm"
+            className={`h-8 px-2 text-xs ${playbackMode === "in_order" ? "border border-[var(--color-accent)]" : ""}`}
+            onClick={() => setGlobalPlaybackMode("in_order")}
+            aria-label="Playback mode one by one"
+            title="Play one after another in queue order"
+          >
+            <ListOrdered className="mr-1 h-3.5 w-3.5" />
+            1-by-1
+          </Button>
+          <Button
+            type="button"
+            variant={playbackMode === "shuffle" ? "secondary" : "ghost"}
+            size="sm"
+            className={`h-8 px-2 text-xs ${playbackMode === "shuffle" ? "border border-[var(--color-accent)]" : ""}`}
+            onClick={() => setGlobalPlaybackMode("shuffle")}
+            aria-label="Playback mode shuffle"
+            title="Shuffle through pending queue items"
+          >
+            <Shuffle className="mr-1 h-3.5 w-3.5" />
+            Shuffle
+          </Button>
         </div>
         <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.25)]">
           <Button variant="ghost" size="sm" className={iconButtonClass} onClick={() => loadPrev()} aria-label="Previous">

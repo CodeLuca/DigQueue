@@ -1,14 +1,14 @@
 "use server";
 
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { labels, queueItems, releases, tracks } from "@/db/schema";
+import { apiCache, labels, queueItems, releases, tracks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
 import { parseLabelIdFromInput, searchDiscogsLabels } from "@/lib/discogs";
 import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
-import { toStoredDiscogsId } from "@/lib/discogs-id";
+import { toExternalDiscogsId, toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshLabelMetadata } from "@/lib/label-metadata";
 import { chooseTrackMatch, processSingleReleaseForLabel, toggleReleaseWishlist, toggleTrackTodo } from "@/lib/processing";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -21,6 +21,110 @@ function userScope(userId: string) {
     tracks: eq(tracks.userId, userId),
     queueItems: eq(queueItems.userId, userId),
   };
+}
+
+function normalizeForFuzzy(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\(\d+\)\s*$/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function isSubsequence(needle: string, haystack: string) {
+  if (!needle) return true;
+  let idx = 0;
+  for (const ch of haystack) {
+    if (ch === needle[idx]) idx += 1;
+    if (idx >= needle.length) return true;
+  }
+  return false;
+}
+
+function scoreLabelName(query: string, candidate: string) {
+  const q = normalizeForFuzzy(query);
+  const c = normalizeForFuzzy(candidate);
+  if (!q || !c) return 0;
+  if (q === c) return 120;
+  if (c.startsWith(q)) return 102;
+  if (q.startsWith(c) && c.length >= 4) return 95;
+  if (c.includes(q)) return 88;
+
+  const qTokens = new Set(q.split(" ").filter(Boolean));
+  const cTokens = new Set(c.split(" ").filter(Boolean));
+  let overlap = 0;
+  for (const token of qTokens) {
+    if (cTokens.has(token)) overlap += 1;
+  }
+  const tokenScore = qTokens.size > 0 ? Math.round((overlap / qTokens.size) * 70) : 0;
+  const subseqScore = isSubsequence(q.replace(/\s+/g, ""), c.replace(/\s+/g, "")) ? 18 : 0;
+  return tokenScore + subseqScore;
+}
+
+type LocalLabelCandidate = { id: number; title: string; score: number };
+
+async function findBestLocalLabelCandidate(userId: string, query: string): Promise<LocalLabelCandidate | null> {
+  const q = query.trim();
+  if (q.length < 2) return null;
+  const scope = userScope(userId);
+  const candidateMap = new Map<number, LocalLabelCandidate>();
+
+  const knownLabels = await db.query.labels.findMany({
+    where: scope.labels,
+    columns: { id: true, name: true },
+  });
+  for (const label of knownLabels) {
+    const externalId = toExternalDiscogsId(label.id);
+    if (!externalId || externalId <= 0) continue;
+    const score = scoreLabelName(q, label.name);
+    if (score <= 0) continue;
+    const previous = candidateMap.get(externalId);
+    if (!previous || score > previous.score) {
+      candidateMap.set(externalId, { id: externalId, title: label.name, score });
+    }
+  }
+
+  const cachedSearchRows = await db
+    .select({ responseJson: apiCache.responseJson })
+    .from(apiCache)
+    .where(
+      and(
+        eq(apiCache.userId, userId),
+        like(apiCache.key, `discogs:${userId}:/database/search?%type=label%`),
+      ),
+    )
+    .orderBy(desc(apiCache.fetchedAt))
+    .limit(220);
+
+  for (const row of cachedSearchRows) {
+    try {
+      const parsed = JSON.parse(row.responseJson) as { results?: Array<{ id?: number; title?: string }> };
+      for (const item of parsed.results ?? []) {
+        const id = item.id;
+        const title = item.title?.trim();
+        if (!id || !title) continue;
+        const score = scoreLabelName(q, title);
+        if (score <= 0) continue;
+        const previous = candidateMap.get(id);
+        if (!previous || score > previous.score) {
+          candidateMap.set(id, { id, title, score });
+        }
+      }
+    } catch {
+      // Ignore malformed cache rows and continue.
+    }
+  }
+
+  const ranked = [...candidateMap.values()].sort((a, b) => b.score - a.score);
+  const top = ranked[0];
+  const second = ranked[1];
+  if (!top) return null;
+  if (top.score < 82) return null;
+  if (second && top.score - second.score < 8) return null;
+  return top;
 }
 
 async function upsertLabelById(userId: string, id: number, fallbackName?: string) {
@@ -96,11 +200,17 @@ export async function addLabelAction(formData: FormData) {
   let name = raw;
 
   if (!id) {
-    const search = await searchDiscogsLabels(raw);
-    const first = search.results[0];
-    if (!first) throw new Error("No label found from search.");
-    id = first.id;
-    name = first.title;
+    const cachedMatch = await findBestLocalLabelCandidate(userId, raw);
+    if (cachedMatch) {
+      id = cachedMatch.id;
+      name = cachedMatch.title;
+    } else {
+      const search = await searchDiscogsLabels(raw);
+      const first = search.results[0];
+      if (!first) throw new Error("No label found from search.");
+      id = first.id;
+      name = first.title;
+    }
   }
 
   const storedLabelId = await upsertLabelById(userId, id, name);
