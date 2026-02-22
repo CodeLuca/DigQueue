@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Chrome, KeyRound } from "lucide-react";
 import { loginWithGoogleAction, loginWithPasswordAction, requestPasswordResetAction } from "@/app/auth-actions";
-import { isGoogleOAuthAvailable } from "@/lib/supabase/google-oauth";
 
 const tertiaryLinkClass =
   "text-sm text-[color:color-mix(in_oklab,var(--color-muted)_82%,var(--color-accent)_18%)] transition-colors hover:text-[var(--color-accent)] hover:underline underline-offset-4";
@@ -14,7 +13,6 @@ export default async function LoginPage({
   const { next, email, error, notice } = await searchParams;
   const nextPath = typeof next === "string" && next.startsWith("/") ? next : "/";
   const sessionEmail = typeof email === "string" && email.includes("@") ? email : "";
-  const googleAvailable = await isGoogleOAuthAvailable();
 
   return (
     <main className="mx-auto min-h-[calc(100vh-11rem)] max-w-[760px] px-4 py-8 md:px-8">
@@ -75,22 +73,16 @@ export default async function LoginPage({
               Send reset link
             </button>
           </form>
-          {googleAvailable ? (
-            <form action={loginWithGoogleAction}>
-              <input type="hidden" name="next" value={nextPath} />
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--color-surface)]"
-              >
-                <Chrome className="h-4 w-4" />
-                Continue with Google
-              </button>
-            </form>
-          ) : (
-            <p className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm text-[var(--color-muted)]">
-              Google login is temporarily unavailable.
-            </p>
-          )}
+          <form action={loginWithGoogleAction}>
+            <input type="hidden" name="next" value={nextPath} />
+            <button
+              type="submit"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--color-surface)]"
+            >
+              <Chrome className="h-4 w-4" />
+              Continue with Google
+            </button>
+          </form>
           <Link href={`/register?next=${encodeURIComponent(nextPath)}`} className={tertiaryLinkClass}>
             Need an account? Register
           </Link>

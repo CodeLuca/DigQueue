@@ -2,7 +2,6 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { isGoogleOAuthAvailable } from "@/lib/supabase/google-oauth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function safeNext(value: unknown) {
@@ -92,10 +91,6 @@ export async function registerWithPasswordAction(formData: FormData) {
 
 export async function loginWithGoogleAction(formData: FormData) {
   const nextPath = safeNext(formData.get("next"));
-  const googleAvailable = await isGoogleOAuthAvailable();
-  if (!googleAvailable) {
-    redirect(withAuthQuery("/login", { next: nextPath, error: "Google login is unavailable. Use email/password for now." }));
-  }
 
   const supabase = await getSupabaseServerClient();
   const headersStore = await headers();
