@@ -15,7 +15,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import {
-  addLabelAction,
+  addSourceAction,
   pullDiscogsWantsAction,
   refreshLabelMetadataAction,
   refreshMissingLabelMetadataAction,
@@ -49,9 +49,9 @@ function normalizeLabelStatus(active: boolean, status: string, lastError: string
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ listenLabel?: string; tab?: string; labelState?: string; labelQuery?: string; libraryView?: string }>;
+  searchParams: Promise<{ listenLabel?: string; tab?: string; labelState?: string; sourceKind?: string; labelQuery?: string; libraryView?: string }>;
 }) {
-  const { listenLabel, tab, labelState, labelQuery, libraryView } = await searchParams;
+  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView } = await searchParams;
   const tabIds = ["step-1", "step-2", "library", "recommendations"] as const;
   type TabId = (typeof tabIds)[number];
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
@@ -69,6 +69,8 @@ export default async function HomePage({
   const selectedListenLabelId = listenLabel ? Number(listenLabel) : undefined;
   const selectedLabelState: "all" | "active" | "inactive" =
     labelState === "active" || labelState === "inactive" ? labelState : "all";
+  const selectedSourceKind: "all" | "label" | "artist" =
+    sourceKind === "label" || sourceKind === "artist" ? sourceKind : "all";
   const normalizedLabelQuery = (labelQuery || "").trim().toLowerCase();
 
   const showLibraryItemsSection = activeTab === "library" && selectedLibraryView === "library";
@@ -112,10 +114,10 @@ export default async function HomePage({
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
   const hasYoutubeBlockedError = false;
   const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
-  const hasAnyLabels = data.labels.length > 0;
-  const showOnboarding = !hasDiscogs || !hasAnyLabels;
+  const hasAnySources = data.labels.length > 0;
+  const showOnboarding = !hasDiscogs || !hasAnySources;
   const onboardingPrimaryHref = !hasDiscogs ? "/connect-discogs?next=/" : "/?tab=step-1";
-  const onboardingPrimaryLabel = !hasDiscogs ? "Connect Discogs" : "Open Labels";
+  const onboardingPrimaryLabel = !hasDiscogs ? "Connect Discogs" : "Open Sources";
 
   const isLabelsTab = activeTab === "step-1";
   const canProcess = hasDiscogs;
@@ -150,6 +152,8 @@ export default async function HomePage({
     ? queriedLabels.filter((label) => {
         if (selectedLabelState === "active") return label.active;
         if (selectedLabelState === "inactive") return !label.active;
+        if (selectedSourceKind === "label") return label.entityKind !== "artist";
+        if (selectedSourceKind === "artist") return label.entityKind === "artist";
         return true;
       })
     : [];
@@ -160,6 +164,16 @@ export default async function HomePage({
     params.set("tab", "step-1");
     if (listenLabel) params.set("listenLabel", listenLabel);
     if (nextState !== "all") params.set("labelState", nextState);
+    if (selectedSourceKind !== "all") params.set("sourceKind", selectedSourceKind);
+    if (normalizedLabelQuery) params.set("labelQuery", labelQuery?.trim() || "");
+    return `/?${params.toString()}`;
+  };
+  const kindHref = (nextKind: "all" | "label" | "artist") => {
+    const params = new URLSearchParams();
+    params.set("tab", "step-1");
+    if (listenLabel) params.set("listenLabel", listenLabel);
+    if (selectedLabelState !== "all") params.set("labelState", selectedLabelState);
+    if (nextKind !== "all") params.set("sourceKind", nextKind);
     if (normalizedLabelQuery) params.set("labelQuery", labelQuery?.trim() || "");
     return `/?${params.toString()}`;
   };
@@ -168,6 +182,7 @@ export default async function HomePage({
     params.set("tab", "step-1");
     if (listenLabel) params.set("listenLabel", listenLabel);
     if (selectedLabelState !== "all") params.set("labelState", selectedLabelState);
+    if (selectedSourceKind !== "all") params.set("sourceKind", selectedSourceKind);
     return `/?${params.toString()}`;
   })();
   const libraryViewHref = (nextView: "library" | "history" | "reviewed" | "needs-review") => {
@@ -190,8 +205,8 @@ export default async function HomePage({
   const totalWishlistedRecords = data.metrics.wishlistedRecords;
   const tabMeta: Record<TabId, { title: string; subtitle: string; icon: typeof Disc3 }> = {
     "step-1": {
-      title: "Labels",
-      subtitle: "Add labels, activate the ones you want to process, and load releases into your queue.",
+      title: "Sources",
+      subtitle: "Add sources, activate what you want to process, and load releases into your queue.",
       icon: Disc3,
     },
     "step-2": {
@@ -213,7 +228,7 @@ export default async function HomePage({
   const tabGuide: Record<TabId, { shellClass: string; chips: string[] }> = {
     "step-1": {
       shellClass: "border-l-4 border-l-cyan-400/70 bg-[linear-gradient(135deg,rgba(34,211,238,0.12),transparent_46%),var(--color-surface2)]",
-      chips: ["Add label sources", "Activate/deactivate labels", "Reload failed labels"],
+      chips: ["Add sources", "Activate/deactivate sources", "Reload failed sources"],
     },
     "step-2": {
       shellClass: "border-l-4 border-l-emerald-400/70 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),transparent_46%),var(--color-surface2)]",
@@ -225,7 +240,7 @@ export default async function HomePage({
     },
     recommendations: {
       shellClass: "border-l-4 border-l-sky-400/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.14),transparent_46%),var(--color-surface2)]",
-      chips: ["Review suggestions", "Queue or play", "Add labels/wants"],
+      chips: ["Review suggestions", "Queue or play", "Add sources/wants"],
     },
   };
   const activeMeta = tabMeta[activeTab];
@@ -268,24 +283,24 @@ export default async function HomePage({
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Quick Start</p>
             <p className="mt-1 text-sm">
               {!hasDiscogs
-                ? "Connect Discogs first. After that, add or pull labels and start listening."
-                : "You are connected. Add your first label (or pull from wishlist) to start building the queue."}
+                ? "Connect Discogs first. After that, add or pull sources and start listening."
+                : "You are connected. Add your first source (or pull from wishlist) to start building the queue."}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge className={hasDiscogs ? "border-emerald-600/60 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
                 Discogs {hasDiscogs ? "Connected" : "Not Connected"}
               </Badge>
-              <Badge className={hasAnyLabels ? "border-emerald-600/60 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
-                Labels {hasAnyLabels ? `${data.labels.length} Loaded` : "None Yet"}
+              <Badge className={hasAnySources ? "border-emerald-600/60 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
+                Sources {hasAnySources ? `${data.labels.length} Loaded` : "None Yet"}
               </Badge>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Link href={onboardingPrimaryHref}>
                 <Button type="button">{onboardingPrimaryLabel}</Button>
               </Link>
-              {hasDiscogs && !hasAnyLabels ? (
+              {hasDiscogs && !hasAnySources ? (
                 <form action={pullDiscogsWantsAction}>
-                  <Button type="submit" variant="outline">Pull labels from Discogs wishlist</Button>
+                  <Button type="submit" variant="outline">Pull sources from Discogs wishlist</Button>
                 </form>
               ) : null}
               <Link href="/how-to-use">
@@ -299,8 +314,8 @@ export default async function HomePage({
       {activeTab === "step-2" ? (
       <section className="mb-5 reveal reveal-delay-1">
         <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Loaded Labels Stats</p>
-          <p className="text-xs text-[var(--color-muted)]">{activeLabels.length} active loaded labels in scope</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Loaded Sources Stats</p>
+          <p className="text-xs text-[var(--color-muted)]">{activeLabels.length} active loaded sources in scope</p>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Card>
@@ -362,7 +377,7 @@ export default async function HomePage({
       <section className="mb-4 grid grid-cols-1 gap-4 reveal reveal-delay-2">
           <Card>
             <CardHeader>
-              <CardTitle>Label Intake & Status</CardTitle>
+              <CardTitle>Source Intake & Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!canProcess ? (
@@ -376,19 +391,19 @@ export default async function HomePage({
                 </div>
               ) : null}
 
-              <form action={addLabelAction} className="flex flex-col gap-2 sm:flex-row">
-                <Input id="label-input" name="label" placeholder="Paste Discogs label URL, ID, or name" required />
-                <Button type="submit">Add</Button>
+              <form action={addSourceAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  name="entityKind"
+                  defaultValue="label"
+                  className="h-9 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm text-[var(--color-text)]"
+                  aria-label="Source kind"
+                >
+                  <option value="label">Label</option>
+                  <option value="artist">Artist</option>
+                </select>
+                <Input id="label-input" name="label" placeholder="Paste Discogs source URL, ID, or name" required />
+                <Button type="submit">Add Source</Button>
               </form>
-              <p className="text-xs text-[var(--color-muted)]">
-                Name searches are fuzzy-matched against your local/cached Discogs results first to reduce live API requests.
-              </p>
-
-              <p className="text-xs text-[var(--color-muted)]">Toggle labels active/inactive. Active labels are included in listening and playback.</p>
-              <p className="text-xs text-[var(--color-muted)]">
-                Active labels: <span className="font-semibold text-[var(--color-text)]">{activeFilteredCount}</span> / {queriedLabels.length}
-                {normalizedLabelQuery ? <span> (filtered from {data.labels.length} total)</span> : null}
-              </p>
               <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Ingestion Pipeline</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -397,17 +412,12 @@ export default async function HomePage({
                   <Badge className={activeStatusCounts.error > 0 ? "border-rose-500/50 bg-rose-500/15 text-rose-200" : ""}>Errored {activeStatusCounts.error}</Badge>
                   <Badge>Complete {activeStatusCounts.complete}</Badge>
                 </div>
-                <p className="mt-2 text-xs text-[var(--color-muted)]">
-                  Sync runs automatically while this app is open. A label stops only when it is deactivated, reaches complete, or hits an error.
-                </p>
-                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  Stages: 1) discover release pages, 2) load release tracks, 3) match playable sources and queue.
-                </p>
+                <p className="mt-2 text-xs text-[var(--color-muted)]">Auto-sync runs while this page is open.</p>
               </div>
               <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">View Filters</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Source Filters</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Link
                         href={filterHref("all")}
@@ -416,7 +426,7 @@ export default async function HomePage({
                             ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
                             : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                         }`}
-                        title="Show all loaded labels"
+                        title="Show all loaded sources"
                       >
                         All ({queriedLabels.length})
                       </Link>
@@ -427,7 +437,7 @@ export default async function HomePage({
                             ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
                             : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                         }`}
-                        title="Show only active labels used for listening"
+                        title="Show only active sources used for listening"
                       >
                         Active ({activeFilteredCount})
                       </Link>
@@ -438,19 +448,53 @@ export default async function HomePage({
                             ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
                             : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                         }`}
-                        title="Show labels currently excluded from processing"
+                        title="Show sources currently excluded from processing"
                       >
                         Inactive ({inactiveFilteredCount})
+                      </Link>
+                      <Link
+                        href={kindHref("all")}
+                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
+                          selectedSourceKind === "all"
+                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
+                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                        }`}
+                        title="Show all source kinds"
+                      >
+                        Any Kind ({queriedLabels.length})
+                      </Link>
+                      <Link
+                        href={kindHref("label")}
+                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
+                          selectedSourceKind === "label"
+                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
+                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                        }`}
+                        title="Show label sources only"
+                      >
+                        Labels ({queriedLabels.filter((item) => item.entityKind !== "artist").length})
+                      </Link>
+                      <Link
+                        href={kindHref("artist")}
+                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
+                          selectedSourceKind === "artist"
+                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
+                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                        }`}
+                        title="Show artist sources only"
+                      >
+                        Artists ({queriedLabels.filter((item) => item.entityKind === "artist").length})
                       </Link>
                     </div>
                     <form method="GET" className="mt-2 flex flex-wrap items-center gap-2">
                       <input type="hidden" name="tab" value="step-1" />
                       {listenLabel ? <input type="hidden" name="listenLabel" value={listenLabel} /> : null}
                       {selectedLabelState !== "all" ? <input type="hidden" name="labelState" value={selectedLabelState} /> : null}
+                      {selectedSourceKind !== "all" ? <input type="hidden" name="sourceKind" value={selectedSourceKind} /> : null}
                       <Input
                         name="labelQuery"
                         defaultValue={labelQuery || ""}
-                        placeholder="Search labels by name, summary, release tags..."
+                        placeholder="Search sources by name, summary, release tags"
                         className="w-full sm:max-w-sm"
                       />
                       <Button type="submit" size="sm" variant="outline">Search</Button>
@@ -468,8 +512,8 @@ export default async function HomePage({
                     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Actions</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <form action={refreshMissingLabelMetadataAction}>
-                        <Button type="submit" size="sm" variant="outline" title="Fetch profile and artwork for labels missing metadata">
-                          Refresh missing label info
+                        <Button type="submit" size="sm" variant="outline" title="Fetch profile and artwork for sources missing metadata">
+                          Refresh missing source info
                         </Button>
                       </form>
                       {hasDiscogs ? (
@@ -515,7 +559,7 @@ export default async function HomePage({
                     : !canProcess
                       ? "Stopped: Discogs is not connected."
                     : !label.active
-                        ? "Stopped: label is inactive."
+                        ? "Stopped: source is inactive."
                         : normalizedStatus === "queued"
                           ? "Waiting for an available worker slot."
                           : normalizedStatus === "processing"
@@ -545,7 +589,7 @@ export default async function HomePage({
                         {label.imageUrl ? (
                           <img
                             src={label.imageUrl}
-                            alt={`${label.name} label`}
+                            alt={`${label.name} source`}
                             className={`h-14 w-14 rounded-md border object-cover ${label.active ? "border-emerald-500/40" : "border-[var(--color-border)]"}`}
                             loading="lazy"
                           />
@@ -588,6 +632,9 @@ export default async function HomePage({
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
+                        <Badge className="border-[var(--color-border)] text-[10px] uppercase">
+                          {label.entityKind === "artist" ? "Artist" : "Label"}
+                        </Badge>
                         {label.active ? (
                           <Badge className="border-emerald-500/70 bg-emerald-500/15 text-emerald-200">ACTIVE</Badge>
                         ) : (
@@ -601,7 +648,7 @@ export default async function HomePage({
                       <div className="flex flex-wrap items-center gap-2">
                         <a
                           className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                          href={toDiscogsWebUrl(label.discogsUrl, `/label/${label.id}`)}
+                          href={toDiscogsWebUrl(label.discogsUrl, "")}
                           target="_blank"
                           rel="noreferrer"
                           title="Open on Discogs"
@@ -611,9 +658,9 @@ export default async function HomePage({
                         </a>
                         <form action={refreshLabelMetadataAction}>
                           <input type="hidden" name="labelId" value={label.id} />
-                          <Button type="submit" size="sm" variant="ghost" title="Refresh this label profile, image, and notable releases">
+                          <Button type="submit" size="sm" variant="ghost" title="Refresh this source profile, image, and notable releases">
                             <RefreshCcw className="mr-1 h-3.5 w-3.5" />
-                            Refresh info
+                            Refresh source info
                           </Button>
                         </form>
                         {!label.tracksFullyLoaded ? (
@@ -625,7 +672,7 @@ export default async function HomePage({
                               variant="outline"
                               disabled={!canProcess || normalizedStatus === "processing"}
                               pendingText="Running step..."
-                              title="Run one immediate ingestion step for this label"
+                              title="Run one immediate ingestion step for this source"
                             >
                               {normalizedStatus === "processing" ? "Syncing..." : normalizedStatus === "queued" ? "Queued..." : "Run one step"}
                             </FormSubmitButton>
@@ -649,15 +696,15 @@ export default async function HomePage({
                 })}
                 {filteredLabels.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-                    <p className="text-sm text-[var(--color-muted)]">No labels match this filter.</p>
+                    <p className="text-sm text-[var(--color-muted)]">No sources match this filter.</p>
                   </div>
                 ) : null}
                 <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-3">
                   <p className="text-sm font-medium">
-                    {data.labels.length === 0 ? "No labels yet." : "Want more labels?"}
+                    {data.labels.length === 0 ? "No sources yet." : "Want more sources?"}
                   </p>
                   <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    Pull your Discogs wishlist from the Actions panel above to auto-add fresh label sources.
+                    Pull your Discogs wishlist from the Actions panel above to auto-add fresh sources.
                   </p>
                 </div>
               </div>
@@ -688,7 +735,7 @@ export default async function HomePage({
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
                     <p className="inline-flex items-center gap-1">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      {data.erroredLabels.length} active {data.erroredLabels.length === 1 ? "label errored" : "labels errored"}.
+                      {data.erroredLabels.length} active {data.erroredLabels.length === 1 ? "source errored" : "sources errored"}.
                     </p>
                     <form action={retryErroredLabelsAction}>
                       <FormSubmitButton
@@ -697,14 +744,14 @@ export default async function HomePage({
                         size="sm"
                         className="h-7 px-2 text-[11px]"
                         pendingText="Clearing..."
-                        title="Clear error state on all active errored labels; does not run processing"
+                        title="Clear error state on all active errored sources; does not run processing"
                       >
                         <RefreshCcw className="h-3 w-3" />
                         Clear all flags
                       </FormSubmitButton>
                     </form>
                   </div>
-                  <p className="text-[10px] text-[var(--color-muted)]">Retry runs one processing step for one label and can still fail if API/database limits are hit.</p>
+                  <p className="text-[10px] text-[var(--color-muted)]">Retry runs one processing step for one source and can still fail if API/database limits are hit.</p>
                   <div className="divide-y divide-[color-mix(in_oklab,var(--color-border)_70%,transparent)] rounded-md border border-[color-mix(in_oklab,var(--color-border)_60%,transparent)]">
                     {data.erroredLabels.slice(0, 5).map((label) => {
                       const visibleLastError = getVisibleLabelError(label.lastError);
@@ -721,7 +768,7 @@ export default async function HomePage({
                           </div>
                           <div className="flex items-center gap-1">
                             <Link href={`/labels/${label.id}`}>
-                              <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" aria-label="Open label">
+                              <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" aria-label="Open source">
                                 <ExternalLink className="h-3 w-3" />
                               </Button>
                             </Link>
@@ -733,7 +780,7 @@ export default async function HomePage({
                                 variant="outline"
                                 className="h-7 px-2 text-[11px]"
                                 pendingText="Retrying now..."
-                                title="Run one immediate processing step for this label"
+                                title="Run one immediate processing step for this source"
                               >
                                 Retry
                               </FormSubmitButton>
@@ -916,7 +963,7 @@ export default async function HomePage({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Loaded Labels Activity</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Loaded Sources Activity</p>
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
                   {selectedLibraryView === "reviewed"
                     ? "Tracks you explicitly marked reviewed."
