@@ -1,17 +1,20 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, Chrome } from "lucide-react";
 import { loginWithGoogleAction, loginWithPasswordAction, registerWithPasswordAction, requestPasswordResetAction } from "@/app/auth-actions";
-
-const tertiaryLinkClass =
-  "text-sm text-[color:color-mix(in_oklab,var(--color-muted)_82%,var(--color-accent)_18%)] transition-colors hover:text-[var(--color-accent)] hover:underline underline-offset-4";
+import { getCurrentAppUserId } from "@/lib/app-user";
 
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string; email?: string; error?: string; notice?: string; mode?: string }>;
 }) {
+  const userId = await getCurrentAppUserId();
+  if (userId) {
+    redirect("/welcome");
+  }
+
   const { next, email, error, notice, mode } = await searchParams;
-  const nextPath = typeof next === "string" && next.startsWith("/") ? next : "/";
+  const nextPath = typeof next === "string" && next.startsWith("/") ? next : "/welcome";
   const sessionEmail = typeof email === "string" && email.includes("@") ? email : "";
   const startInRegisterMode = mode === "register";
 
@@ -125,11 +128,6 @@ export default async function LoginPage({
               Continue with Google
             </button>
           </form>
-        </div>
-        <div className="mt-4">
-          <Link href="/welcome" className={tertiaryLinkClass}>
-            Back to overview
-          </Link>
         </div>
       </section>
     </main>

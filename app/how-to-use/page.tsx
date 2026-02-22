@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import {
   Bookmark,
   CheckCheck,
@@ -21,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getCurrentAppUserId } from "@/lib/app-user";
 
 function NativeTooltip({ text, children }: { text: string; children: ReactNode }) {
   return (
@@ -36,7 +38,12 @@ function NativeTooltip({ text, children }: { text: string; children: ReactNode }
   );
 }
 
-export default function HowToUsePage() {
+export default async function HowToUsePage() {
+  const userId = await getCurrentAppUserId();
+  if (!userId) {
+    redirect("/login?next=/how-to-use");
+  }
+
   return (
     <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8 md:py-8">
       <section className="rounded-xl border border-[var(--color-border)] bg-[linear-gradient(135deg,rgba(245,158,11,0.14),transparent_48%),var(--color-surface2)] p-4 md:p-6">

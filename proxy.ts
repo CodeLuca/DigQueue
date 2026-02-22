@@ -4,7 +4,6 @@ import { createServerClient } from "@supabase/ssr";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 const PUBLIC_PATHS = new Set([
-  "/welcome",
   "/login",
   "/register",
   "/connect-discogs",

@@ -16,7 +16,6 @@ export function AppNav() {
   const searchParams = useSearchParams();
   const authMode = searchParams.get("mode");
   const isMarketingRoute =
-    pathname === "/welcome" ||
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/reset-password" ||
@@ -26,9 +25,8 @@ export function AppNav() {
     return (
       <div className="sticky top-0 z-40 border-b border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-bg)_88%,black_12%)]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-2 md:flex-row md:items-center md:justify-between md:gap-4 md:px-8">
-          <Link href="/welcome" className="text-lg font-semibold tracking-tight">DigQueue</Link>
+          <Link href="/login" className="text-lg font-semibold tracking-tight">DigQueue</Link>
           <nav className="flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:justify-end">
-            <Link href="/how-to-use" className={itemClass(false)} title="Read a full first-time user guide"><CircleHelp className="h-3.5 w-3.5" />How to use</Link>
             <Link href="/login" className={itemClass(pathname === "/login" && authMode !== "register")} title="Sign in to your account"><LogIn className="h-3.5 w-3.5" />Login</Link>
             <Link href="/login?mode=register" className={itemClass(pathname === "/login" && authMode === "register")} title="Create a new account"><UserPlus className="h-3.5 w-3.5" />Register</Link>
           </nav>
@@ -54,7 +52,7 @@ export function AppNav() {
   return (
     <div className="sticky top-0 z-40 border-b border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-bg)_88%,black_12%)]/95 backdrop-blur">
       <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-2 md:flex-row md:items-center md:justify-between md:gap-4 md:px-8">
-        <Link href="/" className="text-lg font-semibold tracking-tight">DigQueue</Link>
+        <Link href="/welcome" className="text-lg font-semibold tracking-tight">DigQueue</Link>
         <nav className="grid w-full grid-cols-2 gap-2 rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)]/30 p-2 sm:flex sm:items-center sm:gap-2 sm:overflow-x-auto sm:pb-2 md:w-auto md:flex-nowrap md:justify-end md:pb-2" aria-label="Primary tabs">
           <Link href="/?tab=step-1" className={itemClass(pathname === "/" && activeTab === "step-1")} title="Manage sources and ingestion" onMouseEnter={() => prefetchRoute("/?tab=step-1")} onFocus={() => prefetchRoute("/?tab=step-1")} aria-current={pathname === "/" && activeTab === "step-1" ? "page" : undefined}><Disc3 className="h-3.5 w-3.5" />Sources</Link>
           <Link href="/?tab=step-2" className={itemClass(pathname === "/" && activeTab === "step-2")} title="Browse and play tracks in your queue" onMouseEnter={() => prefetchRoute("/?tab=step-2")} onFocus={() => prefetchRoute("/?tab=step-2")} aria-current={pathname === "/" && activeTab === "step-2" ? "page" : undefined}><Inbox className="h-3.5 w-3.5" />Listening Station</Link>

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Disc3, ListMusic, Sparkles } from "lucide-react";
+import { Bookmark, CheckCheck, Disc3, Heart, Inbox, Settings, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentAppUserId } from "@/lib/app-user";
 
 const highlights = [
@@ -11,8 +13,8 @@ const highlights = [
   },
   {
     title: "Stay in flow while listening",
-    description: "Continuous player, queue controls, keyboard shortcuts, and review tabs in one workspace.",
-    icon: ListMusic,
+    description: "Queue playback, review controls, and lightweight filters keep triage fast while you listen.",
+    icon: Inbox,
   },
   {
     title: "Own your signal",
@@ -23,8 +25,8 @@ const highlights = [
 
 export default async function WelcomePage() {
   const userId = await getCurrentAppUserId();
-  if (userId) {
-    redirect("/");
+  if (!userId) {
+    redirect("/login?next=/welcome");
   }
 
   return (
@@ -32,28 +34,19 @@ export default async function WelcomePage() {
       <section className="marketing-hero reveal">
         <div className="max-w-3xl">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-5xl">
-            Discover smarter from sources you trust, not random algorithm noise.
+            Welcome to DigQueue
           </h1>
           <p className="mt-4 max-w-2xl text-sm text-[var(--color-muted)] md:text-base">
-            DigQueue turns your source list into a clear processing and listening system: import releases, rank playable tracks, and
-            decide what deserves your attention.
+            This is your starting point after login. Use it as the quick operating guide, then jump into Sources, Listening Station, and Library.
           </p>
           <p className="mt-2 max-w-2xl text-sm text-[var(--color-muted)]">
-            Labels give you tight catalog-driven digging. Artists let you follow one producer across labels and aliases.
+            Labels give catalog-driven digging. Artists let you follow a producer across labels and aliases.
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-            <Link
-              href="/login"
-              className="rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
-            >
-              Login
-            </Link>
-            <Link href="/login?mode=register" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
-              Register
-            </Link>
-            <Link href="/how-to-use" className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm hover:bg-[var(--color-surface2)]">
-              How to use
-            </Link>
+            <Link href="/?tab=step-1"><Button type="button">Open Sources</Button></Link>
+            <Link href="/?tab=step-2"><Button type="button" variant="outline">Open Listening Station</Button></Link>
+            <Link href="/?tab=library"><Button type="button" variant="outline">Open Library</Button></Link>
+            <Link href="/how-to-use"><Button type="button" variant="ghost">Full How-To</Button></Link>
           </div>
         </div>
       </section>
@@ -68,24 +61,68 @@ export default async function WelcomePage() {
         ))}
       </section>
 
-      <section className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:p-6 reveal reveal-delay-2">
-        <div>
-          <h2 className="text-xl font-semibold">Quick start</h2>
-          <ol className="mt-4 space-y-3 text-sm">
-            <li className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-              <p className="font-medium">1. Create your account</p>
-              <p className="mt-1 text-[var(--color-muted)]">Use email/password or Google to access your account.</p>
-            </li>
-            <li className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-              <p className="font-medium">2. Connect Discogs</p>
-              <p className="mt-1 text-[var(--color-muted)]">After account auth, connect Discogs once to link your digging identity.</p>
-            </li>
-            <li className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-              <p className="font-medium">3. Add one label or artist source and process</p>
-              <p className="mt-1 text-[var(--color-muted)]">Start with one label for curation depth or one artist for cross-label discovery, then run ingestion.</p>
-            </li>
-          </ol>
-        </div>
+      <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 reveal reveal-delay-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="inline-flex items-center gap-2"><Disc3 className="h-4 w-4 text-[var(--color-accent)]" />Sources First</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>1. Add 1-3 high-signal label/artist sources.</p>
+            <p>2. Keep only sources you trust active.</p>
+            <p>3. Run sync in Queue Workbench and resolve source errors quickly.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="inline-flex items-center gap-2"><Inbox className="h-4 w-4 text-[var(--color-accent)]" />Listening Loop</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>Use play controls to keep momentum.</p>
+            <p><span className="font-medium">Single check:</span> review track.</p>
+            <p><span className="font-medium">Double check:</span> review full release.</p>
+            <p><span className="font-medium">Save track:</span> keep personal signal for Library + recommendations.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="inline-flex items-center gap-2"><Bookmark className="h-4 w-4 text-[var(--color-accent)]" />Library Views</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p><span className="font-medium">Library:</span> saved tracks + wishlist records.</p>
+            <p><span className="font-medium">History:</span> played tracks.</p>
+            <p><span className="font-medium">Reviewed:</span> decisions already made.</p>
+            <p><span className="font-medium">Needs Review:</span> played but unresolved items.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="inline-flex items-center gap-2"><CheckCheck className="h-4 w-4 text-[var(--color-accent)]" />First 10 Minutes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>1. Connect Discogs in <Link href="/settings" className="text-[var(--color-accent)] hover:underline">Settings</Link> if needed.</p>
+            <p>2. Add sources in Sources tab.</p>
+            <p>3. Play from Listening Station and mark tracks/release as you go.</p>
+            <p>4. Clear leftovers in Library → Needs Review.</p>
+            <div className="pt-1">
+              <Link href="/how-to-use"><Button type="button" size="sm" variant="outline">Open Detailed Guide</Button></Link>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="inline-flex items-center gap-2 text-sm font-medium"><Heart className="h-4 w-4 text-[var(--color-accent)]" />Save Signal</p>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">Use saves intentionally. They directly shape what shows up again.</p>
+        </article>
+        <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="inline-flex items-center gap-2 text-sm font-medium"><Settings className="h-4 w-4 text-[var(--color-accent)]" />Integrations</p>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">Discogs powers ingest. YouTube OAuth is optional and only needed for playlist export.</p>
+        </article>
+        <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <p className="inline-flex items-center gap-2 text-sm font-medium"><Sparkles className="h-4 w-4 text-[var(--color-accent)]" />Keep It Focused</p>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">Pause weak sources, review aggressively, and your queue quality stays high.</p>
+        </article>
       </section>
     </main>
   );
