@@ -1,5 +1,7 @@
 import { headers } from "next/headers";
 
+const HARDCODED_PROD_FALLBACK_ORIGIN = "https://digqueue-production.up.railway.app";
+
 function isLocalHost(hostOrOrigin: string) {
   const value = hostOrOrigin.toLowerCase();
   return value.includes("localhost") || value.includes("127.0.0.1");
@@ -22,7 +24,8 @@ function readConfiguredOrigin() {
     toOrigin(process.env.APP_URL) ||
     toOrigin(process.env.RAILWAY_PUBLIC_DOMAIN) ||
     toOrigin(process.env.RAILWAY_STATIC_URL) ||
-    toOrigin(process.env.RAILWAY_SERVICE_DIGQUEUE_URL);
+    toOrigin(process.env.RAILWAY_SERVICE_DIGQUEUE_URL) ||
+    (process.env.NODE_ENV === "production" ? HARDCODED_PROD_FALLBACK_ORIGIN : null);
   if (explicit) return explicit;
   return null;
 }
