@@ -1060,7 +1060,80 @@ export function ListenInboxClient({
           ) : null}
 
           {showQueueFilters ? (
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <>
+              <details className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-2 sm:hidden">
+                <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+                  Filters & Bulk
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <div className="inline-flex flex-wrap items-center gap-1">
+                    <button type="button" onClick={() => { setStateView("all"); setCursor(0); }} className={filterButtonClass(stateView === "all")} aria-pressed={stateView === "all"}>All ({queueFilterCounts.all})</button>
+                    <button type="button" onClick={() => { setStateView("needs_review"); setCursor(0); }} className={filterButtonClass(stateView === "needs_review")} aria-pressed={stateView === "needs_review"}>Needs Review ({queueFilterCounts.needsReview})</button>
+                    <button type="button" onClick={() => { setStateView("reviewed"); setCursor(0); }} className={filterButtonClass(stateView === "reviewed")} aria-pressed={stateView === "reviewed"}>Reviewed ({queueFilterCounts.reviewed})</button>
+                    <button type="button" onClick={() => { setStateView("played"); setCursor(0); }} className={filterButtonClass(stateView === "played")} aria-pressed={stateView === "played"}>Played ({queueFilterCounts.played})</button>
+                  </div>
+                  <div className="inline-flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => { setHideReviewed((prev) => !prev); setCursor(0); }}
+                      className={filterButtonClass(hideReviewed)}
+                      aria-pressed={hideReviewed}
+                    >
+                      Exclude reviewed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setHideAlreadyPlayed((prev) => !prev); setCursor(0); }}
+                      className={filterButtonClass(hideAlreadyPlayed)}
+                      aria-pressed={hideAlreadyPlayed}
+                    >
+                      Exclude played
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdvancedFiltersOpen((prev) => !prev)}
+                      className={filterButtonClass(advancedFiltersOpen)}
+                      aria-expanded={advancedFiltersOpen}
+                    >
+                      {advancedFiltersOpen ? "Hide" : "More"} filters
+                      {hasAdvancedFiltersActive ? " (active)" : ""}
+                    </button>
+                  </div>
+                  {advancedFiltersOpen ? (
+                    <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-2">
+                      <div className="inline-flex flex-wrap items-center gap-1">
+                        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
+                        <button type="button" onClick={() => setSourceFilter("all")} className={filterButtonClass(sourceFilter === "all")} aria-pressed={sourceFilter === "all"}>All ({sourceFilterCounts.all})</button>
+                        <button type="button" onClick={() => setSourceFilter("saved")} className={filterButtonClass(sourceFilter === "saved")} aria-pressed={sourceFilter === "saved"}>Saved ({sourceFilterCounts.saved})</button>
+                        <button type="button" onClick={() => setSourceFilter("wishlisted")} className={filterButtonClass(sourceFilter === "wishlisted")} aria-pressed={sourceFilter === "wishlisted"}>Wishlisted ({sourceFilterCounts.wishlisted})</button>
+                      </div>
+                      <div className="inline-flex flex-wrap items-center gap-1">
+                        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
+                        <button type="button" onClick={() => setVideoFilter("all")} className={filterButtonClass(videoFilter === "all")} aria-pressed={videoFilter === "all"}>Any ({videoFilterCounts.all})</button>
+                        <button type="button" onClick={() => setVideoFilter("playable")} className={filterButtonClass(videoFilter === "playable")} aria-pressed={videoFilter === "playable"}>Playable ({videoFilterCounts.playable})</button>
+                        <button type="button" onClick={() => setVideoFilter("no_video_or_private")} className={filterButtonClass(videoFilter === "no_video_or_private")} aria-pressed={videoFilter === "no_video_or_private"}>No video/private ({videoFilterCounts.noVideoOrPrivate})</button>
+                      </div>
+                      <div className="inline-flex flex-wrap items-center gap-1">
+                        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
+                        <button type="button" onClick={() => setGlobalPlaybackMode("in_order")} className={filterButtonClass(playbackMode === "in_order")} aria-pressed={playbackMode === "in_order"}><ListOrdered className="mr-1 inline h-3 w-3" />In Order</button>
+                        <button type="button" onClick={() => setGlobalPlaybackMode("shuffle")} className={filterButtonClass(playbackMode === "shuffle")} aria-pressed={playbackMode === "shuffle"}><Shuffle className="mr-1 inline h-3 w-3" />Shuffle</button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button type="button" size="sm" variant="outline" className="w-full justify-center" onClick={selectVisibleTracks} disabled={visibleRows.length === 0}>
+                      <CheckSquare className="h-3.5 w-3.5" />
+                      Select all
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" className="w-full justify-center" onClick={clearSelectedTracks} disabled={selectedTrackIds.length === 0}>
+                      <X className="h-3.5 w-3.5" />
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              </details>
+
+              <div className="hidden flex-wrap items-center gap-2 text-xs sm:flex">
               <div className="inline-flex flex-wrap items-center gap-1">
                 <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">View</span>
                 <button
@@ -1177,7 +1250,8 @@ export function ListenInboxClient({
                   </div>
                 </div>
               ) : null}
-            </div>
+              </div>
+            </>
           ) : null}
         </div>
         {!showQueueFilters ? (
@@ -1191,7 +1265,7 @@ export function ListenInboxClient({
             <p className="text-xs text-[var(--color-muted)]">{activeWishlistSourceMeta.description}</p>
           </div>
         ) : null}
-        <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-xs sm:flex sm:flex-wrap sm:items-center">
+        <div className="mt-1.5 hidden text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-1.5">
           <Button
             type="button"
             size="sm"

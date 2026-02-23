@@ -76,14 +76,14 @@ export default async function SettingsPage({
   const youtubeError = sanitizeYoutubeErrorMessage(params.youtube_error);
 
   return (
-    <main className="mx-auto max-w-[980px] px-4 py-6 md:px-8">
+    <main className="pb-player-safe mx-auto max-w-[980px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
       <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="text-sm text-[var(--color-muted)]">Control integrations, exports, and playback behavior without breaking your digging flow.</p>
         </div>
-        <form action={clearSessionAction}>
-          <Button type="submit" variant="outline" className="px-3 py-1.5 text-xs">Sign Out</Button>
+        <form action={clearSessionAction} className="w-full sm:w-auto">
+          <Button type="submit" variant="outline" className="w-full px-3 py-1.5 text-xs sm:w-auto">Sign Out</Button>
         </form>
       </header>
 

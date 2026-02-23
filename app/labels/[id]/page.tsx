@@ -60,7 +60,7 @@ export default async function LabelPage({
     : "Inactive";
 
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8">
+    <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{data.label.name}</h1>

@@ -40,7 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Suspense fallback={<div className="h-12 border-b border-[var(--color-border-soft)]" />}>
           <ChromeShell />
         </Suspense>
-        <div className="pb-36 md:pb-24">{children}</div>
+        {children}
       </body>
     </html>
   );

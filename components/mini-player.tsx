@@ -175,6 +175,7 @@ export function MiniPlayer() {
   const releaseDetailsCacheRef = useRef(new Map<number, ReleaseDetailsApiResponse>());
   const releaseLinksCacheRef = useRef(new Map<number, FinderLinksApiResponse>());
   const tabIdRef = useRef(`tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+  const wasPlayingBeforeHiddenRef = useRef(false);
   const [current, setCurrent] = useState<QueueApiItem | null>(null);
   const [history, setHistory] = useState<QueueApiItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -682,10 +683,15 @@ export function MiniPlayer() {
                 playerRef.current?.pauseVideo();
                 return;
               }
+              wasPlayingBeforeHiddenRef.current = false;
               setPlaying(true);
             }
             if (event.data === window.YT.PlayerState.PAUSED) {
               setPlaying(false);
+              if (typeof document !== "undefined" && document.hidden) {
+                wasPlayingBeforeHiddenRef.current = true;
+                return;
+              }
               clearPlaybackOwnerIfOwned();
             }
           },
@@ -714,6 +720,105 @@ export function MiniPlayer() {
       window.onYouTubeIframeAPIReady = undefined;
     };
   }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, loadNext]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (typeof document === "undefined") return;
+      if (document.hidden) {
+        wasPlayingBeforeHiddenRef.current = playing;
+        return;
+      }
+      const shouldResume = wasPlayingBeforeHiddenRef.current;
+      wasPlayingBeforeHiddenRef.current = false;
+      if (!shouldResume || !isIOS || !playerRef.current || !ready || !currentRef.current) return;
+      if (!ensurePlaybackOwnership(false)) return;
+      window.setTimeout(() => {
+        playerRef.current?.playVideo();
+      }, 120);
+    };
+
+    const onPageHide = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        wasPlayingBeforeHiddenRef.current = playing;
+        return;
+      }
+      clearPlaybackOwnerIfOwned();
+    };
+
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      if (!isIOS || !ready || !playerRef.current || !currentRef.current) return;
+      if (!wasPlayingBeforeHiddenRef.current) return;
+      if (!ensurePlaybackOwnership(false)) return;
+      window.setTimeout(() => {
+        playerRef.current?.playVideo();
+      }, 120);
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, isIOS, playing, ready]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const mediaSession = navigator.mediaSession;
+
+    if (typeof window !== "undefined" && "MediaMetadata" in window) {
+      mediaSession.metadata = current
+        ? new MediaMetadata({
+            title: current.track?.title || "Now Playing",
+            artist: current.track?.artistsText || current.release?.artist || "Unknown artist",
+            album: current.release?.title || "",
+            artwork: current.release?.thumbUrl
+              ? [{ src: current.release.thumbUrl, sizes: "128x128", type: "image/jpeg" }]
+              : undefined,
+          })
+        : null;
+    }
+    mediaSession.playbackState = playing ? "playing" : "paused";
+
+    const setHandler = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
+      try {
+        mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Some actions are not supported on all browsers/platforms.
+      }
+    };
+
+    setHandler("play", () => {
+      if (!playerRef.current) return;
+      if (!ensurePlaybackOwnership()) return;
+      playerRef.current.playVideo();
+    });
+    setHandler("pause", () => {
+      playerRef.current?.pauseVideo();
+    });
+    setHandler("nexttrack", () => {
+      void loadNext("played");
+    });
+    setHandler("previoustrack", () => {
+      loadPrev();
+    });
+
+    return () => {
+      setHandler("play", null);
+      setHandler("pause", null);
+      setHandler("nexttrack", null);
+      setHandler("previoustrack", null);
+    };
+  }, [
+    current,
+    ensurePlaybackOwnership,
+    loadNext,
+    loadPrev,
+    playing,
+  ]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -1202,7 +1307,7 @@ export function MiniPlayer() {
   }, []);
 
   const iconButtonClass =
-    "h-9 w-9 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] p-0 text-[var(--color-text)] hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0";
+    "h-8 w-8 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] p-0 text-[var(--color-text)] hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0 sm:h-9 sm:w-9";
   const tooltipClass =
     "pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-56 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
 
@@ -1409,10 +1514,10 @@ export function MiniPlayer() {
           ) : null}
         </div>
       ) : null}
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-start gap-2 md:items-center">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-start gap-1.5 md:items-center md:gap-2">
         <div
           id="digqueue-youtube-player"
-          className="h-16 w-28 overflow-hidden rounded-md border border-[var(--color-border-soft)] md:h-20 md:w-36"
+          className="h-14 w-24 overflow-hidden rounded-md border border-[var(--color-border-soft)] sm:h-16 sm:w-28 md:h-20 md:w-36"
         />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold text-[var(--color-text)] sm:text-base md:text-lg">
@@ -1460,7 +1565,54 @@ export function MiniPlayer() {
           </div>
         </div>
         <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:w-auto md:overflow-visible md:pb-0">
-          <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
+          <details className="shrink-0 md:hidden">
+            <summary className="cursor-pointer list-none rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] px-3 py-1 text-xs text-[var(--color-muted)]">
+              More
+            </summary>
+            <div className="mt-2 flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={expandedOpen ? "secondary" : "ghost"}
+                className={iconButtonClass}
+                onClick={() => setExpandedOpen((prev) => !prev)}
+                disabled={!current}
+                title={expandedOpen ? "Collapse release details" : "Expand release details"}
+                aria-label={expandedOpen ? "Collapse release details" : "Expand release details"}
+              >
+                {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={queueOpen ? "secondary" : "ghost"}
+                className={iconButtonClass}
+                onClick={() => {
+                  const next = !queueOpen;
+                  setQueueOpen(next);
+                  if (next) void fetchQueueItems();
+                }}
+                title="Open queue"
+                aria-label="Open queue"
+              >
+                <ListOrdered className="h-3.5 w-3.5" />
+              </Button>
+              {current?.youtubeVideoId ? (
+                <a
+                  href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
+                  title="Open on YouTube"
+                  aria-label="Open on YouTube"
+                >
+                  <Youtube className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
+            </div>
+          </details>
+
+          <div className="hidden shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1 md:flex">
             <span className="group relative inline-flex">
               <Button
                 type="button"
@@ -1504,13 +1656,13 @@ export function MiniPlayer() {
                   type="button"
                   size="sm"
                   variant="secondary"
-                  className="h-10 w-10 rounded-full border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-0"
+                  className="h-9 w-9 rounded-full border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-0 sm:h-10 sm:w-10"
                   onClick={() => void markReviewed()}
                   disabled={!current?.track?.id || todoLoading !== null}
                   title="Mark current track reviewed and move to next track"
                   aria-label="Mark current track reviewed and move to next track"
                 >
-                  {todoLoading === "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
+                  {todoLoading === "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </Button>
                 <span role="tooltip" className={tooltipClass}>Mark current track reviewed and move to next track</span>
               </span>
@@ -1521,7 +1673,7 @@ export function MiniPlayer() {
                   type="button"
                   size="sm"
                   variant="secondary"
-                  className="h-10 w-10 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-amber-100 hover:bg-amber-500/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-0"
+                  className="h-9 w-9 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-amber-100 hover:bg-amber-500/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-0 sm:h-10 sm:w-10"
                   onClick={() => void markEntireReleaseReviewed()}
                   disabled={!current?.release?.id || todoLoading !== null}
                   title="Mark entire release reviewed and skip to next release"
@@ -1530,7 +1682,7 @@ export function MiniPlayer() {
                   {todoLoading === "reviewed_release" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <CheckCheck className="h-5 w-5" />
+                    <CheckCheck className="h-4 w-4 sm:h-5 sm:w-5" />
                   )}
                 </Button>
                 <span role="tooltip" className={tooltipClass}>Mark entire release reviewed and skip to next release</span>
@@ -1571,7 +1723,7 @@ export function MiniPlayer() {
                 type="button"
                 size="sm"
                 variant={current?.release?.wishlist ? "secondary" : "ghost"}
-                className={`h-10 w-10 ${iconButtonClass} ${
+                className={`h-9 w-9 sm:h-10 sm:w-10 ${iconButtonClass} ${
                   current?.release?.wishlist
                     ? "border-amber-500/60 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 hover:text-amber-100"
                     : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
@@ -1601,12 +1753,12 @@ export function MiniPlayer() {
           </div>
         </div>
         {current?.youtubeVideoId ? (
-          <span className="group relative inline-flex shrink-0">
+          <span className="group relative hidden shrink-0 md:inline-flex">
             <a
               href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] text-[var(--color-text)] hover:bg-[var(--color-surface2)] sm:h-9 sm:w-9"
               title="Open on YouTube"
               aria-label="Open on YouTube"
             >
@@ -1616,7 +1768,7 @@ export function MiniPlayer() {
           </span>
         ) : null}
         {currentYoutubeUrl && isIOS ? (
-          <span className="group relative inline-flex shrink-0">
+          <span className="group relative hidden shrink-0 md:inline-flex">
             <Button
               type="button"
               size="sm"
@@ -1666,7 +1818,7 @@ export function MiniPlayer() {
           <Button
             variant="secondary"
             size="sm"
-            className="h-10 w-10 rounded-full border border-[var(--color-border)] bg-[var(--color-accent)] p-0 text-black hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0"
+            className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-accent)] p-0 text-black hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0 sm:h-10 sm:w-10"
             onClick={() => {
               if (!playerRef.current) return;
               if (!current) {

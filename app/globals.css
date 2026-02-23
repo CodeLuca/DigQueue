@@ -140,3 +140,13 @@ input[type="reset"] {
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-accent) 32%, transparent);
   }
 }
+
+.pb-player-safe {
+  padding-bottom: calc(12rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .pb-player-safe {
+    padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  }
+}

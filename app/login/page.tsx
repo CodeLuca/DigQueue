@@ -12,7 +12,7 @@ export default async function LoginPage({
   const startInRegisterMode = mode === "register";
 
   return (
-    <main className="mx-auto min-h-[calc(100vh-11rem)] max-w-[980px] px-4 py-8 md:px-8">
+    <main className="mx-auto min-h-[calc(100dvh-10rem)] max-w-[980px] px-3 py-6 sm:px-4 md:px-8 md:py-8">
       <section className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-low)] reveal sm:p-6 md:p-8">
         <div className="pointer-events-none absolute right-[-110px] top-[-90px] h-[220px] w-[220px] rounded-full bg-[radial-gradient(circle,_rgba(216,169,96,0.2),_transparent_66%)]" />
         <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">Login or Create Account</h1>

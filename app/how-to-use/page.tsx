@@ -45,7 +45,7 @@ export default async function HowToUsePage() {
   }
 
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8 md:py-8">
+    <main className="mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-8">
       <section className="rounded-xl border border-[var(--color-border)] bg-[linear-gradient(135deg,rgba(245,158,11,0.14),transparent_48%),var(--color-surface2)] p-4 md:p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">How To Use DigQueue</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">Learn The Interface Once</h1>
@@ -69,10 +69,10 @@ export default async function HowToUsePage() {
         <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
           Demo page note: sample controls below are disabled and shown for orientation only.
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/?tab=step-1"><Button size="sm" variant="outline">Open Sources</Button></Link>
-          <Link href="/?tab=step-2"><Button size="sm" variant="outline">Open Listening Station</Button></Link>
-          <Link href="/?tab=library"><Button size="sm" variant="outline">Open Library</Button></Link>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Sources</Button></Link>
+          <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Listening Station</Button></Link>
+          <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Library</Button></Link>
         </div>
       </section>
 

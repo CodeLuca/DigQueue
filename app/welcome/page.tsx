@@ -27,7 +27,7 @@ export default async function WelcomePage() {
   const isLoggedIn = Boolean(userId);
 
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-8 md:px-8">
+    <main className="mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-8 md:py-8">
       <section className="marketing-hero reveal">
         <div className="max-w-3xl">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-5xl">
@@ -42,15 +42,15 @@ export default async function WelcomePage() {
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
             {isLoggedIn ? (
               <>
-                <Link href="/?tab=step-1"><Button type="button">Open Sources</Button></Link>
-                <Link href="/?tab=step-2"><Button type="button" variant="outline">Open Listening Station</Button></Link>
-                <Link href="/?tab=library"><Button type="button" variant="outline">Open Library</Button></Link>
-                <Link href="/how-to-use"><Button type="button" variant="ghost">Full How-To</Button></Link>
+                <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" type="button">Open Sources</Button></Link>
+                <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Listening Station</Button></Link>
+                <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Library</Button></Link>
+                <Link className="w-full sm:w-auto" href="/how-to-use"><Button className="w-full sm:w-auto" type="button" variant="ghost">Full How-To</Button></Link>
               </>
             ) : (
               <>
-                <Link href="/login"><Button type="button">Login</Button></Link>
-                <Link href="/login?mode=register"><Button type="button" variant="outline">Register</Button></Link>
+                <Link className="w-full sm:w-auto" href="/login"><Button className="w-full sm:w-auto" type="button">Login</Button></Link>
+                <Link className="w-full sm:w-auto" href="/login?mode=register"><Button className="w-full sm:w-auto" type="button" variant="outline">Register</Button></Link>
               </>
             )}
           </div>

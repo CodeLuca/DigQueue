@@ -285,7 +285,7 @@ export default async function HomePage({
   const ActiveTabIcon = activeMeta.icon;
   const activeGuide = tabGuide[activeTab];
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-4 md:px-8 md:py-6">
+    <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-4 sm:px-4 md:px-8 md:py-6">
       <KeyboardShortcuts />
 
       <header className={`mb-5 rounded-xl border border-[var(--color-border)] p-4 reveal ${activeGuide.shellClass}`}>
