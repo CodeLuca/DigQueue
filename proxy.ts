@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 const PUBLIC_PATHS = new Set([
@@ -14,42 +15,6 @@ const PUBLIC_PATHS = new Set([
   "/reset-password",
 ]);
 const PUBLIC_API_PREFIXES: string[] = [];
-
-function isLocalHost(hostOrOrigin: string) {
-  const value = hostOrOrigin.toLowerCase();
-  return value.includes("localhost") || value.includes("127.0.0.1");
-}
-
-function toOrigin(value: string | undefined | null, defaultProto = "https") {
-  const raw = value?.trim();
-  if (!raw) return null;
-  const withProto = /^[a-z]+:\/\//i.test(raw) ? raw : `${defaultProto}://${raw}`;
-  try {
-    return new URL(withProto).origin;
-  } catch {
-    return null;
-  }
-}
-
-function resolveProxyOrigin(request: NextRequest) {
-  const configuredOrigin =
-    toOrigin(process.env.NEXT_PUBLIC_APP_URL) ||
-    toOrigin(process.env.APP_URL) ||
-    toOrigin(process.env.RAILWAY_PUBLIC_DOMAIN) ||
-    toOrigin(process.env.RAILWAY_STATIC_URL) ||
-    toOrigin(process.env.RAILWAY_SERVICE_DIGQUEUE_URL);
-  if (configuredOrigin) return configuredOrigin;
-
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const host = forwardedHost || request.headers.get("host") || "";
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  if (host) {
-    const proto = forwardedProto || (isLocalHost(host) ? "http" : "https");
-    const origin = toOrigin(`${proto}://${host}`);
-    if (origin) return origin;
-  }
-  return request.nextUrl.origin;
-}
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true;
@@ -65,7 +30,7 @@ function isPublicApiPath(pathname: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const appOrigin = resolveProxyOrigin(request);
+  const appOrigin = resolveRequestAppOrigin(request);
 
   // Some OAuth configurations may return the auth code to "/".
   // Always funnel this through our dedicated callback handler.
