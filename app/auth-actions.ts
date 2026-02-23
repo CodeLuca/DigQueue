@@ -6,8 +6,8 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function safeNext(value: unknown) {
   const raw = typeof value === "string" ? value : "";
-  if (!raw.startsWith("/")) return "/welcome";
-  if (raw.startsWith("//")) return "/welcome";
+  if (!raw.startsWith("/")) return "/?tab=step-2";
+  if (raw.startsWith("//")) return "/?tab=step-2";
   return raw;
 }
 

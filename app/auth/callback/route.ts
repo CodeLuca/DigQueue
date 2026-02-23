@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function safeNext(value: string | null) {
-  if (!value) return "/";
-  if (!value.startsWith("/")) return "/";
-  if (value.startsWith("//")) return "/";
+  if (!value) return "/?tab=step-2";
+  if (!value.startsWith("/")) return "/?tab=step-2";
+  if (value.startsWith("//")) return "/?tab=step-2";
   return value;
 }
 
