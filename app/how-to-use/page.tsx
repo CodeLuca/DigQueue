@@ -114,7 +114,7 @@ export default async function HowToUsePage() {
               <p className="font-medium">What to do first</p>
               <p className="text-[var(--color-muted)]">Add 1-3 sources (labels or artists), activate them, then go to Listening Station.</p>
               <p className="mt-1 text-[var(--color-muted)]">
-                Label sources focus on a label catalog. Artist sources follow one producer across multiple labels.
+                Label sources focus on a label catalog. Artist sources follow one artist across multiple labels and projects.
               </p>
             </div>
           </CardContent>
@@ -191,9 +191,9 @@ export default async function HowToUsePage() {
             <CardTitle>Queue Focus: Keep It Tight</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>Keep the queue useful by tightening source quality:</p>
-            <p><span className="font-medium">Pause or deactivate</span> sources that drift away from your taste.</p>
-            <p><span className="font-medium">Review full releases</span> when you already know the catalog quality.</p>
+            <p>Keep the queue useful with simple cleanup:</p>
+            <p><span className="font-medium">Pause or deactivate</span> sources you do not want in rotation.</p>
+            <p><span className="font-medium">Review full releases</span> when you have enough context to decide quickly.</p>
             <p><span className="font-medium">Use retry + error panel</span> to clear blocked sources quickly.</p>
           </CardContent>
         </Card>
@@ -206,12 +206,12 @@ export default async function HowToUsePage() {
             <CardTitle>Find New Sources From Tracks You Already Like</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>If you do not know which sources to add yet, start from music you already trust.</p>
+            <p>If you do not know which sources to add yet, start from music you already like.</p>
             <p>1. Open a track/release you like in Listening Station or Library.</p>
             <p>2. Use the release action to <span className="font-medium">Add + activate source</span>.</p>
             <p>3. Go to Sources and run ingestion on that new source.</p>
             <p className="text-[var(--color-muted)]">
-              This is the fastest way to grow your source universe without guessing random names.
+              This is the fastest way to grow your source list without guessing random names.
             </p>
           </CardContent>
         </Card>
@@ -259,7 +259,7 @@ export default async function HowToUsePage() {
             <p>2. Open Listening Station and press Play Now on a track.</p>
             <p>3. Use review buttons while listening.</p>
             <p>4. Check Library → Needs Review and clear leftovers.</p>
-            <p>5. Return to Sources and add one more high-signal source.</p>
+            <p>5. Return to Sources and add one more source.</p>
             <div className="flex flex-wrap gap-2">
               <Link href="/settings">
                 <Button size="sm" variant="outline"><Settings className="mr-1 h-3.5 w-3.5" />Settings</Button>

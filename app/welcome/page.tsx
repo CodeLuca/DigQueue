@@ -12,12 +12,12 @@ const highlights = [
   },
   {
     title: "Stay in flow while listening",
-    description: "Queue playback, review controls, and lightweight filters keep triage fast while you listen.",
+    description: "Queue playback, review controls, and lightweight filters help you sort tracks quickly while listening.",
     icon: Inbox,
   },
   {
-    title: "Own your signal",
-    description: "Wishlist and listened states stay structured so recommendations get better over time.",
+    title: "Keep your preferences",
+    description: "Wishlist and listening actions stay organized so recommendations improve over time.",
     icon: Sparkles,
   },
 ];
@@ -34,10 +34,10 @@ export default async function WelcomePage() {
             Welcome to DigQueue
           </h1>
           <p className="mt-4 max-w-2xl text-sm text-[var(--color-muted)] md:text-base">
-            This is your starting point after login. Use it as the quick operating guide, then jump into Sources, Listening Station, and Library.
+            This is your starting page. Use it as a quick guide, then jump into Sources, Listening Station, and Library.
           </p>
           <p className="mt-2 max-w-2xl text-sm text-[var(--color-muted)]">
-            Labels give catalog-driven digging. Artists let you follow a producer across labels and aliases.
+            Labels give catalog-driven digging. Artist sources let you follow one artist across labels, projects, and aliases.
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
             {isLoggedIn ? (
@@ -73,8 +73,8 @@ export default async function WelcomePage() {
             <CardTitle className="inline-flex items-center gap-2"><Disc3 className="h-4 w-4 text-[var(--color-accent)]" />Sources First</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>1. Add 1-3 high-signal label/artist sources.</p>
-            <p>2. Keep only sources you trust active.</p>
+            <p>1. Start with 1-3 label or artist sources.</p>
+            <p>2. Keep active only the sources you want in your queue.</p>
             <p>3. Run sync in Queue Workbench and resolve source errors quickly.</p>
           </CardContent>
         </Card>
@@ -86,7 +86,7 @@ export default async function WelcomePage() {
             <p>Use play controls to keep momentum.</p>
             <p><span className="font-medium">Single check:</span> review track.</p>
             <p><span className="font-medium">Double check:</span> review full release.</p>
-            <p><span className="font-medium">Save track:</span> keep personal signal for Library + recommendations.</p>
+            <p><span className="font-medium">Save track:</span> keep tracks you want to revisit in Library and recommendations.</p>
           </CardContent>
         </Card>
         <Card>
@@ -118,9 +118,9 @@ export default async function WelcomePage() {
             ) : (
               <>
                 <p>1. Create your account.</p>
-                <p>2. Login and land back here.</p>
+                <p>2. Log in and return to this page.</p>
                 <p>3. Connect Discogs once in Settings.</p>
-                <p>4. Start with 1-3 strong sources.</p>
+                <p>4. Start with 1-3 sources.</p>
               </>
             )}
           </CardContent>
@@ -129,7 +129,7 @@ export default async function WelcomePage() {
 
       <section className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
         <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <p className="inline-flex items-center gap-2 text-sm font-medium"><Heart className="h-4 w-4 text-[var(--color-accent)]" />Save Signal</p>
+          <p className="inline-flex items-center gap-2 text-sm font-medium"><Heart className="h-4 w-4 text-[var(--color-accent)]" />Save Tracks</p>
           <p className="mt-2 text-sm text-[var(--color-muted)]">Use saves intentionally. They directly shape what shows up again.</p>
         </article>
         <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
@@ -138,7 +138,7 @@ export default async function WelcomePage() {
         </article>
         <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <p className="inline-flex items-center gap-2 text-sm font-medium"><Sparkles className="h-4 w-4 text-[var(--color-accent)]" />Keep It Focused</p>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">Pause weak sources, review aggressively, and your queue quality stays high.</p>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">Pause sources that are not useful right now, keep reviewing, and your queue stays clean.</p>
         </article>
       </section>
     </main>
