@@ -3,9 +3,9 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const ACTIVE_TICK_MS = 1800;
-const IDLE_TICK_MS = 5000;
-const ERROR_TICK_MS = 8000;
+const ACTIVE_TICK_MS = 4000;
+const IDLE_TICK_MS = 7000;
+const ERROR_TICK_MS = 10000;
 const REFRESH_MIN_GAP_MS = 4500;
 
 type NextSourceResponse = {
@@ -24,6 +24,10 @@ export function LabelSyncDaemon() {
 
     const tick = async () => {
       if (!runningRef.current) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        window.setTimeout(tick, IDLE_TICK_MS);
+        return;
+      }
       try {
         const nextResponse = await fetch("/api/sources/next", { cache: "no-store" });
         if (!nextResponse.ok) {
@@ -37,11 +41,17 @@ export function LabelSyncDaemon() {
           return;
         }
 
-        await fetch("/api/worker/process", {
+        const processResponse = await fetch("/api/worker/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sourceId: nextSourceId }),
         });
+        if (!processResponse.ok) {
+          // Back off aggressively on mutation failures to avoid lock-step retry storms.
+          const backoff = processResponse.status === 429 ? ERROR_TICK_MS * 2 : ERROR_TICK_MS;
+          window.setTimeout(tick, backoff);
+          return;
+        }
 
         const now = Date.now();
         if ((pathname === "/" || pathname.startsWith("/labels/")) && now - lastRefreshAtRef.current > REFRESH_MIN_GAP_MS) {

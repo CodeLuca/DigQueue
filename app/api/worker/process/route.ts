@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const userId = await requireCurrentAppUserId();
   const rateLimited = await guardMutationRateLimit(userId, {
     bucket: "worker/process",
-    limit: 45,
+    limit: 240,
     windowSeconds: 60,
   });
   if (rateLimited) return rateLimited;
