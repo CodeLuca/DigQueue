@@ -182,6 +182,8 @@ export default async function HomePage({
     (label) => !label.tracksFullyLoaded && label.status !== "processing",
   ).length;
   const retryableActiveSourceCount = activeLabels.filter((label) => label.status === "error").length;
+  const showIngestionPanelOpen =
+    activeStatusCounts.processing > 0 || activeStatusCounts.error > 0 || retryableActiveSourceCount > 0;
   const queriedLabels = isLabelsTab
     ? data.labels.filter((label) => {
         if (!normalizedLabelQuery) return true;
@@ -462,71 +464,31 @@ export default async function HomePage({
                 <p><span className="font-medium text-[var(--color-text)]">Label source:</span> pull from a label catalog for tighter stylistic consistency.</p>
                 <p className="mt-1"><span className="font-medium text-[var(--color-text)]">Artist source:</span> follow a producer across multiple labels/releases for broader discovery.</p>
               </div>
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Ingestion Pipeline</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <Badge>Processing {activeStatusCounts.processing}</Badge>
-                  <Badge>Queued {activeStatusCounts.queued}</Badge>
-                  <Badge className={activeStatusCounts.error > 0 ? "border-rose-500/50 bg-rose-500/15 text-rose-200" : ""}>Errored {activeStatusCounts.error}</Badge>
-                  <Badge>Complete {activeStatusCounts.complete}</Badge>
-                </div>
-                <p className="mt-2 text-xs text-[var(--color-muted)]">
-                  These Processing/Queued counts are source ingestion jobs (labels/artists), not wishlist sync.
-                </p>
-                <details className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
-                  <summary className="cursor-pointer select-none text-[var(--color-text)]">
-                    {activeStatusCounts.processing > 0
-                      ? `Auto-sync is running on this page (${activeStatusCounts.processing} active source ${activeStatusCounts.processing === 1 ? "job" : "jobs"}).`
-                      : "Auto-sync is idle right now on this page."}
-                  </summary>
-                  <div className="mt-2">
-                    {processingSourceNames.length > 0 ? (
-                      <p className="text-[var(--color-muted)]">Currently processing: {processingSourceNames.join(", ")}</p>
-                    ) : null}
-                    {processingSourceProgress.length > 0 ? (
-                      <div className="mt-2 space-y-1">
-                        {processingSourceProgress.map((source) => (
-                          <p key={source.id} className="text-[var(--color-muted)]">
-                            {source.name}: page {source.currentPage}/{source.totalPages}, releases {source.fetchedReleaseCount}/{source.loadedReleaseCount} fetched
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-                    {syncTelemetry ? (
-                      <div className="mt-2 space-y-1">
-                        <p className="text-[var(--color-text)]">
-                          Now syncing: {syncTelemetry.sourceName} ({syncTelemetry.sourceKind})
-                        </p>
-                        {syncTelemetry.message ? (
-                          <p className="text-[var(--color-muted)]">{syncTelemetry.message}</p>
-                        ) : null}
-                        {syncTelemetry.releaseTitle ? (
-                          <p className="text-[var(--color-muted)]">Release: {syncTelemetry.releaseTitle}</p>
-                        ) : null}
-                        {syncTelemetry.trackTitle ? (
-                          <p className="text-[var(--color-muted)]">
-                            Track now: {syncTelemetry.trackTitle}
-                            {typeof syncTelemetry.trackIndex === "number" && typeof syncTelemetry.trackTotal === "number"
-                              ? ` (${syncTelemetry.trackIndex}/${syncTelemetry.trackTotal})`
-                              : ""}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
+              <details className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5" open={showIngestionPanelOpen}>
+                <summary className="cursor-pointer list-none">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Ingestion Control Center</p>
+                      <p className="mt-1 text-xs text-[var(--color-muted)]">
+                        {activeStatusCounts.processing > 0
+                          ? "Sync is active. Use quick actions below if you need to adjust flow."
+                          : "Sync is idle. Queue active sources to keep tracks flowing into Listening Station."}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge className={activeStatusCounts.processing > 0 ? "border-sky-500/60 bg-sky-500/15 text-sky-200" : ""}>
+                        {activeStatusCounts.processing > 0 ? "Running" : "Idle"} {activeStatusCounts.processing}
+                      </Badge>
+                      <Badge>Queued {activeStatusCounts.queued}</Badge>
+                      <Badge className={activeStatusCounts.error > 0 ? "border-rose-500/50 bg-rose-500/15 text-rose-200" : ""}>
+                        Errors {activeStatusCounts.error}
+                      </Badge>
+                      <Badge className={activeStatusCounts.complete > 0 ? "border-emerald-500/50 bg-emerald-500/12 text-emerald-200" : ""}>
+                        Complete {activeStatusCounts.complete}
+                      </Badge>
+                    </div>
                   </div>
-                </details>
-                {hasDiscogs ? (
-                  <WishlistSyncStatus initialStatus={wantsSyncStatus} />
-                ) : (
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync status.</p>
-                )}
-              </div>
-
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Quick Controls</p>
-                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  Use these first if you are unsure. They apply safe defaults and keep processing moving.
-                </p>
+                </summary>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <form action={queueActiveSourcesBatchAction}>
                     <input type="hidden" name="limit" value="5" />
@@ -580,7 +542,54 @@ export default async function HomePage({
                     </FormSubmitButton>
                   </form>
                 </div>
-              </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
+                  <span>Source ingestion only (separate from wishlist sync).</span>
+                  {hasDiscogs ? <WishlistSyncStatus initialStatus={wantsSyncStatus} compact /> : null}
+                </div>
+                <details className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
+                  <summary className="cursor-pointer select-none text-[var(--color-text)]">
+                    {activeStatusCounts.processing > 0
+                      ? `Live progress (${activeStatusCounts.processing} active source ${activeStatusCounts.processing === 1 ? "job" : "jobs"})`
+                      : "Live progress (idle)"}
+                  </summary>
+                  <div className="mt-2">
+                    {processingSourceNames.length > 0 ? (
+                      <p className="text-[var(--color-muted)]">Currently processing: {processingSourceNames.join(", ")}</p>
+                    ) : null}
+                    {processingSourceProgress.length > 0 ? (
+                      <div className="mt-2 space-y-1">
+                        {processingSourceProgress.map((source) => (
+                          <p key={source.id} className="text-[var(--color-muted)]">
+                            {source.name}: page {source.currentPage}/{source.totalPages}, releases {source.fetchedReleaseCount}/{source.loadedReleaseCount} fetched
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                    {syncTelemetry ? (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-[var(--color-text)]">
+                          Now syncing: {syncTelemetry.sourceName} ({syncTelemetry.sourceKind})
+                        </p>
+                        {syncTelemetry.message ? (
+                          <p className="text-[var(--color-muted)]">{syncTelemetry.message}</p>
+                        ) : null}
+                        {syncTelemetry.releaseTitle ? (
+                          <p className="text-[var(--color-muted)]">Release: {syncTelemetry.releaseTitle}</p>
+                        ) : null}
+                        {syncTelemetry.trackTitle ? (
+                          <p className="text-[var(--color-muted)]">
+                            Track now: {syncTelemetry.trackTitle}
+                            {typeof syncTelemetry.trackIndex === "number" && typeof syncTelemetry.trackTotal === "number"
+                              ? ` (${syncTelemetry.trackIndex}/${syncTelemetry.trackTotal})`
+                              : ""}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </details>
+                {!hasDiscogs ? <p className="mt-1 text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync status.</p> : null}
+              </details>
               <details className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3" open={!useSimpleSourcesView}>
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">
                   Advanced options
