@@ -267,6 +267,9 @@ export function MiniPlayer() {
     });
     const body = (await response.json().catch(() => null)) as TodoApiResponse | null;
     if (!response.ok || !body?.ok) {
+      if (response.status === 401) {
+        throw new Error("Session expired. Please log in again.");
+      }
       throw new Error(body?.error || "Unable to update track.");
     }
     return body;
@@ -412,6 +415,8 @@ export function MiniPlayer() {
         return;
       }
       await loadNext("played");
+    } catch (error) {
+      setActionNotice(error instanceof Error ? error.message : "Unable to update track.");
     } finally {
       setTodoLoading(null);
     }
@@ -474,6 +479,8 @@ export function MiniPlayer() {
           },
         }),
       );
+    } catch (error) {
+      setActionNotice(error instanceof Error ? error.message : "Unable to update track.");
     } finally {
       setTodoLoading(null);
     }
