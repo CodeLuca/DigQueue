@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function safeNext(value: string | null) {
@@ -33,6 +34,11 @@ export async function GET(request: Request) {
   const user = userData.user;
   if (!user?.id || !user?.email) {
     return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent("Unable to resolve user session.")}`, requestUrl.origin));
+  }
+  try {
+    await ensureDefaultSourcesForUser(user.id);
+  } catch {
+    // Non-blocking: OAuth callback should still complete even if source bootstrap fails.
   }
 
   return NextResponse.redirect(new URL(nextPath, requestUrl.origin));

@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
 
 function safeNext(value: unknown) {
   const raw = typeof value === "string" ? value : "";
@@ -75,6 +76,11 @@ export async function loginWithPasswordAction(formData: FormData) {
   if (error || !data.user) {
     redirect(withAuthQuery("/login", { next: nextPath, email, error: friendlyAuthError(error?.message || "", "Login failed.") }));
   }
+  try {
+    await ensureDefaultSourcesForUser(data.user.id);
+  } catch {
+    // Non-blocking: login should still work if bootstrap source insert fails.
+  }
   redirect(nextPath);
 }
 
@@ -109,6 +115,11 @@ export async function registerWithPasswordAction(formData: FormData) {
   }
 
   if (data.session?.user) {
+    try {
+      await ensureDefaultSourcesForUser(data.session.user.id);
+    } catch {
+      // Non-blocking: account creation should still complete if source bootstrap fails.
+    }
     redirect(nextPath);
   }
 
