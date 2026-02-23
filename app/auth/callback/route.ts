@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
+import { resolvePostAuthRedirect } from "@/lib/post-auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function safeNext(value: string | null) {
@@ -29,17 +30,18 @@ export async function GET(request: Request) {
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) {
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(userError.message)}`, requestUrl.origin));
+    const fallbackDestination = await resolvePostAuthRedirect(nextPath);
+    return NextResponse.redirect(new URL(fallbackDestination, requestUrl.origin));
   }
   const user = userData.user;
-  if (!user?.id || !user?.email) {
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent("Unable to resolve user session.")}`, requestUrl.origin));
-  }
-  try {
-    await ensureDefaultSourcesForUser(user.id);
-  } catch {
-    // Non-blocking: OAuth callback should still complete even if source bootstrap fails.
+  if (user?.id) {
+    try {
+      await ensureDefaultSourcesForUser(user.id);
+    } catch {
+      // Non-blocking: OAuth callback should still complete even if source bootstrap fails.
+    }
   }
 
-  return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
+  const destination = await resolvePostAuthRedirect(nextPath);
+  return NextResponse.redirect(new URL(destination, requestUrl.origin));
 }

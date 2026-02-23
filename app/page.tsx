@@ -124,7 +124,7 @@ export default async function HomePage({
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
   const hasYoutubeBlockedError = false;
   const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
-  const showWishlistHeaderPill = hasDiscogs && activeTab !== "step-1" && activeTab !== "step-2";
+  const showWishlistHeaderPill = hasDiscogs && activeTab === "recommendations";
   const hasAnySources = data.labels.length > 0;
   const showOnboarding = !hasDiscogs || !hasAnySources;
   const onboardingPrimaryHref = !hasDiscogs ? "/connect-discogs?next=/" : "/?tab=step-1";
@@ -960,6 +960,12 @@ export default async function HomePage({
                 </div>
               ) : null}
 
+              {activeLabels.length > 0 && (listenData?.rows?.length ?? 0) === 0 ? (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-100">
+                  No tracks are loaded yet. Open <Link href="/?tab=step-1" className="underline underline-offset-2">Sources</Link> and run <span className="font-semibold">Keep sync moving</span> to fetch releases and tracks.
+                </div>
+              ) : null}
+
               <ListenInboxClient
                 initialRows={listenData?.rows ?? []}
                 initialSelectedLabelId={Number.isFinite(selectedListenLabelId) ? selectedListenLabelId : undefined}
@@ -1056,7 +1062,13 @@ export default async function HomePage({
                   </form>
                   <SyncSavedToDiscogsButton enabled={hasDiscogs} />
                   <form action={pullDiscogsWantsAction}>
-                    <FormSubmitButton type="submit" size="sm" variant="outline" pendingText="Syncing...">
+                    <FormSubmitButton
+                      type="submit"
+                      size="sm"
+                      variant="outline"
+                      pendingText="Syncing..."
+                      title="Trigger a manual Discogs wants sync now instead of waiting for the 1-minute auto check."
+                    >
                       Run sync now
                     </FormSubmitButton>
                   </form>

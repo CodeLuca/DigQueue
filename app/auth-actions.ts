@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
+import { resolvePostAuthRedirect } from "@/lib/post-auth";
 
 function safeNext(value: unknown) {
   const raw = typeof value === "string" ? value : "";
@@ -81,7 +82,8 @@ export async function loginWithPasswordAction(formData: FormData) {
   } catch {
     // Non-blocking: login should still work if bootstrap source insert fails.
   }
-  redirect(nextPath);
+  const destination = await resolvePostAuthRedirect(nextPath);
+  redirect(destination);
 }
 
 export async function registerWithPasswordAction(formData: FormData) {
@@ -120,7 +122,8 @@ export async function registerWithPasswordAction(formData: FormData) {
     } catch {
       // Non-blocking: account creation should still complete if source bootstrap fails.
     }
-    redirect(nextPath);
+    const destination = await resolvePostAuthRedirect(nextPath);
+    redirect(destination);
   }
 
   // When email confirmation is required, Supabase may create a user without an active session.
