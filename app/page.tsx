@@ -121,6 +121,7 @@ export default async function HomePage({
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
   const hasYoutubeBlockedError = false;
   const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
+  const showWishlistHeaderPill = hasDiscogs && activeTab !== "step-2";
   const hasAnySources = data.labels.length > 0;
   const showOnboarding = !hasDiscogs || !hasAnySources;
   const onboardingPrimaryHref = !hasDiscogs ? "/connect-discogs?next=/" : "/?tab=step-1";
@@ -303,10 +304,10 @@ export default async function HomePage({
               ) : !hasYoutubeKey ? (
                 <Badge className="border-amber-600/50 text-amber-300">YouTube Missing Key</Badge>
               ) : null}
-              {hasDiscogs ? <WishlistSyncStatus initialStatus={wantsSyncStatus} compact /> : null}
+              {showWishlistHeaderPill ? <WishlistSyncStatus initialStatus={wantsSyncStatus} compact /> : null}
             </div>
           ) : null}
-          {!showIntegrationAlerts && hasDiscogs ? (
+          {!showIntegrationAlerts && showWishlistHeaderPill ? (
             <div className="mt-2 flex flex-wrap gap-2">
               <WishlistSyncStatus initialStatus={wantsSyncStatus} compact />
             </div>
@@ -976,6 +977,22 @@ export default async function HomePage({
                 ) : (
                   <p className="mt-2 text-xs text-[var(--color-muted)]">No actions for this view.</p>
                 )}
+                {showLibraryItemsSection ? (
+                  <div className="mt-2">
+                    {hasDiscogs ? (
+                      <div>
+                        <WishlistSyncStatus initialStatus={wantsSyncStatus} />
+                        <form action={pullDiscogsWantsAction} className="mt-2">
+                          <FormSubmitButton type="submit" size="sm" variant="outline" pendingText="Retrying...">
+                            Retry wishlist sync now
+                          </FormSubmitButton>
+                        </form>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync.</p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
