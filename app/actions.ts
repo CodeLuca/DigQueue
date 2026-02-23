@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, inArray, like, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { apiCache, labels, queueItems, releases, sourceReleases, tracks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
@@ -372,6 +372,105 @@ export async function retryErroredLabelsAction() {
       .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: now })
       .where(and(eq(labels.id, label.id), scope.labels));
   }
+  revalidatePath("/");
+}
+
+function parseBatchLimit(formData: FormData, fallback = 5) {
+  const raw = Number(formData.get("limit") ?? fallback);
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.max(1, Math.min(25, Math.floor(raw)));
+}
+
+export async function queueActiveSourcesBatchAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const limit = parseBatchLimit(formData, 5);
+  const now = new Date();
+
+  const candidates = await db.query.labels.findMany({
+    where: and(eq(labels.active, true), scope.labels),
+    orderBy: [asc(labels.updatedAt)],
+    columns: { id: true, status: true },
+  });
+
+  let applied = 0;
+  for (const source of candidates) {
+    if (applied >= limit) break;
+    if (source.status === "processing" || source.status === "complete") continue;
+    await db
+      .update(labels)
+      .set({ status: "queued", lastError: null, updatedAt: now })
+      .where(and(eq(labels.id, source.id), scope.labels));
+    applied += 1;
+  }
+
+  revalidatePath("/");
+}
+
+export async function retryErroredSourcesBatchAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const limit = parseBatchLimit(formData, 5);
+  const now = new Date();
+
+  const errored = await db.query.labels.findMany({
+    where: and(eq(labels.status, "error"), eq(labels.active, true), scope.labels),
+    orderBy: [asc(labels.updatedAt)],
+    limit,
+    columns: { id: true },
+  });
+
+  for (const source of errored) {
+    await db
+      .update(labels)
+      .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: now })
+      .where(and(eq(labels.id, source.id), scope.labels));
+  }
+
+  revalidatePath("/");
+}
+
+export async function pauseAllActiveSourcesAction() {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const now = new Date();
+
+  const activeSources = await db.query.labels.findMany({
+    where: and(eq(labels.active, true), scope.labels),
+    columns: { id: true, status: true },
+  });
+
+  for (const source of activeSources) {
+    const nextStatus = source.status === "complete" ? "complete" : "paused";
+    await db
+      .update(labels)
+      .set({ active: false, status: nextStatus, updatedAt: now })
+      .where(and(eq(labels.id, source.id), scope.labels));
+  }
+
+  revalidatePath("/");
+}
+
+export async function resumePausedSourcesBatchAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const limit = parseBatchLimit(formData, 5);
+  const now = new Date();
+
+  const paused = await db.query.labels.findMany({
+    where: and(eq(labels.active, false), eq(labels.status, "paused"), scope.labels),
+    orderBy: [asc(labels.updatedAt)],
+    limit,
+    columns: { id: true },
+  });
+
+  for (const source of paused) {
+    await db
+      .update(labels)
+      .set({ active: true, status: "queued", lastError: null, updatedAt: now })
+      .where(and(eq(labels.id, source.id), scope.labels));
+  }
+
   revalidatePath("/");
 }
 

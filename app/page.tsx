@@ -16,9 +16,13 @@ import {
 } from "lucide-react";
 import {
   addSourceAction,
+  pauseAllActiveSourcesAction,
   pullDiscogsWantsAction,
+  queueActiveSourcesBatchAction,
   refreshLabelMetadataAction,
   refreshMissingLabelMetadataAction,
+  resumePausedSourcesBatchAction,
+  retryErroredSourcesBatchAction,
   retryErroredLabelsAction,
   retryLabelAction,
 } from "@/app/actions";
@@ -173,6 +177,11 @@ export default async function HomePage({
     },
     { queued: 0, processing: 0, error: 0, paused: 0, complete: 0, other: 0 },
   );
+  const pausedSourceCount = data.labels.filter((label) => !label.active && label.status === "paused").length;
+  const queueableActiveSourceCount = activeLabels.filter(
+    (label) => !label.tracksFullyLoaded && label.status !== "processing",
+  ).length;
+  const retryableActiveSourceCount = activeLabels.filter((label) => label.status === "error").length;
   const queriedLabels = isLabelsTab
     ? data.labels.filter((label) => {
         if (!normalizedLabelQuery) return true;
@@ -511,6 +520,66 @@ export default async function HomePage({
                 ) : (
                   <p className="mt-1 text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync status.</p>
                 )}
+              </div>
+
+              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Quick Controls</p>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  Use these first if you are unsure. They apply safe defaults and keep processing moving.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <form action={queueActiveSourcesBatchAction}>
+                    <input type="hidden" name="limit" value="5" />
+                    <FormSubmitButton
+                      type="submit"
+                      size="sm"
+                      variant="secondary"
+                      pendingText="Queueing..."
+                      title="Queue up to 5 active sources that are idle, paused, or errored."
+                      disabled={!canProcess || queueableActiveSourceCount <= 0}
+                    >
+                      Queue next 5 active ({queueableActiveSourceCount})
+                    </FormSubmitButton>
+                  </form>
+                  <form action={retryErroredSourcesBatchAction}>
+                    <input type="hidden" name="limit" value="5" />
+                    <FormSubmitButton
+                      type="submit"
+                      size="sm"
+                      variant="outline"
+                      pendingText="Retrying..."
+                      title="Move up to 5 active errored sources back to queued."
+                      disabled={!canProcess || retryableActiveSourceCount <= 0}
+                    >
+                      Retry 5 errors ({retryableActiveSourceCount})
+                    </FormSubmitButton>
+                  </form>
+                  <form action={resumePausedSourcesBatchAction}>
+                    <input type="hidden" name="limit" value="5" />
+                    <FormSubmitButton
+                      type="submit"
+                      size="sm"
+                      variant="outline"
+                      pendingText="Resuming..."
+                      title="Reactivate up to 5 paused sources and queue them."
+                      disabled={!canProcess || pausedSourceCount <= 0}
+                    >
+                      Resume 5 paused ({pausedSourceCount})
+                    </FormSubmitButton>
+                  </form>
+                  <form action={pauseAllActiveSourcesAction}>
+                    <FormSubmitButton
+                      type="submit"
+                      size="sm"
+                      variant="ghost"
+                      pendingText="Pausing..."
+                      title="Pause all active sources at once."
+                      disabled={!canProcess || activeLabels.length <= 0}
+                    >
+                      Pause all active ({activeLabels.length})
+                    </FormSubmitButton>
+                  </form>
+                </div>
               </div>
               <details className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3" open={!useSimpleSourcesView}>
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">
