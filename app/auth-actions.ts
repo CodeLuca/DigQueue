@@ -14,6 +14,34 @@ function safeNext(value: unknown) {
   return raw;
 }
 
+function resolveAppOrigin(headersStore: Awaited<ReturnType<typeof headers>>) {
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configuredOrigin && process.env.NODE_ENV === "production") {
+    try {
+      return new URL(configuredOrigin).origin;
+    } catch {
+      // Ignore invalid NEXT_PUBLIC_APP_URL and fall back to request headers.
+    }
+  }
+
+  const rawForwardedHost = headersStore.get("x-forwarded-host");
+  const rawHost = rawForwardedHost?.split(",")[0]?.trim() || headersStore.get("host") || "127.0.0.1:3000";
+  const rawForwardedProto = headersStore.get("x-forwarded-proto");
+  const rawProto = rawForwardedProto?.split(",")[0]?.trim();
+  const isLocalHost = rawHost.startsWith("127.0.0.1") || rawHost.startsWith("localhost");
+  const proto = rawProto || (isLocalHost ? "http" : "https");
+
+  if (configuredOrigin && isLocalHost) {
+    try {
+      return new URL(configuredOrigin).origin;
+    } catch {
+      // Ignore invalid NEXT_PUBLIC_APP_URL and continue with host-derived origin.
+    }
+  }
+
+  return `${proto}://${rawHost}`;
+}
+
 function withAuthQuery(path: string, params: Record<string, string | null | undefined>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -97,9 +125,7 @@ export async function loginWithGoogleAction(formData: FormData) {
 
   const supabase = await getSupabaseServerClient();
   const headersStore = await headers();
-  const host = headersStore.get("x-forwarded-host") || headersStore.get("host") || "127.0.0.1:3000";
-  const proto = headersStore.get("x-forwarded-proto") || (host.startsWith("127.0.0.1") || host.startsWith("localhost") ? "http" : "https");
-  const redirectTo = new URL("/auth/callback", `${proto}://${host}`);
+  const redirectTo = new URL("/auth/callback", resolveAppOrigin(headersStore));
   redirectTo.searchParams.set("next", nextPath);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -135,9 +161,7 @@ export async function requestPasswordResetAction(formData: FormData) {
 
   const supabase = await getSupabaseServerClient();
   const headersStore = await headers();
-  const host = headersStore.get("x-forwarded-host") || headersStore.get("host") || "127.0.0.1:3000";
-  const proto = headersStore.get("x-forwarded-proto") || (host.startsWith("127.0.0.1") || host.startsWith("localhost") ? "http" : "https");
-  const confirmUrl = new URL("/auth/confirm", `${proto}://${host}`);
+  const confirmUrl = new URL("/auth/confirm", resolveAppOrigin(headersStore));
   confirmUrl.searchParams.set("next", "/reset-password");
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
