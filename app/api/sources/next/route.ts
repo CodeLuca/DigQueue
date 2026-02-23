@@ -7,6 +7,7 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
 import { readSyncTelemetry } from "@/lib/sync-telemetry";
+import { isTransientLabelError } from "@/lib/utils";
 import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
 export async function GET() {
@@ -20,7 +21,8 @@ export async function GET() {
     });
 
     for (const source of initialSources) {
-      if (source.status !== "processing" && source.status !== "queued") continue;
+      const transientError = source.status === "error" && isTransientLabelError(source.lastError);
+      if (source.status !== "processing" && source.status !== "queued" && !transientError) continue;
 
       const pending = await db
         .select({ releaseId: releases.id })
@@ -61,11 +63,21 @@ export async function GET() {
 
       const staleForMs = now - source.updatedAt.getTime();
       const processingStale = source.status === "processing" && !activeLock && staleForMs > 90_000;
+      const transientErrorStale = transientError && !activeLock && staleForMs > 10_000;
       if (processingStale) {
         await db
           .update(labels)
           .set({
             status: hasPendingReleases ? "queued" : "complete",
+            updatedAt: new Date(),
+            lastError: null,
+          })
+          .where(and(eq(labels.id, source.id), eq(labels.userId, userId)));
+      } else if (transientErrorStale) {
+        await db
+          .update(labels)
+          .set({
+            status: hasPendingReleases || !paginationFinished ? "queued" : "complete",
             updatedAt: new Date(),
             lastError: null,
           })
