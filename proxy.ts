@@ -29,6 +29,16 @@ function isPublicApiPath(pathname: string) {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  // Some OAuth configurations may return the auth code to "/".
+  // Always funnel this through our dedicated callback handler.
+  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const callbackUrl = new URL("/auth/callback", request.url);
+    for (const [key, value] of request.nextUrl.searchParams.entries()) {
+      callbackUrl.searchParams.set(key, value);
+    }
+    return NextResponse.redirect(callbackUrl);
+  }
+
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/favicon") ||
