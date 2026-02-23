@@ -5,7 +5,9 @@ import { NextResponse } from "next/server";
 import { labels, releases, sourceReleases, workerLocks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
+import { processSingleReleaseForSource } from "@/lib/processing";
 import { readSyncTelemetry } from "@/lib/sync-telemetry";
+import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
 export async function GET() {
   try {
@@ -98,6 +100,21 @@ export async function GET() {
     const nextProcessing = activeSources.find((source) => source.status === "processing");
     const nextQueued = activeSources.find((source) => source.status === "queued");
     const nextSourceId = nextProcessing?.id ?? nextQueued?.id ?? null;
+
+    // Safety net: keep ingestion moving even if client-side worker polling fails.
+    if (nextSourceId) {
+      const lock = await acquireSourceWorkerLock(userId, nextSourceId, 120_000);
+      if (lock) {
+        try {
+          await processSingleReleaseForSource(nextSourceId, userId);
+        } catch {
+          // Best-effort; source status/telemetry are updated in processing.
+        } finally {
+          await releaseSourceWorkerLock(lock);
+        }
+      }
+    }
+
     const syncTelemetry = await readSyncTelemetry(userId);
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
