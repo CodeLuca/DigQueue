@@ -324,7 +324,7 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
     });
     const releaseDetails = await fetchDiscogsRelease(nextRelease.id);
     try {
-    await captureReleaseSignals(releaseDetails, nextRelease.artist, nextRelease.year, userId, nextRelease.id);
+    await captureReleaseSignals(releaseDetails, nextRelease.artist, nextRelease.year, userId);
     } catch (error) {
       const message = safeErrorMessage(error);
       // Signal capture improves recommendations but should never block ingestion.
