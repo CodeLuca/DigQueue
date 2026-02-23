@@ -1,5 +1,5 @@
 import { ArrowRight, Chrome } from "lucide-react";
-import { loginWithGoogleAction, loginWithPasswordAction, registerWithPasswordAction, requestPasswordResetAction } from "@/app/auth-actions";
+import { loginWithPasswordAction, registerWithPasswordAction, requestPasswordResetAction } from "@/app/auth-actions";
 
 export default async function LoginPage({
   searchParams,
@@ -119,16 +119,13 @@ export default async function LoginPage({
           <div className="hidden h-px bg-[var(--color-border)] md:block" />
           <p className="text-center text-xs uppercase tracking-[0.12em] text-[var(--color-muted)]">or</p>
           <div className="hidden h-px bg-[var(--color-border)] md:block" />
-          <form action={loginWithGoogleAction} className="md:col-span-3">
-            <input type="hidden" name="next" value={nextPath} />
-            <button
-              type="submit"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--color-surface)]"
-            >
-              <Chrome className="h-4 w-4" />
-              Continue with Google
-            </button>
-          </form>
+          <a
+            href={`/auth/google/start?next=${encodeURIComponent(nextPath)}`}
+            className="md:col-span-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--color-surface)]"
+          >
+            <Chrome className="h-4 w-4" />
+            Continue with Google
+          </a>
         </div>
       </section>
     </main>

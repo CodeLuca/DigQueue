@@ -10,6 +10,7 @@ const PUBLIC_PATHS = new Set([
   "/connect-discogs",
   "/auth/callback",
   "/auth/confirm",
+  "/auth/google/start",
   "/reset-password",
 ]);
 const PUBLIC_API_PREFIXES: string[] = [];
