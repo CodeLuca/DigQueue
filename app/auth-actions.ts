@@ -8,6 +8,9 @@ function safeNext(value: unknown) {
   const raw = typeof value === "string" ? value : "";
   if (!raw.startsWith("/")) return "/?tab=step-2";
   if (raw.startsWith("//")) return "/?tab=step-2";
+  if (raw.startsWith("/auth/")) return "/?tab=step-2";
+  if (raw.startsWith("/login")) return "/?tab=step-2";
+  if (raw.startsWith("/register")) return "/?tab=step-2";
   return raw;
 }
 

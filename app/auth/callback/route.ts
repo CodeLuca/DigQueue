@@ -5,6 +5,9 @@ function safeNext(value: string | null) {
   if (!value) return "/?tab=step-2";
   if (!value.startsWith("/")) return "/?tab=step-2";
   if (value.startsWith("//")) return "/?tab=step-2";
+  if (value.startsWith("/auth/")) return "/?tab=step-2";
+  if (value.startsWith("/login")) return "/?tab=step-2";
+  if (value.startsWith("/register")) return "/?tab=step-2";
   return value;
 }
 

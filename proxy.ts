@@ -8,6 +8,9 @@ const PUBLIC_PATHS = new Set([
   "/login",
   "/register",
   "/connect-discogs",
+  "/auth/callback",
+  "/auth/confirm",
+  "/reset-password",
 ]);
 const PUBLIC_API_PREFIXES: string[] = [];
 

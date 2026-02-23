@@ -7,7 +7,15 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; email?: string; error?: string; notice?: string; mode?: string }>;
 }) {
   const { next, email, error, notice, mode } = await searchParams;
-  const nextPath = typeof next === "string" && next.startsWith("/") ? next : "/?tab=step-2";
+  const nextPath =
+    typeof next === "string" &&
+    next.startsWith("/") &&
+    !next.startsWith("//") &&
+    !next.startsWith("/auth/") &&
+    !next.startsWith("/login") &&
+    !next.startsWith("/register")
+      ? next
+      : "/?tab=step-2";
   const sessionEmail = typeof email === "string" && email.includes("@") ? email : "";
   const startInRegisterMode = mode === "register";
 
