@@ -1,8 +1,8 @@
-import { and, eq, gt, inArray, ne } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { apiCache, labels, releases, sourceReleases, tracks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
-import { DISCOGS_WANTS_LABEL_ID, DISCOGS_WANTS_LABEL_NAME } from "@/lib/constants";
+import { DISCOGS_WANTS_LABEL_ID } from "@/lib/constants";
 import { fetchDiscogsWantItems } from "@/lib/discogs";
 import { toStoredDiscogsId } from "@/lib/discogs-id";
 
@@ -89,47 +89,6 @@ function parseReleaseIdFromDiscogsUrl(value: string | undefined) {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
-async function ensureDiscogsWantsSource(userId: string) {
-  const now = new Date();
-  const labelScope = eq(labels.userId, userId);
-  const existing = await db.query.labels.findFirst({ where: and(eq(labels.id, DISCOGS_WANTS_LABEL_ID), labelScope) });
-  if (!existing) {
-    await db.insert(labels).values({
-      id: DISCOGS_WANTS_LABEL_ID,
-      userId,
-      entityKind: "label", // Synthetic source for Discogs wantlist imports.
-      externalDiscogsId: null,
-      name: DISCOGS_WANTS_LABEL_NAME,
-      discogsUrl: "https://www.discogs.com/mywants",
-      blurb: null,
-      imageUrl: null,
-      notableReleasesJson: "[]",
-      sourceType: "derived_want",
-      active: false,
-      status: "complete",
-      currentPage: 1,
-      totalPages: 1,
-      retryCount: 0,
-      lastError: null,
-      addedAt: now,
-      updatedAt: now,
-    });
-    return;
-  }
-
-  await db
-    .update(labels)
-    .set({
-      entityKind: "label",
-      externalDiscogsId: existing.externalDiscogsId ?? null,
-      name: existing.name || DISCOGS_WANTS_LABEL_NAME,
-      discogsUrl: existing.discogsUrl || "https://www.discogs.com/mywants",
-      sourceType: "derived_want",
-      updatedAt: now,
-    })
-    .where(and(eq(labels.id, DISCOGS_WANTS_LABEL_ID), labelScope));
-}
-
 export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxItems?: number }) {
   const userId = await requireCurrentAppUserId();
   const startedAt = new Date();
@@ -161,10 +120,52 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
   const releasesScope = eq(releases.userId, userId);
   const tracksScope = eq(tracks.userId, userId);
   try {
-    await ensureDiscogsWantsSource(userId);
-
     const wantedItemsFull = await fetchDiscogsWantItems();
     const wantedItems = maxItems ? wantedItemsFull.slice(0, maxItems) : wantedItemsFull;
+    const labelSourceIdByExternalLabelId = new Map<number, number>();
+    const ensureWantLabelSource = async (labelId: number | null, labelName: string | null) => {
+      if (!Number.isFinite(labelId) || !labelId || labelId <= 0) return null;
+      const externalLabelId = Math.floor(labelId);
+      const cached = labelSourceIdByExternalLabelId.get(externalLabelId);
+      if (cached) return cached;
+
+      const sourceId = toStoredDiscogsId(userId, externalLabelId, "label");
+      const now = new Date();
+      const name = labelName?.trim() || `Label ${externalLabelId}`;
+      await db
+        .insert(labels)
+        .values({
+          id: sourceId,
+          userId,
+          entityKind: "label",
+          externalDiscogsId: externalLabelId,
+          name,
+          discogsUrl: `https://www.discogs.com/label/${externalLabelId}`,
+          sourceType: "derived_want",
+          active: false,
+          status: "complete",
+          currentPage: 1,
+          totalPages: 1,
+          retryCount: 0,
+          lastError: null,
+          addedAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: labels.id,
+          set: {
+            externalDiscogsId: externalLabelId,
+            name,
+            discogsUrl: `https://www.discogs.com/label/${externalLabelId}`,
+            sourceType: "derived_want",
+            updatedAt: now,
+          },
+        });
+
+      labelSourceIdByExternalLabelId.set(externalLabelId, sourceId);
+      return sourceId;
+    };
+
     await writeAutoSyncStatus(userId, {
       mode,
       status: "running",
@@ -174,18 +175,6 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
       totalCount: wantedItems.length,
       maxItems,
     });
-    const derivedWantSources = await db.query.labels.findMany({
-      where: and(eq(labels.sourceType, "derived_want"), ne(labels.id, DISCOGS_WANTS_LABEL_ID), eq(labels.userId, userId)),
-      columns: { id: true },
-    });
-    const legacyDerivedSourceIds = derivedWantSources.map((row) => row.id);
-    if (legacyDerivedSourceIds.length > 0) {
-      for (const ids of chunk(legacyDerivedSourceIds, 500)) {
-        await db.update(releases).set({ labelId: DISCOGS_WANTS_LABEL_ID }).where(and(inArray(releases.labelId, ids), releasesScope));
-        await db.delete(sourceReleases).where(and(inArray(sourceReleases.sourceId, ids), eq(sourceReleases.userId, userId)));
-        await db.delete(labels).where(and(inArray(labels.id, ids), eq(labels.userId, userId)));
-      }
-    }
 
     const wantedExternalSet = new Set(wantedItems.map((item) => item.releaseId));
     const allReleaseRows = await db.query.releases.findMany({
@@ -226,26 +215,34 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
     for (let idx = 0; idx < wantedItems.length; idx += 1) {
       const item = wantedItems[idx];
       const matchedReleaseIds = existingReleaseIdsByExternal.get(item.releaseId) ?? [];
+      const labelSourceId = await ensureWantLabelSource(item.labelId, item.labelName);
 
       if (matchedReleaseIds.length > 0) {
-        await db
-          .update(releases)
-          .set({
-            labelId: DISCOGS_WANTS_LABEL_ID,
-            importSource: "discogs_want",
-          })
-          .where(and(inArray(releases.id, matchedReleaseIds), releasesScope));
-        for (const releaseId of matchedReleaseIds) {
+        if (labelSourceId) {
           await db
-            .insert(sourceReleases)
-            .values({
-              sourceId: DISCOGS_WANTS_LABEL_ID,
-              releaseId,
-              userId,
-              releaseOrder: 0,
-              discoveredAt: now,
+            .update(releases)
+            .set({
+              labelId: labelSourceId,
+              importSource: "discogs_want",
             })
-            .onConflictDoNothing();
+            .where(and(inArray(releases.id, matchedReleaseIds), releasesScope));
+          for (const releaseId of matchedReleaseIds) {
+            await db
+              .insert(sourceReleases)
+              .values({
+                sourceId: labelSourceId,
+                releaseId,
+                userId,
+                releaseOrder: 0,
+                discoveredAt: now,
+              })
+              .onConflictDoNothing();
+          }
+        } else {
+          await db
+            .update(releases)
+            .set({ importSource: "discogs_want" })
+            .where(and(inArray(releases.id, matchedReleaseIds), releasesScope));
         }
       }
       if ((idx + 1) % 50 === 0 || idx + 1 === wantedItems.length) {
@@ -273,6 +270,8 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
 
     for (let idx = 0; idx < missingWanted.length; idx += 1) {
       const item = missingWanted[idx];
+      const labelSourceId = await ensureWantLabelSource(item.labelId, item.labelName);
+      if (!labelSourceId) continue;
       const storedReleaseId = toStoredDiscogsId(userId, item.releaseId, "release");
 
       await db
@@ -280,7 +279,7 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
         .values({
           id: storedReleaseId,
           userId,
-          labelId: DISCOGS_WANTS_LABEL_ID,
+          labelId: labelSourceId,
           title: item.title,
           artist: item.artist,
           year: null,
@@ -302,7 +301,7 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
       await db
         .insert(sourceReleases)
         .values({
-          sourceId: DISCOGS_WANTS_LABEL_ID,
+          sourceId: labelSourceId,
           releaseId: storedReleaseId,
           userId,
           releaseOrder: idx,
@@ -346,6 +345,16 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
           createdAt: now,
         });
       }
+    }
+
+    // Remove legacy synthetic "Discogs Wishlist" source/mappings now that wants map to real labels.
+    await db.delete(sourceReleases).where(and(eq(sourceReleases.sourceId, DISCOGS_WANTS_LABEL_ID), eq(sourceReleases.userId, userId)));
+    const legacyWantsRelease = await db.query.releases.findFirst({
+      where: and(eq(releases.labelId, DISCOGS_WANTS_LABEL_ID), releasesScope),
+      columns: { id: true },
+    });
+    if (!legacyWantsRelease) {
+      await db.delete(labels).where(and(eq(labels.id, DISCOGS_WANTS_LABEL_ID), eq(labels.userId, userId)));
     }
 
     await touchAutoSyncCache(userId, {
