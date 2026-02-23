@@ -1,8 +1,8 @@
 export const dynamic = "force-dynamic";
 
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { labels, releases, sourceReleases, workerLocks } from "@/db/schema";
+import { labels, releases, sourceReleases } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
@@ -40,14 +40,7 @@ export async function GET() {
 
       const hasPendingReleases = pending.length > 0;
       const paginationFinished = source.currentPage >= source.totalPages;
-      const activeLock = await db.query.workerLocks.findFirst({
-        where: and(
-          eq(workerLocks.lockKey, `${userId}:${source.id}`),
-          eq(workerLocks.userId, userId),
-          gt(workerLocks.lockedUntil, new Date(now)),
-        ),
-        columns: { lockKey: true },
-      });
+      const activeLock: { lockKey: string } | null = null;
 
       if (!hasPendingReleases && paginationFinished) {
         await db
@@ -62,13 +55,13 @@ export async function GET() {
       }
 
       const staleForMs = now - source.updatedAt.getTime();
-      const processingStale = source.status === "processing" && !activeLock && staleForMs > 90_000;
+      const processingStale = source.status === "processing" && !activeLock && staleForMs > 25_000;
       const transientErrorStale = transientError && !activeLock && staleForMs > 10_000;
       if (processingStale) {
         await db
           .update(labels)
           .set({
-            status: hasPendingReleases ? "queued" : "complete",
+            status: hasPendingReleases || !paginationFinished ? "queued" : "complete",
             updatedAt: new Date(),
             lastError: null,
           })
@@ -113,21 +106,49 @@ export async function GET() {
     const nextQueued = activeSources.find((source) => source.status === "queued");
     const nextSourceId = nextProcessing?.id ?? nextQueued?.id ?? null;
 
+    const processingAttempt: {
+      attempted: boolean;
+      sourceId: number | null;
+      lockAcquired: boolean;
+      outcome: "ok" | "error" | "skipped";
+      message?: string;
+      error?: string;
+    } = {
+      attempted: false,
+      sourceId: nextSourceId,
+      lockAcquired: false,
+      outcome: "skipped",
+    };
+
     // Safety net: keep ingestion moving even if client-side worker polling fails.
     if (nextSourceId) {
+      processingAttempt.attempted = true;
       const lock = await acquireSourceWorkerLock(userId, nextSourceId, 120_000);
       if (lock) {
+        processingAttempt.lockAcquired = true;
         try {
-          await processSingleReleaseForSource(nextSourceId, userId);
-        } catch {
-          // Best-effort; source status/telemetry are updated in processing.
+          const result = await processSingleReleaseForSource(nextSourceId, userId);
+          processingAttempt.outcome = "ok";
+          processingAttempt.message = result?.message || "Processed one source step.";
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          processingAttempt.outcome = "error";
+          processingAttempt.error = message;
+          console.error(`[sources-next] source=${nextSourceId} processing error: ${message}`);
         } finally {
           await releaseSourceWorkerLock(lock);
         }
+      } else {
+        processingAttempt.outcome = "skipped";
+        processingAttempt.message = "Worker lock busy";
       }
     }
 
-    const syncTelemetry = await readSyncTelemetry(userId);
+    const syncTelemetry = await readSyncTelemetry(userId).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[sources-next] telemetry unavailable: ${message}`);
+      return null;
+    });
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
       .map((source) => ({
@@ -142,6 +163,7 @@ export async function GET() {
       activeCount: activeSources.length,
       processingSources,
       syncTelemetry,
+      processingAttempt,
       blocker:
         nextSourceId !== null
           ? null
@@ -151,7 +173,9 @@ export async function GET() {
               ? "No active sources."
               : "No queued/processing sources.",
     });
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[sources-next] fatal error: ${message}`);
     return NextResponse.json({
       nextSourceId: null,
       counts: {
@@ -165,6 +189,13 @@ export async function GET() {
       activeCount: 0,
       processingSources: [],
       syncTelemetry: null,
+      processingAttempt: {
+        attempted: false,
+        sourceId: null,
+        lockAcquired: false,
+        outcome: "error",
+        error: message,
+      },
       blocker: "Database unavailable.",
     });
   }

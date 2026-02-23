@@ -474,11 +474,11 @@ export default async function HomePage({
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Ingestion Control Center</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Sync</p>
                       <p className="mt-1 text-xs text-[var(--color-muted)]">
                         {activeStatusCounts.processing > 0
-                          ? "Sync is active. Use quick actions below if you need to adjust flow."
-                          : "Sync is idle. Queue active sources to keep tracks flowing into Listening Station."}
+                          ? "Sync is active."
+                          : "Sync is idle."}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -497,16 +497,29 @@ export default async function HomePage({
                 </summary>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <form action={queueActiveSourcesBatchAction}>
-                    <input type="hidden" name="limit" value="5" />
+                    <input type="hidden" name="limit" value="1" />
                     <FormSubmitButton
                       type="submit"
                       size="sm"
                       variant="secondary"
-                      pendingText="Queueing..."
-                      title="Use this to keep sync moving: queues up to 5 active sources and retries active errors."
+                      pendingText="Running..."
+                      title="Run one sync step now."
                       disabled={!canProcess || queueableActiveSourceCount <= 0}
                     >
-                      Keep sync moving (up to 5)
+                      Run one step
+                    </FormSubmitButton>
+                  </form>
+                  <form action={queueActiveSourcesBatchAction}>
+                    <input type="hidden" name="limit" value="5" />
+                    <FormSubmitButton
+                      type="submit"
+                      size="sm"
+                      variant="outline"
+                      pendingText="Running..."
+                      title="Run up to 5 queued/errored sources."
+                      disabled={!canProcess || queueableActiveSourceCount <= 0}
+                    >
+                      Run batch (up to 5)
                     </FormSubmitButton>
                   </form>
                   {activeLabels.length > 0 ? (
@@ -537,19 +550,41 @@ export default async function HomePage({
                       </FormSubmitButton>
                     </form>
                   )}
-                  {retryableActiveSourceCount > 0 ? (
-                    <span className="text-[11px] text-[var(--color-muted)]">{retryableActiveSourceCount} active error {retryableActiveSourceCount === 1 ? "source will" : "sources will"} be retried by keep sync.</span>
-                  ) : null}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
-                  <span>Source ingestion only (separate from wishlist sync).</span>
+                  <span>Source sync only.</span>
                   {hasDiscogs ? <WishlistSyncStatus initialStatus={wantsSyncStatus} compact /> : null}
                 </div>
-                <details className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
+                <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
+                  {syncTelemetry?.sourceName ? (
+                    <p className="text-[var(--color-text)]">
+                      Working on: <span className="font-medium">{syncTelemetry.sourceName}</span>
+                    </p>
+                  ) : null}
+                  {syncTelemetry?.releaseTitle ? (
+                    <p className="mt-1 text-[var(--color-muted)]">Release: {syncTelemetry.releaseTitle}</p>
+                  ) : null}
+                  {syncTelemetry?.trackTitle ? (
+                    <p className="mt-1 text-[var(--color-muted)]">
+                      Track: {syncTelemetry.trackTitle}
+                      {typeof syncTelemetry.trackIndex === "number" && typeof syncTelemetry.trackTotal === "number"
+                        ? ` (${syncTelemetry.trackIndex}/${syncTelemetry.trackTotal})`
+                        : ""}
+                    </p>
+                  ) : null}
+                  {processingSourceProgress.length > 0 ? (
+                    <div className="mt-2 space-y-1">
+                      {processingSourceProgress.map((source) => (
+                        <p key={source.id} className="text-[var(--color-muted)]">
+                          {source.name}: {source.fetchedReleaseCount}/{source.loadedReleaseCount} releases
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <details className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/40 p-2.5 text-xs">
                   <summary className="cursor-pointer select-none text-[var(--color-text)]">
-                    {activeStatusCounts.processing > 0
-                      ? `Live progress (${activeStatusCounts.processing} active source ${activeStatusCounts.processing === 1 ? "job" : "jobs"})`
-                      : "Live progress (idle)"}
+                    Technical details
                   </summary>
                   <div className="mt-2">
                     {processingSourceNames.length > 0 ? (

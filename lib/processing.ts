@@ -24,11 +24,15 @@ function safeErrorMessage(error: unknown) {
   if (error instanceof Error) {
     const raw = error.message || "";
     const normalized = raw.toLowerCase();
+    const pgCode =
+      typeof (error as { code?: unknown }).code === "string"
+        ? String((error as { code?: string }).code)
+        : "";
     if (normalized.includes("maxclientsinsessionmode")) {
       return "Database is temporarily overloaded. Retry in a few seconds.";
     }
-    if (normalized.includes("failed query:")) {
-      return "Temporary database write failure. Retry in a few seconds.";
+    if (pgCode === "53300") {
+      return "Database is temporarily overloaded. Retry in a few seconds.";
     }
     return raw.slice(0, 1200);
   }
@@ -38,9 +42,16 @@ function safeErrorMessage(error: unknown) {
 function isTransientDatabaseError(error: unknown) {
   if (!(error instanceof Error)) return false;
   const normalized = (error.message || "").toLowerCase();
+  const pgCode =
+    typeof (error as { code?: unknown }).code === "string"
+      ? String((error as { code?: string }).code)
+      : "";
   return (
+    pgCode === "53300" || // too_many_connections
+    pgCode === "55P03" || // lock_not_available
+    pgCode === "40P01" || // deadlock_detected
+    pgCode === "40001" || // serialization_failure
     normalized.includes("maxclientsinsessionmode") ||
-    normalized.includes("failed query:") ||
     normalized.includes("sqlite_busy") ||
     normalized.includes("database is locked")
   );
@@ -312,7 +323,13 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
       updatedAt: Date.now(),
     });
     const releaseDetails = await fetchDiscogsRelease(nextRelease.id);
-    await captureReleaseSignals(releaseDetails, nextRelease.artist, nextRelease.year, userId);
+    try {
+    await captureReleaseSignals(releaseDetails, nextRelease.artist, nextRelease.year, userId, nextRelease.id);
+    } catch (error) {
+      const message = safeErrorMessage(error);
+      // Signal capture improves recommendations but should never block ingestion.
+      console.error(`[source-sync] release-signals skipped release=${nextRelease.id} error=${message}`);
+    }
     await db.delete(tracks).where(and(eq(tracks.releaseId, nextRelease.id), scope.tracks));
 
     const trackRows = releaseDetails.tracklist.filter((item) => item.title?.trim());
@@ -466,6 +483,8 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
     });
     return { done: false, message: `Processed ${nextRelease.title}` };
   } catch (error) {
+    const message = safeErrorMessage(error);
+    console.error(`[source-sync] source=${sourceId} name="${source.name}" status=${source.status} error=${message}`);
     if (isTransientDatabaseError(error)) {
       await db
         .update(labels)
@@ -487,7 +506,6 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
       return { done: false, message: "Temporary database contention. Retrying…" };
     }
 
-    const message = safeErrorMessage(error);
     await db
       .update(labels)
       .set({

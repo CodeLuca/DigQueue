@@ -11,6 +11,14 @@ const REFRESH_MIN_GAP_MS = 4500;
 type NextSourceResponse = {
   nextSourceId?: number | null;
   nextLabelId?: number | null;
+  processingAttempt?: {
+    attempted?: boolean;
+    sourceId?: number | null;
+    lockAcquired?: boolean;
+    outcome?: "ok" | "error" | "skipped";
+    message?: string;
+    error?: string;
+  };
 };
 
 export function LabelSyncDaemon() {
@@ -35,6 +43,15 @@ export function LabelSyncDaemon() {
           return;
         }
         const nextData = (await nextResponse.json()) as NextSourceResponse;
+        if (nextData.processingAttempt?.outcome === "error") {
+          console.error(
+            `[label-sync-daemon] source=${nextData.processingAttempt.sourceId ?? "unknown"} error=${nextData.processingAttempt.error ?? "unknown"}`,
+          );
+        } else if (nextData.processingAttempt?.attempted) {
+          console.debug(
+            `[label-sync-daemon] source=${nextData.processingAttempt.sourceId ?? "unknown"} outcome=${nextData.processingAttempt.outcome ?? "unknown"} message=${nextData.processingAttempt.message ?? ""}`,
+          );
+        }
         const nextSourceId = nextData.nextSourceId ?? nextData.nextLabelId ?? null;
         if (!nextSourceId) {
           window.setTimeout(tick, IDLE_TICK_MS);

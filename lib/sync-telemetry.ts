@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { apiCache } from "@/db/schema";
 import { db } from "@/lib/db";
 
@@ -28,38 +28,51 @@ export async function writeSyncTelemetry(userId: string, telemetry: SyncTelemetr
   const now = Date.now();
   const payload = JSON.stringify(telemetry);
 
-  await db
-    .insert(apiCache)
-    .values({
-      key,
-      userId,
-      responseJson: payload,
-      fetchedAt: new Date(now),
-      expiresAt: new Date(now + TTL_MS),
-    })
-    .onConflictDoUpdate({
-      target: apiCache.key,
-      set: {
+  try {
+    await db
+      .insert(apiCache)
+      .values({
+        key,
         userId,
         responseJson: payload,
         fetchedAt: new Date(now),
         expiresAt: new Date(now + TTL_MS),
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: apiCache.key,
+        set: {
+          userId,
+          responseJson: payload,
+          fetchedAt: new Date(now),
+          expiresAt: new Date(now + TTL_MS),
+        },
+      });
+  } catch {
+    // Telemetry is best-effort; never block ingestion on cache writes.
+  }
 }
 
 export async function clearSyncTelemetry(userId: string) {
   const key = syncTelemetryKey(userId);
-  await db.delete(apiCache).where(and(eq(apiCache.key, key), eq(apiCache.userId, userId)));
+  try {
+    await db.delete(apiCache).where(and(eq(apiCache.key, key), eq(apiCache.userId, userId)));
+  } catch {
+    // Telemetry is best-effort; ignore cleanup failures.
+  }
 }
 
 export async function readSyncTelemetry(userId: string): Promise<SyncTelemetry | null> {
   const key = syncTelemetryKey(userId);
   const now = Date.now();
-  const row = await db.query.apiCache.findFirst({
-    where: and(eq(apiCache.key, key), eq(apiCache.userId, userId), sql`${apiCache.expiresAt} > ${new Date(now)}`),
-    columns: { responseJson: true },
-  });
+  let row: { responseJson: string } | null = null;
+  try {
+    row = await db.query.apiCache.findFirst({
+      where: and(eq(apiCache.key, key), eq(apiCache.userId, userId), gt(apiCache.expiresAt, new Date(now))),
+      columns: { responseJson: true },
+    }) ?? null;
+  } catch {
+    return null;
+  }
   if (!row?.responseJson) return null;
 
   try {
