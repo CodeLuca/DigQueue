@@ -52,6 +52,15 @@ export default async function SettingsPage({
   const youtubeOAuth = await getYoutubeOAuthConnectionStatus();
   const supabase = await getSupabaseServerClient();
   const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData.user?.id || "";
+  const currentUserEmail = String(authData.user?.email || "").toLowerCase();
+  const configuredAdminUserId = env.SUPABASE_APP_USER_ID?.trim() || "";
+  const configuredAdminUserEmail = env.SUPABASE_APP_USER_EMAIL?.trim().toLowerCase() || "";
+  const hasExplicitAdmin = Boolean(configuredAdminUserId || configuredAdminUserEmail);
+  const isAdmin =
+    (configuredAdminUserId ? currentUserId === configuredAdminUserId : false) ||
+    (configuredAdminUserEmail ? currentUserEmail === configuredAdminUserEmail : false) ||
+    !hasExplicitAdmin;
   const provider = String(authData.user?.app_metadata?.provider || "").toLowerCase();
   const signInMethod = provider === "google" ? "Google" : provider === "email" || !provider ? "Email/Password" : provider;
   const savedYoutubeKey = savedKeys.youtubeApiKey || env.YOUTUBE_API_KEY || null;
@@ -152,8 +161,13 @@ export default async function SettingsPage({
                 <Youtube className="h-3.5 w-3.5 text-[var(--color-accent)]" />
                 YouTube
               </p>
-              <p className="text-sm">Backend API key: <span className="mono">{maskSecret(savedYoutubeKey)}</span></p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">Used for match/search during ingestion. Managed at backend level for this workspace.</p>
+              <p className="text-sm">
+                Search key:{" "}
+                <span className="mono">
+                  {effectiveKeys.youtubeApiKey ? "Connected" : "Missing"}
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">Used for YouTube match/search during ingestion.</p>
               <p className="mt-2 text-sm">
                 Playlist export:{" "}
                 <span className="mono">
@@ -174,13 +188,22 @@ export default async function SettingsPage({
                   </a>
                 ) : (
                   <span className="rounded-md border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                    Ask admin to set YOUTUBE_OAUTH_CLIENT_ID / SECRET
+                    Playlist export is not enabled on this deployment yet.
                   </span>
                 )}
-                <form action={clearApiKeysAction}>
-                  <Button type="submit" variant="outline">Clear Local Keys</Button>
-                </form>
               </div>
+              {isAdmin ? (
+                <details className="mt-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+                  <summary className="cursor-pointer text-xs font-medium text-[var(--color-muted)]">Advanced (Admin)</summary>
+                  <div className="mt-2 space-y-2 text-xs text-[var(--color-muted)]">
+                    <p>Backend API key: <span className="mono">{maskSecret(savedYoutubeKey)}</span></p>
+                    {!youtubeOAuth.configured ? <p>Set <span className="mono">YOUTUBE_OAUTH_CLIENT_ID</span> and <span className="mono">YOUTUBE_OAUTH_CLIENT_SECRET</span> to enable playlist export.</p> : null}
+                    <form action={clearApiKeysAction}>
+                      <Button type="submit" variant="outline">Clear Local Keys</Button>
+                    </form>
+                  </div>
+                </details>
+              ) : null}
             </section>
           </div>
 

@@ -117,6 +117,8 @@ const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
 const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
 const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
+const PLAYBACK_OWNER_STORAGE_KEY = "digqueue:playback-owner";
+const PLAYBACK_OWNER_TTL_MS = 12000;
 const REQUEST_TIMEOUT_MS = 15000;
 const BULK_REQUEST_TIMEOUT_MS = 30000;
 type PlaybackMode = "in_order" | "shuffle";
@@ -146,6 +148,11 @@ type ListeningScopeDetail = {
   activeLabelId?: number | null;
 };
 
+type PlaybackOwnerState = {
+  tabId: string;
+  updatedAt: number;
+};
+
 export function MiniPlayer() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab");
@@ -167,6 +174,7 @@ export function MiniPlayer() {
   const lastQueueDedupeAtRef = useRef(0);
   const releaseDetailsCacheRef = useRef(new Map<number, ReleaseDetailsApiResponse>());
   const releaseLinksCacheRef = useRef(new Map<number, FinderLinksApiResponse>());
+  const tabIdRef = useRef(`tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const [current, setCurrent] = useState<QueueApiItem | null>(null);
   const [history, setHistory] = useState<QueueApiItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -227,6 +235,54 @@ export function MiniPlayer() {
       clearTimeout(timeoutId);
     }
   }, []);
+
+  const readPlaybackOwner = useCallback((): PlaybackOwnerState | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(PLAYBACK_OWNER_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<PlaybackOwnerState>;
+      if (typeof parsed.tabId !== "string" || typeof parsed.updatedAt !== "number" || !Number.isFinite(parsed.updatedAt)) return null;
+      return { tabId: parsed.tabId, updatedAt: parsed.updatedAt };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const writePlaybackOwner = useCallback((state: PlaybackOwnerState) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(PLAYBACK_OWNER_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Ignore storage write failures.
+    }
+  }, []);
+
+  const clearPlaybackOwnerIfOwned = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const existing = readPlaybackOwner();
+      if (existing?.tabId === tabIdRef.current) {
+        window.localStorage.removeItem(PLAYBACK_OWNER_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [readPlaybackOwner]);
+
+  const ensurePlaybackOwnership = useCallback((showNotice = true) => {
+    const now = Date.now();
+    const owner = readPlaybackOwner();
+    const ownerIsFresh = owner && now - owner.updatedAt < PLAYBACK_OWNER_TTL_MS;
+    if (ownerIsFresh && owner.tabId !== tabIdRef.current) {
+      if (showNotice) {
+        setActionNotice("Audio is active in another tab. Pause there or use that tab.");
+      }
+      return false;
+    }
+    writePlaybackOwner({ tabId: tabIdRef.current, updatedAt: now });
+    return true;
+  }, [readPlaybackOwner, writePlaybackOwner]);
 
   const fetchQueueItems = useCallback(async () => {
     setQueueLoading(true);
@@ -384,6 +440,7 @@ export function MiniPlayer() {
       }
       setCurrent(item);
       if (playerRef.current) {
+        if (!ensurePlaybackOwnership()) return true;
         playerRef.current.loadVideoById(item.youtubeVideoId);
         setPlaying(true);
       }
@@ -397,7 +454,7 @@ export function MiniPlayer() {
         loadNextRequestRef.current = null;
       }
     }
-  }, [isListeningStationTab, playbackMode, syncQueueToListeningScope]);
+  }, [ensurePlaybackOwnership, isListeningStationTab, playbackMode, syncQueueToListeningScope]);
 
   const markReviewed = useCallback(async () => {
     const trackId = current?.track?.id ?? null;
@@ -541,10 +598,11 @@ export function MiniPlayer() {
     if (item.id > 0) {
       setQueueItemsState((prev) => prev.filter((entry) => entry.id !== item.id));
     }
+    if (!ensurePlaybackOwnership()) return;
     setCurrent(item);
     playerRef.current.loadVideoById(item.youtubeVideoId);
     setPlaying(true);
-  }, [playbackMode, ready]);
+  }, [ensurePlaybackOwnership, playbackMode, ready]);
 
   useEffect(() => {
     if (!isListeningStationTab) {
@@ -604,6 +662,7 @@ export function MiniPlayer() {
             if (pendingItem) {
               pendingPlayItemRef.current = null;
               setCurrent(pendingItem);
+              if (!ensurePlaybackOwnership()) return;
               playerRef.current?.loadVideoById(pendingItem.youtubeVideoId);
               setPlaying(true);
               return;
@@ -619,10 +678,15 @@ export function MiniPlayer() {
               void loadNext("played", finishedId);
             }
             if (event.data === window.YT.PlayerState.PLAYING) {
+              if (!ensurePlaybackOwnership(false)) {
+                playerRef.current?.pauseVideo();
+                return;
+              }
               setPlaying(true);
             }
             if (event.data === window.YT.PlayerState.PAUSED) {
               setPlaying(false);
+              clearPlaybackOwnerIfOwned();
             }
           },
         },
@@ -649,7 +713,7 @@ export function MiniPlayer() {
     return () => {
       window.onYouTubeIframeAPIReady = undefined;
     };
-  }, [loadNext]);
+  }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, loadNext]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -708,6 +772,7 @@ export function MiniPlayer() {
       if (playing) {
         playerRef.current.pauseVideo();
       } else {
+        if (!ensurePlaybackOwnership()) return;
         playerRef.current.playVideo();
       }
     };
@@ -738,7 +803,43 @@ export function MiniPlayer() {
       window.removeEventListener("digqueue:done-current", reviewedCurrent);
       window.removeEventListener("digqueue:play-item", playItem as EventListener);
     };
-  }, [current, loadNext, loadPrev, loadSpecific, markReviewed, playing, ready]);
+  }, [current, ensurePlaybackOwnership, loadNext, loadPrev, loadSpecific, markReviewed, playing, ready]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (!playing) return;
+      const owner = readPlaybackOwner();
+      if (owner?.tabId === tabIdRef.current) {
+        writePlaybackOwner({ tabId: tabIdRef.current, updatedAt: Date.now() });
+      }
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, [playing, readPlaybackOwner, writePlaybackOwner]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== PLAYBACK_OWNER_STORAGE_KEY) return;
+      if (!playerRef.current) return;
+      if (!playing) return;
+      const owner = readPlaybackOwner();
+      if (owner && owner.tabId !== tabIdRef.current) {
+        playerRef.current.pauseVideo();
+        setPlaying(false);
+        setActionNotice("Playback moved to another tab.");
+      }
+    };
+
+    const onBeforeUnload = () => {
+      clearPlaybackOwnerIfOwned();
+    };
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [clearPlaybackOwnerIfOwned, playing, readPlaybackOwner]);
 
   const releaseMeta = useMemo(() => {
     if (!current) return "Queue is empty";

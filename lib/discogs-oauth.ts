@@ -21,8 +21,6 @@ const DISCOGS_USER_AGENT = "DigQueue/0.1 (+https://digqueue.app)";
 const DISCOGS_OAUTH_REQUEST_TOKEN_URL = "https://api.discogs.com/oauth/request_token";
 const DISCOGS_OAUTH_AUTHORIZE_URL = "https://www.discogs.com/oauth/authorize";
 const DISCOGS_OAUTH_ACCESS_TOKEN_URL = "https://api.discogs.com/oauth/access_token";
-const DISCOGS_CONSUMER_KEY_FALLBACK = "lMJnjNojOSFeijKuQPVR";
-const DISCOGS_CONSUMER_SECRET_FALLBACK = "mdEPXnOugVrlrFvdENPDmjpuFUDMaPZU";
 
 function percentEncode(value: string) {
   return encodeURIComponent(value)
@@ -72,10 +70,12 @@ function buildAuthorizationHeader(input: OAuthHeaderInput) {
 }
 
 function requireDiscogsOAuthConsumer() {
-  return {
-    consumerKey: env.DISCOGS_CONSUMER_KEY || DISCOGS_CONSUMER_KEY_FALLBACK,
-    consumerSecret: env.DISCOGS_CONSUMER_SECRET || DISCOGS_CONSUMER_SECRET_FALLBACK,
-  };
+  const consumerKey = env.DISCOGS_CONSUMER_KEY?.trim() || "";
+  const consumerSecret = env.DISCOGS_CONSUMER_SECRET?.trim() || "";
+  if (!consumerKey || !consumerSecret) {
+    throw new Error("Discogs OAuth is not configured. Set DISCOGS_CONSUMER_KEY and DISCOGS_CONSUMER_SECRET.");
+  }
+  return { consumerKey, consumerSecret };
 }
 
 function parseOAuthTokenPair(body: string): OAuthTokenPair {
