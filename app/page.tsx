@@ -22,7 +22,6 @@ import {
   refreshLabelMetadataAction,
   refreshMissingLabelMetadataAction,
   resumePausedSourcesBatchAction,
-  retryErroredSourcesBatchAction,
   retryErroredLabelsAction,
   retryLabelAction,
 } from "@/app/actions";
@@ -125,7 +124,7 @@ export default async function HomePage({
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
   const hasYoutubeBlockedError = false;
   const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
-  const showWishlistHeaderPill = hasDiscogs && activeTab !== "step-2";
+  const showWishlistHeaderPill = hasDiscogs && activeTab !== "step-1" && activeTab !== "step-2";
   const hasAnySources = data.labels.length > 0;
   const showOnboarding = !hasDiscogs || !hasAnySources;
   const onboardingPrimaryHref = !hasDiscogs ? "/connect-discogs?next=/" : "/?tab=step-1";
@@ -242,7 +241,14 @@ export default async function HomePage({
     return `/?${params.toString()}`;
   };
   const libraryRows = wishlistData?.rows ?? [];
-  const historyRows = (playedReviewedData?.rows ?? []).filter((row) => (row.playedCount ?? 0) > 0 || Boolean(row.wasPlayed));
+  const historyRows = [...(playedReviewedData?.rows ?? [])]
+    .filter((row) => (row.playedCount ?? 0) > 0 || Boolean(row.wasPlayed))
+    .sort((a, b) => {
+      const aLast = typeof a.lastPlayedQueueId === "number" ? a.lastPlayedQueueId : 0;
+      const bLast = typeof b.lastPlayedQueueId === "number" ? b.lastPlayedQueueId : 0;
+      if (bLast !== aLast) return bLast - aLast;
+      return b.trackId - a.trackId;
+    });
   const reviewedRows = (playedReviewedData?.rows ?? []).filter((row) => row.listened);
   const needsReviewRows = (playedReviewedData?.rows ?? []).filter(
     (row) => !row.listened && ((row.playedCount ?? 0) > 0 || Boolean(row.wasPlayed)),
@@ -497,50 +503,43 @@ export default async function HomePage({
                       size="sm"
                       variant="secondary"
                       pendingText="Queueing..."
-                      title="Queue up to 5 active sources that are idle, paused, or errored."
+                      title="Use this to keep sync moving: queues up to 5 active sources and retries active errors."
                       disabled={!canProcess || queueableActiveSourceCount <= 0}
                     >
-                      Queue next 5 active ({queueableActiveSourceCount})
+                      Keep sync moving (up to 5)
                     </FormSubmitButton>
                   </form>
-                  <form action={retryErroredSourcesBatchAction}>
-                    <input type="hidden" name="limit" value="5" />
-                    <FormSubmitButton
-                      type="submit"
-                      size="sm"
-                      variant="outline"
-                      pendingText="Retrying..."
-                      title="Move up to 5 active errored sources back to queued."
-                      disabled={!canProcess || retryableActiveSourceCount <= 0}
-                    >
-                      Retry 5 errors ({retryableActiveSourceCount})
-                    </FormSubmitButton>
-                  </form>
-                  <form action={resumePausedSourcesBatchAction}>
-                    <input type="hidden" name="limit" value="5" />
-                    <FormSubmitButton
-                      type="submit"
-                      size="sm"
-                      variant="outline"
-                      pendingText="Resuming..."
-                      title="Reactivate up to 5 paused sources and queue them."
-                      disabled={!canProcess || pausedSourceCount <= 0}
-                    >
-                      Resume 5 paused ({pausedSourceCount})
-                    </FormSubmitButton>
-                  </form>
-                  <form action={pauseAllActiveSourcesAction}>
-                    <FormSubmitButton
-                      type="submit"
-                      size="sm"
-                      variant="ghost"
-                      pendingText="Pausing..."
-                      title="Pause all active sources at once."
-                      disabled={!canProcess || activeLabels.length <= 0}
-                    >
-                      Pause all active ({activeLabels.length})
-                    </FormSubmitButton>
-                  </form>
+                  {activeLabels.length > 0 ? (
+                    <form action={pauseAllActiveSourcesAction}>
+                      <FormSubmitButton
+                        type="submit"
+                        size="sm"
+                        variant="ghost"
+                        pendingText="Pausing..."
+                        title="Pause all active sources at once."
+                        disabled={!canProcess}
+                      >
+                        Pause all active ({activeLabels.length})
+                      </FormSubmitButton>
+                    </form>
+                  ) : (
+                    <form action={resumePausedSourcesBatchAction}>
+                      <input type="hidden" name="limit" value="5" />
+                      <FormSubmitButton
+                        type="submit"
+                        size="sm"
+                        variant="outline"
+                        pendingText="Resuming..."
+                        title="Resume up to 5 paused sources."
+                        disabled={!canProcess || pausedSourceCount <= 0}
+                      >
+                        Resume paused (up to 5)
+                      </FormSubmitButton>
+                    </form>
+                  )}
+                  {retryableActiveSourceCount > 0 ? (
+                    <span className="text-[11px] text-[var(--color-muted)]">{retryableActiveSourceCount} active error {retryableActiveSourceCount === 1 ? "source will" : "sources will"} be retried by keep sync.</span>
+                  ) : null}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
                   <span>Source ingestion only (separate from wishlist sync).</span>
@@ -978,8 +977,8 @@ export default async function HomePage({
 
       {activeTab === "library" ? (
       <section className="mb-4 grid grid-cols-1 gap-4 reveal reveal-delay-2">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[linear-gradient(140deg,color-mix(in_oklab,var(--color-surface2)_88%,transparent),var(--color-surface2))] p-3 sm:p-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Library Views</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -1032,11 +1031,18 @@ export default async function HomePage({
                   Needs Review
                 </Link>
               </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {showLibraryItemsSection ? <Badge>Saved Tracks {totalSavedCount}</Badge> : null}
+                  <Badge>Wishlisted Records {totalWishlistedRecords}</Badge>
+                  {selectedLibraryView === "history" ? <Badge>History Items {historyCount}</Badge> : null}
+                  {selectedLibraryView === "reviewed" ? <Badge>Reviewed Items {reviewedCount}</Badge> : null}
+                  {selectedLibraryView === "needs-review" ? <Badge>Needs Review {needsReviewCount}</Badge> : null}
+                </div>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Actions</p>
                 {showLibraryItemsSection && hasDiscogs ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <form action={pullDiscogsWantsAction}>
                     <FormSubmitButton
                       type="submit"
@@ -1049,36 +1055,25 @@ export default async function HomePage({
                     </FormSubmitButton>
                   </form>
                   <SyncSavedToDiscogsButton enabled={hasDiscogs} />
+                  <form action={pullDiscogsWantsAction}>
+                    <FormSubmitButton type="submit" size="sm" variant="outline" pendingText="Syncing...">
+                      Run sync now
+                    </FormSubmitButton>
+                  </form>
                   </div>
                 ) : showLibraryItemsSection ? (
-                  <p className="mt-2 text-xs text-[var(--color-muted)]">Connect Discogs to sync wants.</p>
-                ) : (
-                  <p className="mt-2 text-xs text-[var(--color-muted)]">No actions for this view.</p>
-                )}
+                  <p className="mt-1.5 text-xs text-[var(--color-muted)]">Connect Discogs to sync wants.</p>
+                ) : null}
                 {showLibraryItemsSection ? (
-                  <div className="mt-2">
+                  <div className="mt-1.5">
                     {hasDiscogs ? (
-                      <div>
-                        <WishlistSyncStatus initialStatus={wantsSyncStatus} />
-                        <form action={pullDiscogsWantsAction} className="mt-2">
-                          <FormSubmitButton type="submit" size="sm" variant="outline" pendingText="Retrying...">
-                            Retry wishlist sync now
-                          </FormSubmitButton>
-                        </form>
-                      </div>
+                      <WishlistSyncStatus initialStatus={wantsSyncStatus} compact />
                     ) : (
                       <p className="text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync.</p>
                     )}
                   </div>
                 ) : null}
               </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {showLibraryItemsSection ? <Badge>Saved Tracks {totalSavedCount}</Badge> : null}
-              <Badge>Wishlisted Records {totalWishlistedRecords}</Badge>
-              {selectedLibraryView === "history" ? <Badge>History Items {historyCount}</Badge> : null}
-              {selectedLibraryView === "reviewed" ? <Badge>Reviewed Items {reviewedCount}</Badge> : null}
-              {selectedLibraryView === "needs-review" ? <Badge>Needs Review {needsReviewCount}</Badge> : null}
             </div>
           </div>
 

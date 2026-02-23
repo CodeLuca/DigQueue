@@ -309,11 +309,6 @@ export function ListenInboxClient({
       }),
     [rows, showWishlistSourceFilter, wishlistSourceFilter],
   );
-  const wishlistSourceCounts = useMemo(() => {
-    const savedTracks = rows.filter((item) => item.saved).length;
-    const wishlistedRecords = rows.filter((item) => item.releaseWishlist).length;
-    return { all: rows.length, savedTracks, wishlistedRecords };
-  }, [rows]);
   const activeWishlistSourceMeta = useMemo(() => {
     if (wishlistSourceFilter === "saved_tracks") {
       return {
@@ -357,6 +352,15 @@ export function ListenInboxClient({
   const activeLabelId = selectedLabelStillExists ? selectedLabelId : null;
   const activeLabelIndex = activeLabelId === null ? -1 : effectiveLabelOptions.findIndex((item) => item.id === activeLabelId);
   const activeLabel = activeLabelId === null ? null : effectiveLabelOptions.find((item) => item.id === activeLabelId) ?? null;
+  const wishlistScopeRows = useMemo(
+    () => (activeLabelId === null ? rows : rows.filter((item) => item.labelId === activeLabelId)),
+    [activeLabelId, rows],
+  );
+  const wishlistSourceCounts = useMemo(() => {
+    const savedTracks = wishlistScopeRows.filter((item) => item.saved).length;
+    const wishlistedRecords = wishlistScopeRows.filter((item) => item.releaseWishlist).length;
+    return { all: wishlistScopeRows.length, savedTracks, wishlistedRecords };
+  }, [wishlistScopeRows]);
   const scopedRows = useMemo(
     () => (activeLabelId === null ? sourceFilteredRows : sourceFilteredRows.filter((item) => item.labelId === activeLabelId)),
     [activeLabelId, sourceFilteredRows],
@@ -1363,8 +1367,13 @@ export function ListenInboxClient({
           const hasPlayedHistory = playedCount > 0;
           const needsMark = hasPlayedHistory && !item.listened;
           const wasPlayed = hasPlayedHistory && !needsMark;
+          const labelIsActive = activeLabelIds.has(item.labelId);
           const playUnavailableReason = youtubeQuotaExceeded
             ? "YouTube quota reached. Queue/play is temporarily disabled."
+            : !showQueueFilters && !labelIsActive
+                ? "This track belongs to an inactive label. Click 'Add + activate label' first, then try Play Now."
+                : !item.youtubeVideoId
+                    ? "No playable video is linked yet. Add and activate the label, then reprocess to generate playable matches."
             : item.videoEmbeddable === false
                 ? "Private or restricted video selected. Choose another match to play."
                 : null;
@@ -1475,7 +1484,13 @@ export function ListenInboxClient({
                     </div>
                   </div>
                 </div>
-                <div className="grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end">
+                <div
+                  className={
+                    showQueueFilters
+                      ? "grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end"
+                      : "flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap sm:justify-end"
+                  }
+                >
                   <a
                     href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
                     target="_blank"
@@ -1556,7 +1571,6 @@ export function ListenInboxClient({
                     </>
                   ) : (
                     (() => {
-                      const labelIsActive = activeLabelIds.has(item.labelId);
                       const isAdding = addingLabelReleaseId === item.releaseId;
                       const isAdded = addedLabelReleaseIds.includes(item.releaseId);
                       const isBusy = isAdding;
@@ -1573,7 +1587,7 @@ export function ListenInboxClient({
                       disabled={isBusy || !canAddLabel || isAdded}
                       title="Add this release label to DigQueue and activate it for processing."
                       aria-label="Add and activate label"
-                      className="col-span-2 w-full justify-center border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100 sm:col-span-3 sm:w-full sm:justify-center"
+                      className="w-full justify-center border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100 sm:w-[12rem]"
                     >
                       <PlusCircle className="h-3.5 w-3.5" />
                       {isAdding
@@ -1591,7 +1605,7 @@ export function ListenInboxClient({
                     type="button"
                     size="sm"
                     variant={item.saved ? "secondary" : "ghost"}
-                    className="col-span-2 w-full justify-center sm:col-auto sm:w-[8.5rem] sm:justify-center"
+                    className={`w-full justify-center sm:w-[8.5rem] sm:justify-center ${showQueueFilters ? "col-span-2 sm:col-auto" : ""}`}
                     onClick={() => void toggleRowSaved(item.trackId)}
                     title="Track save is local only and does not add to your Discogs wantlist."
                     aria-label={item.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}

@@ -42,6 +42,7 @@ type InboxRow = {
   wasPlayed: boolean;
   needsMark: boolean;
   playbackSource: "discogs" | "youtube" | null;
+  lastPlayedQueueId?: number;
 };
 
 function normalizeValue(value: string | null | undefined) {
@@ -99,6 +100,7 @@ function dedupeInboxRows(rows: InboxRow[]) {
       playedCount,
       wasPlayed: playedCount > 0,
       needsMark: !listened && playedCount > 0,
+      lastPlayedQueueId: Math.max(...variants.map((row) => row.lastPlayedQueueId ?? 0)),
     });
   }
 
@@ -109,7 +111,11 @@ type DashboardTab = "step-1" | "step-2" | "library" | "wishlist" | "played-revie
 
 async function getQueueTrackState(trackIds: number[], queueScope: ReturnType<typeof userScope>["queueItems"]) {
   if (trackIds.length === 0) {
-    return { pendingSet: new Set<number>(), playedCountByTrack: new Map<number, number>() };
+    return {
+      pendingSet: new Set<number>(),
+      playedCountByTrack: new Map<number, number>(),
+      playedLastIdByTrack: new Map<number, number>(),
+    };
   }
 
   const [pendingQueueRows, playedQueueRows] = await Promise.all([
@@ -119,7 +125,11 @@ async function getQueueTrackState(trackIds: number[], queueScope: ReturnType<typ
       .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "pending"), queueScope))
       .groupBy(queueItems.trackId),
     db
-      .select({ trackId: queueItems.trackId, value: count() })
+      .select({
+        trackId: queueItems.trackId,
+        value: count(),
+        lastId: sql<number>`max(${queueItems.id})`,
+      })
       .from(queueItems)
       .where(and(inArray(queueItems.trackId, trackIds), eq(queueItems.status, "played"), queueScope))
       .groupBy(queueItems.trackId),
@@ -129,12 +139,14 @@ async function getQueueTrackState(trackIds: number[], queueScope: ReturnType<typ
     pendingQueueRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"),
   );
   const playedCountByTrack = new Map<number, number>();
+  const playedLastIdByTrack = new Map<number, number>();
   for (const row of playedQueueRows) {
     if (typeof row.trackId !== "number") continue;
     playedCountByTrack.set(row.trackId, Number(row.value) || 0);
+    playedLastIdByTrack.set(row.trackId, Number(row.lastId) || 0);
   }
 
-  return { pendingSet, playedCountByTrack };
+  return { pendingSet, playedCountByTrack, playedLastIdByTrack };
 }
 
 export async function getDashboardData(options?: { includeRecommendations?: boolean; tab?: DashboardTab }) {
@@ -633,7 +645,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
     .limit(600);
 
   const trackIds = rows.map((row) => row.trackId);
-  const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
+  const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
   const enrichedRows = rows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =
@@ -647,6 +659,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
       wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       playbackSource,
+      lastPlayedQueueId: playedLastIdByTrack.get(row.trackId) ?? 0,
     };
   });
 
@@ -696,7 +709,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
         .limit(600);
 
       const trackIds = rows.map((row) => row.trackId);
-      const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
+      const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
       const enrichedRows = rows.map((row) => {
         const playbackSource: "discogs" | "youtube" | null =
@@ -710,6 +723,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
           wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
           needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
           playbackSource,
+      lastPlayedQueueId: playedLastIdByTrack.get(row.trackId) ?? 0,
         };
       });
 
@@ -768,7 +782,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
     .limit(600);
 
   const trackIds = rows.map((row) => row.trackId);
-  const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
+  const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
   const enrichedRows = rows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =
@@ -782,6 +796,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
       wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       playbackSource,
+      lastPlayedQueueId: playedLastIdByTrack.get(row.trackId) ?? 0,
     };
   });
 
@@ -831,7 +846,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
         .limit(600);
 
       const trackIds = rows.map((row) => row.trackId);
-      const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
+      const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
       const enrichedRows = rows.map((row) => {
         const playbackSource: "discogs" | "youtube" | null =
@@ -845,6 +860,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
           wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
           needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
           playbackSource,
+      lastPlayedQueueId: playedLastIdByTrack.get(row.trackId) ?? 0,
         };
       });
 
@@ -920,7 +936,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
     .limit(800);
 
   const trackIds = rows.map((row) => row.trackId);
-  const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
+  const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
   const enrichedRows = rows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =
@@ -934,6 +950,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
       wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
       playbackSource,
+      lastPlayedQueueId: playedLastIdByTrack.get(row.trackId) ?? 0,
     };
   });
 
@@ -999,7 +1016,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
         .limit(800);
 
       const trackIds = rows.map((row) => row.trackId);
-      const { pendingSet, playedCountByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
+      const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
       const enrichedRows = rows.map((row) => {
         const playbackSource: "discogs" | "youtube" | null =
@@ -1013,6 +1030,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
           wasPlayed: (playedCountByTrack.get(row.trackId) ?? 0) > 0,
           needsMark: !row.listened && (playedCountByTrack.get(row.trackId) ?? 0) > 0,
           playbackSource,
+      lastPlayedQueueId: playedLastIdByTrack.get(row.trackId) ?? 0,
         };
       });
 

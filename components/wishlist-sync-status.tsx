@@ -33,6 +33,15 @@ function phaseLabel(phase?: WantsSyncStatus["phase"]) {
   return "Running";
 }
 
+function errorHint(raw?: string) {
+  const text = (raw || "").toLowerCase();
+  if (text.includes("unauthorized")) return "reconnect Discogs";
+  if (text.includes("token")) return "check Discogs token";
+  if (text.includes("rate") || text.includes("429")) return "rate-limited, retry shortly";
+  if (text.includes("network") || text.includes("fetch")) return "network/API issue";
+  return "open Source Intake for details";
+}
+
 export function WishlistSyncStatus({
   initialStatus,
   compact = false,
@@ -82,7 +91,7 @@ export function WishlistSyncStatus({
     }
     if (status.status === "throttled") {
       const at = fmtUtc(status.finishedAt) ?? "just now";
-      return `Wishlist auto-sync is throttled (max once per minute). Last check: ${at}.`;
+      return `Wishlist auto-sync checks once per minute to avoid API limits. Last check: ${at}.`;
     }
     const at = fmtUtc(status.finishedAt) ?? "just now";
     return `Wishlist sync failed at ${at}${status.error ? `: ${status.error}` : "."}`;
@@ -99,9 +108,9 @@ export function WishlistSyncStatus({
       return "Wishlist sync: complete";
     }
     if (status.status === "throttled") {
-      return "Wishlist sync: throttled";
+      return "Wishlist sync: checks every minute";
     }
-    return "Wishlist sync: error";
+    return `Wishlist sync failed: ${errorHint(status.error)}`;
   }, [status]);
 
   if (compact) {
