@@ -1,32 +1,61 @@
 import { headers } from "next/headers";
 
-function readConfiguredOrigin() {
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (!configuredOrigin) return null;
+function isLocalHost(hostOrOrigin: string) {
+  const value = hostOrOrigin.toLowerCase();
+  return value.includes("localhost") || value.includes("127.0.0.1");
+}
+
+function toOrigin(value: string | undefined | null, defaultProto = "https") {
+  const raw = value?.trim();
+  if (!raw) return null;
+  const withProto = /^[a-z]+:\/\//i.test(raw) ? raw : `${defaultProto}://${raw}`;
   try {
-    return new URL(configuredOrigin).origin;
+    return new URL(withProto).origin;
   } catch {
     return null;
   }
 }
 
+function readConfiguredOrigin() {
+  const explicit =
+    toOrigin(process.env.NEXT_PUBLIC_APP_URL) ||
+    toOrigin(process.env.APP_URL) ||
+    toOrigin(process.env.RAILWAY_PUBLIC_DOMAIN) ||
+    toOrigin(process.env.RAILWAY_STATIC_URL) ||
+    toOrigin(process.env.RAILWAY_SERVICE_DIGQUEUE_URL);
+  if (explicit) return explicit;
+  return null;
+}
+
+function getOriginFromHeaders(headersLike: Pick<Headers, "get">) {
+  const forwardedHost = headersLike.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || headersLike.get("host") || "";
+  if (!host) return null;
+  const forwardedProto = headersLike.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const proto = forwardedProto || (isLocalHost(host) ? "http" : "https");
+  return toOrigin(`${proto}://${host}`);
+}
+
 export function resolveRequestAppOrigin(request: Request) {
-  const requestUrl = new URL(request.url);
   const configuredOrigin = readConfiguredOrigin();
-  if (configuredOrigin && process.env.NODE_ENV === "production") return configuredOrigin;
+  if (configuredOrigin) return configuredOrigin;
+
+  const fromHeaders = getOriginFromHeaders(request.headers);
+  if (fromHeaders && !isLocalHost(fromHeaders)) return fromHeaders;
+
+  const requestUrl = new URL(request.url);
+  if (!isLocalHost(requestUrl.origin)) return requestUrl.origin;
+
+  if (fromHeaders) return fromHeaders;
   return requestUrl.origin;
 }
 
 export async function resolveHeaderAppOrigin() {
   const configuredOrigin = readConfiguredOrigin();
-  if (configuredOrigin && process.env.NODE_ENV === "production") return configuredOrigin;
+  if (configuredOrigin) return configuredOrigin;
 
   const headersStore = await headers();
-  const rawForwardedHost = headersStore.get("x-forwarded-host");
-  const rawHost = rawForwardedHost?.split(",")[0]?.trim() || headersStore.get("host") || "127.0.0.1:3000";
-  const rawForwardedProto = headersStore.get("x-forwarded-proto");
-  const rawProto = rawForwardedProto?.split(",")[0]?.trim();
-  const isLocalHost = rawHost.startsWith("127.0.0.1") || rawHost.startsWith("localhost");
-  const proto = rawProto || (isLocalHost ? "http" : "https");
-  return `${proto}://${rawHost}`;
+  const fromHeaders = getOriginFromHeaders(headersStore);
+  if (fromHeaders) return fromHeaders;
+  return "http://127.0.0.1:3000";
 }
