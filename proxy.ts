@@ -15,6 +15,42 @@ const PUBLIC_PATHS = new Set([
 ]);
 const PUBLIC_API_PREFIXES: string[] = [];
 
+function isLocalHost(hostOrOrigin: string) {
+  const value = hostOrOrigin.toLowerCase();
+  return value.includes("localhost") || value.includes("127.0.0.1");
+}
+
+function toOrigin(value: string | undefined | null, defaultProto = "https") {
+  const raw = value?.trim();
+  if (!raw) return null;
+  const withProto = /^[a-z]+:\/\//i.test(raw) ? raw : `${defaultProto}://${raw}`;
+  try {
+    return new URL(withProto).origin;
+  } catch {
+    return null;
+  }
+}
+
+function resolveProxyOrigin(request: NextRequest) {
+  const configuredOrigin =
+    toOrigin(process.env.NEXT_PUBLIC_APP_URL) ||
+    toOrigin(process.env.APP_URL) ||
+    toOrigin(process.env.RAILWAY_PUBLIC_DOMAIN) ||
+    toOrigin(process.env.RAILWAY_STATIC_URL) ||
+    toOrigin(process.env.RAILWAY_SERVICE_DIGQUEUE_URL);
+  if (configuredOrigin) return configuredOrigin;
+
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || request.headers.get("host") || "";
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  if (host) {
+    const proto = forwardedProto || (isLocalHost(host) ? "http" : "https");
+    const origin = toOrigin(`${proto}://${host}`);
+    if (origin) return origin;
+  }
+  return request.nextUrl.origin;
+}
+
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true;
   for (const value of PUBLIC_PATHS) {
@@ -29,11 +65,12 @@ function isPublicApiPath(pathname: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const appOrigin = resolveProxyOrigin(request);
 
   // Some OAuth configurations may return the auth code to "/".
   // Always funnel this through our dedicated callback handler.
   if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
-    const callbackUrl = new URL("/auth/callback", request.url);
+    const callbackUrl = new URL("/auth/callback", appOrigin);
     for (const [key, value] of request.nextUrl.searchParams.entries()) {
       callbackUrl.searchParams.set(key, value);
     }
@@ -76,10 +113,10 @@ export async function proxy(request: NextRequest) {
   if (isPublicPath(pathname)) return NextResponse.next();
 
   if (pathname === "/") {
-    return NextResponse.redirect(new URL("/welcome", request.url));
+    return NextResponse.redirect(new URL("/welcome", appOrigin));
   }
 
-  const loginUrl = new URL("/login", request.url);
+  const loginUrl = new URL("/login", appOrigin);
   loginUrl.searchParams.set("next", pathname + search);
   return NextResponse.redirect(loginUrl);
 }
