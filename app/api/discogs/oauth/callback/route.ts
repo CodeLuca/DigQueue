@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
+import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { getApiKeys, setApiKeys } from "@/lib/api-keys";
 import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
@@ -29,6 +30,7 @@ function sanitizeDiscogsErrorMessage(message: string) {
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  const appOrigin = resolveRequestAppOrigin(request);
   const nextPath = safeNext(requestUrl.searchParams.get("next"));
   const returnedState = requestUrl.searchParams.get("state") || "";
   const oauthToken = requestUrl.searchParams.get("oauth_token") || "";
@@ -36,7 +38,7 @@ export async function GET(request: Request) {
 
   const userId = await getCurrentAppUserId();
   if (!userId) {
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/connect-discogs")}`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/connect-discogs")}`, appOrigin));
   }
 
   const cookieStore = await cookies();
@@ -45,10 +47,10 @@ export async function GET(request: Request) {
 
   const [expectedState, requestToken, requestTokenSecret] = pending.split(":");
   if (!returnedState || !oauthToken || !verifier || !expectedState || !requestToken || !requestTokenSecret) {
-    return NextResponse.redirect(new URL("/settings?discogs_error=Invalid%20Discogs%20OAuth%20callback.", requestUrl.origin));
+    return NextResponse.redirect(new URL("/settings?discogs_error=Invalid%20Discogs%20OAuth%20callback.", appOrigin));
   }
   if (returnedState !== expectedState || oauthToken !== requestToken) {
-    return NextResponse.redirect(new URL("/settings?discogs_error=Discogs%20OAuth%20state%20mismatch.", requestUrl.origin));
+    return NextResponse.redirect(new URL("/settings?discogs_error=Discogs%20OAuth%20state%20mismatch.", appOrigin));
   }
 
   try {
@@ -66,9 +68,9 @@ export async function GET(request: Request) {
     revalidatePath("/");
     revalidatePath("/settings");
     revalidatePath("/connect-discogs");
-    return NextResponse.redirect(new URL(`${nextPath}${nextPath.includes("?") ? "&" : "?"}discogs=connected`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`${nextPath}${nextPath.includes("?") ? "&" : "?"}discogs=connected`, appOrigin));
   } catch (error) {
     const message = sanitizeDiscogsErrorMessage(error instanceof Error ? error.message : "Unable to finish Discogs OAuth.");
-    return NextResponse.redirect(new URL(`/settings?discogs_error=${encodeURIComponent(message)}`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`/settings?discogs_error=${encodeURIComponent(message)}`, appOrigin));
   }
 }

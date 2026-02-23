@@ -1,10 +1,12 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveHeaderAppOrigin } from "@/lib/app-origin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
 import { resolvePostAuthRedirect } from "@/lib/post-auth";
+
+const MIN_PASSWORD_LENGTH = 6;
 
 function safeNext(value: unknown) {
   const raw = typeof value === "string" ? value : "";
@@ -14,34 +16,6 @@ function safeNext(value: unknown) {
   if (raw.startsWith("/login")) return "/?tab=step-2";
   if (raw.startsWith("/register")) return "/?tab=step-2";
   return raw;
-}
-
-function resolveAppOrigin(headersStore: Awaited<ReturnType<typeof headers>>) {
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configuredOrigin && process.env.NODE_ENV === "production") {
-    try {
-      return new URL(configuredOrigin).origin;
-    } catch {
-      // Ignore invalid NEXT_PUBLIC_APP_URL and fall back to request headers.
-    }
-  }
-
-  const rawForwardedHost = headersStore.get("x-forwarded-host");
-  const rawHost = rawForwardedHost?.split(",")[0]?.trim() || headersStore.get("host") || "127.0.0.1:3000";
-  const rawForwardedProto = headersStore.get("x-forwarded-proto");
-  const rawProto = rawForwardedProto?.split(",")[0]?.trim();
-  const isLocalHost = rawHost.startsWith("127.0.0.1") || rawHost.startsWith("localhost");
-  const proto = rawProto || (isLocalHost ? "http" : "https");
-
-  if (configuredOrigin && isLocalHost) {
-    try {
-      return new URL(configuredOrigin).origin;
-    } catch {
-      // Ignore invalid NEXT_PUBLIC_APP_URL and continue with host-derived origin.
-    }
-  }
-
-  return `${proto}://${rawHost}`;
 }
 
 function withAuthQuery(path: string, params: Record<string, string | null | undefined>) {
@@ -60,6 +34,7 @@ function friendlyAuthError(message: string, fallback: string) {
   if (lower.includes("unsupported provider")) return "Google login is not available right now.";
   if (lower.includes("missing oauth client id")) return "Google login is not configured yet.";
   if (lower.includes("is invalid")) return "Please enter a valid email address.";
+  if (lower.includes("password should be at least")) return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
   return message || fallback;
 }
 
@@ -95,8 +70,8 @@ export async function registerWithPasswordAction(formData: FormData) {
   if (!email || !password) {
     redirect(withAuthQuery("/login", { mode: "register", next: nextPath, error: "Email and password are required." }));
   }
-  if (password.length < 8) {
-    redirect(withAuthQuery("/login", { mode: "register", next: nextPath, error: "Password must be at least 8 characters." }));
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    redirect(withAuthQuery("/login", { mode: "register", next: nextPath, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }));
   }
   if (password !== confirmPassword) {
     redirect(withAuthQuery("/login", { mode: "register", next: nextPath, error: "Passwords do not match." }));
@@ -126,20 +101,29 @@ export async function registerWithPasswordAction(formData: FormData) {
     redirect(destination);
   }
 
-  // When email confirmation is required, Supabase may create a user without an active session.
-  redirect(withAuthQuery("/login", {
-    next: nextPath,
-    email,
-    notice: "Account created. Check your email to confirm, then login.",
-  }));
+  // Fallback: if signUp did not return a session, immediately attempt sign-in so registration logs in by default.
+  const signInResult = await supabase.auth.signInWithPassword({ email, password });
+  if (signInResult.error || !signInResult.data.user) {
+    redirect(withAuthQuery("/login", {
+      next: nextPath,
+      email,
+      notice: "Account created. Login once to continue.",
+    }));
+  }
+  try {
+    await ensureDefaultSourcesForUser(signInResult.data.user.id);
+  } catch {
+    // Non-blocking: account creation should still complete if source bootstrap fails.
+  }
+  const destination = await resolvePostAuthRedirect(nextPath);
+  redirect(destination);
 }
 
 export async function loginWithGoogleAction(formData: FormData) {
   const nextPath = safeNext(formData.get("next"));
 
   const supabase = await getSupabaseServerClient();
-  const headersStore = await headers();
-  const redirectTo = new URL("/auth/callback", resolveAppOrigin(headersStore));
+  const redirectTo = new URL("/auth/callback", await resolveHeaderAppOrigin());
   redirectTo.searchParams.set("next", nextPath);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -174,8 +158,7 @@ export async function requestPasswordResetAction(formData: FormData) {
   }
 
   const supabase = await getSupabaseServerClient();
-  const headersStore = await headers();
-  const confirmUrl = new URL("/auth/confirm", resolveAppOrigin(headersStore));
+  const confirmUrl = new URL("/auth/confirm", await resolveHeaderAppOrigin());
   confirmUrl.searchParams.set("next", "/reset-password");
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -199,8 +182,8 @@ export async function completePasswordResetAction(formData: FormData) {
   if (!password || !confirmPassword) {
     redirect(withAuthQuery("/reset-password", { error: "Both password fields are required." }));
   }
-  if (password.length < 8) {
-    redirect(withAuthQuery("/reset-password", { error: "Password must be at least 8 characters." }));
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    redirect(withAuthQuery("/reset-password", { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` }));
   }
   if (password !== confirmPassword) {
     redirect(withAuthQuery("/reset-password", { error: "Passwords do not match." }));

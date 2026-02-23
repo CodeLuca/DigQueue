@@ -39,7 +39,7 @@ export default async function ListenPage({
               defaultValue={selectedLabelId ? String(selectedLabelId) : ""}
               className="h-9 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 text-sm sm:w-auto"
             >
-              <option value="">All labels</option>
+              <option value="">All sources</option>
               {data.labels.map((item) => (
                 <option key={item.id} value={item.id}>{item.name}</option>
               ))}

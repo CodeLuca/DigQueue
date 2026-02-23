@@ -977,7 +977,7 @@ export function ListenInboxClient({
               title="Filter tracks by label"
               aria-label="Filter tracks by label"
             >
-              <option value="">All labels</option>
+              <option value="">All sources</option>
               {effectiveLabelOptions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -1391,7 +1391,7 @@ export function ListenInboxClient({
               }`}
               onMouseEnter={() => setCursor(index)}
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                   <input
                     type="checkbox"
@@ -1437,7 +1437,7 @@ export function ListenInboxClient({
                           disabled={wishlistReleaseIdLoading === item.releaseId}
                           className={`h-9 w-9 p-0 ${
                             item.releaseWishlist
-                              ? "border border-amber-500/70 bg-amber-500/18 text-amber-200 hover:bg-amber-500/28 hover:text-amber-50"
+                              ? "border border-amber-500/70 bg-amber-500/18 text-black hover:bg-amber-500/28 hover:text-black"
                               : "border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-surface2)] hover:text-white"
                           }`}
                           onClick={() => void toggleRowRecordWishlist(item.releaseId)}
@@ -1487,8 +1487,8 @@ export function ListenInboxClient({
                 <div
                   className={
                     showQueueFilters
-                      ? "grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end"
-                      : "flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap sm:justify-end"
+                      ? "grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:self-start sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end"
+                      : "flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:self-start sm:flex-nowrap sm:justify-end"
                   }
                 >
                   <a
@@ -1501,6 +1501,16 @@ export function ListenInboxClient({
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
+                  {!showQueueFilters ? (
+                    <a
+                      href={`/releases/${item.releaseId}`}
+                      className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--color-border)] px-3 text-sm text-[var(--color-text)] hover:bg-[var(--color-surface)]"
+                      title="Open release details to view all tracks and manage matches/saves."
+                      aria-label="Open release details"
+                    >
+                      Release
+                    </a>
+                  ) : null}
                   <span
                     className={`group relative inline-flex min-w-0 sm:w-[8.5rem] ${canPlay ? "" : "cursor-not-allowed"}`}
                     aria-label={playUnavailableReason ?? "Play"}
@@ -1555,7 +1565,7 @@ export function ListenInboxClient({
                           variant="secondary"
                           onClick={() => void markRowReleaseListened(item.releaseId, item.trackId, item.releaseDiscogsUrl)}
                           disabled={reviewingReleaseId === item.releaseId}
-                          className="h-9 w-9 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-amber-100 hover:bg-amber-500/32"
+                          className="h-9 w-9 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-black hover:bg-amber-500/32"
                           title="Mark entire release reviewed and skip to next release"
                           aria-label="Mark entire release reviewed and skip to next release"
                         >

@@ -30,15 +30,15 @@ export default async function ResetPasswordPage({
               name="password"
               type="password"
               required
-              minLength={8}
-              placeholder="New password (min 8 characters)"
+              minLength={6}
+              placeholder="New password (min 6 characters)"
               className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
             />
             <input
               name="confirmPassword"
               type="password"
               required
-              minLength={8}
+              minLength={6}
               placeholder="Confirm new password"
               className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
             />

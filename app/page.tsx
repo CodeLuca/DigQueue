@@ -18,10 +18,8 @@ import {
   addSourceAction,
   pauseAllActiveSourcesAction,
   pullDiscogsWantsAction,
-  queueActiveSourcesBatchAction,
   refreshLabelMetadataAction,
-  refreshMissingLabelMetadataAction,
-  resumePausedSourcesBatchAction,
+  startSyncAction,
   retryErroredLabelsAction,
   retryLabelAction,
 } from "@/app/actions";
@@ -52,6 +50,22 @@ function normalizeLabelStatus(active: boolean, status: string, lastError: string
   if (!active && status === "processing") return "paused";
   if (status === "error" && isTransientLabelError(lastError)) return "processing";
   return status;
+}
+
+function getDisplaySourceName(name: string, discogsUrl: string, kind: "label" | "artist") {
+  const trimmedName = (name || "").trim();
+  if (trimmedName && !/^https?:\/\//i.test(trimmedName)) return trimmedName;
+  try {
+    const parsed = new URL(discogsUrl);
+    const match = parsed.pathname.match(/\/(?:label|artist)\/\d+-([^/?#]+)/i);
+    if (match?.[1]) {
+      const slug = decodeURIComponent(match[1]).replace(/[-_]+/g, " ").trim();
+      if (slug) return slug;
+    }
+  } catch {
+    // Fall through to generic fallback.
+  }
+  return kind === "artist" ? "Artist source" : "Label source";
 }
 
 export default async function HomePage({
@@ -177,9 +191,6 @@ export default async function HomePage({
     { queued: 0, processing: 0, error: 0, paused: 0, complete: 0, other: 0 },
   );
   const pausedSourceCount = data.labels.filter((label) => !label.active && label.status === "paused").length;
-  const queueableActiveSourceCount = activeLabels.filter(
-    (label) => !label.tracksFullyLoaded && label.status !== "processing",
-  ).length;
   const retryableActiveSourceCount = activeLabels.filter((label) => label.status === "error").length;
   const showIngestionPanelOpen =
     activeStatusCounts.processing > 0 || activeStatusCounts.error > 0 || retryableActiveSourceCount > 0;
@@ -205,6 +216,8 @@ export default async function HomePage({
         return true;
       })
     : [];
+  const labelSources = filteredLabels.filter((label) => label.entityKind !== "artist");
+  const artistSources = filteredLabels.filter((label) => label.entityKind === "artist");
   const activeFilteredCount = queriedLabels.filter((label) => label.active).length;
   const inactiveFilteredCount = queriedLabels.length - activeFilteredCount;
   const filterHref = (nextState: "all" | "active" | "inactive") => {
@@ -213,15 +226,6 @@ export default async function HomePage({
     if (listenLabel) params.set("listenLabel", listenLabel);
     if (nextState !== "all") params.set("labelState", nextState);
     if (selectedSourceKind !== "all") params.set("sourceKind", selectedSourceKind);
-    if (normalizedLabelQuery) params.set("labelQuery", labelQuery?.trim() || "");
-    return `/?${params.toString()}`;
-  };
-  const kindHref = (nextKind: "all" | "label" | "artist") => {
-    const params = new URLSearchParams();
-    params.set("tab", "step-1");
-    if (listenLabel) params.set("listenLabel", listenLabel);
-    if (selectedLabelState !== "all") params.set("labelState", selectedLabelState);
-    if (nextKind !== "all") params.set("sourceKind", nextKind);
     if (normalizedLabelQuery) params.set("labelQuery", labelQuery?.trim() || "");
     return `/?${params.toString()}`;
   };
@@ -263,6 +267,144 @@ export default async function HomePage({
   const reviewedCount = reviewedRows.length;
   const needsReviewCount = needsReviewRows.length;
   const totalWishlistedRecords = data.metrics.wishlistedRecords;
+  const renderSourceCard = (label: (typeof data.labels)[number]) => {
+    const displayName = getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label");
+    const visibleLastError = getVisibleLabelError(label.lastError);
+    const normalizedStatusRaw = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
+    const normalizedStatus = label.tracksFullyLoaded ? "complete" : normalizedStatusRaw;
+    const totalLoadedReleases = Math.max(0, label.loadedReleaseCount);
+    const fetchedReleases = Math.max(0, label.fetchedReleaseCount);
+    const progressPct = totalLoadedReleases > 0 ? Math.min(100, Math.round((fetchedReleases / totalLoadedReleases) * 100)) : 0;
+    const statusLabel =
+      normalizedStatus === "processing"
+        ? "Processing"
+        : normalizedStatus === "queued"
+          ? "Queued"
+          : normalizedStatus === "error"
+            ? "Error"
+            : normalizedStatus === "paused"
+              ? "Paused"
+              : normalizedStatus === "complete"
+                ? "Complete"
+                : normalizedStatus;
+    return (
+      <div
+        key={label.id}
+        className={`rounded-xl border p-3 transition ${
+          label.active
+            ? "border-emerald-500/60 bg-emerald-500/10 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+            : "border-[var(--color-border)] bg-[var(--color-surface2)] opacity-90"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 gap-3">
+            {label.imageUrl ? (
+              <img
+                src={label.imageUrl}
+                alt={`${label.name} source`}
+                className={`h-14 w-14 rounded-md border object-cover ${label.active ? "border-emerald-500/40" : "border-[var(--color-border)]"}`}
+                loading="lazy"
+              />
+            ) : (
+              <div
+                className={`h-14 w-14 rounded-md border bg-[var(--color-surface)] ${label.active ? "border-emerald-500/40" : "border-[var(--color-border)]"}`}
+                aria-hidden
+              />
+            )}
+            <div className="min-w-0">
+              <Link href={`/labels/${label.id}`} className="line-clamp-1 text-sm font-medium hover:text-[var(--color-accent)]">{displayName}</Link>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                {fetchedReleases}/{totalLoadedReleases} releases • {progressPct}% • {label.loadedTrackCount} tracks
+              </p>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface)]">
+                <div
+                  className={`h-full transition-all ${normalizedStatus === "error" ? "bg-rose-400/80" : "bg-emerald-400/80"}`}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Badge className="border-[var(--color-border)] text-[10px] uppercase">{label.entityKind === "artist" ? "Artist" : "Label"}</Badge>
+            {label.active ? (
+              <Badge className="border-emerald-500/70 bg-emerald-500/15 text-emerald-200">ACTIVE</Badge>
+            ) : (
+              <Badge className="border-zinc-600/40 text-zinc-400">inactive</Badge>
+            )}
+            <Badge className={normalizedStatus === "error" ? "border-rose-500/60 text-rose-200" : ""}>{statusLabel}</Badge>
+          </div>
+        </div>
+        {visibleLastError ? <p className="mt-2 line-clamp-2 text-xs text-red-300">Error: {visibleLastError}</p> : null}
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+              href={toDiscogsWebUrl(label.discogsUrl, "")}
+              target="_blank"
+              rel="noreferrer"
+              title="Open on Discogs"
+              aria-label="Open on Discogs"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            {!label.tracksFullyLoaded ? (
+              <form action={retryLabelAction}>
+                <input type="hidden" name="labelId" value={label.id} />
+                <FormSubmitButton
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  disabled={!canProcess || normalizedStatus === "processing"}
+                  pendingText="Syncing..."
+                  title="Sync this source now"
+                >
+                  {normalizedStatus === "processing" ? "Syncing..." : normalizedStatus === "queued" ? "Queued..." : "Sync now"}
+                </FormSubmitButton>
+              </form>
+            ) : null}
+            <p className="text-xs text-[var(--color-muted)]">
+              Updated {new Date(label.updatedAt).toLocaleDateString()} • Retries {label.retryCount}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ProcessingToggle
+              key={`${label.id}-${label.active ? "1" : "0"}-${label.status}`}
+              labelId={label.id}
+              initialActive={Boolean(label.active)}
+              initialStatus={label.status}
+              disabled={!canProcess}
+            />
+          </div>
+        </div>
+        <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 px-2.5 py-2 text-xs text-[var(--color-muted)]">
+          <summary className="cursor-pointer select-none text-[11px] uppercase tracking-[0.06em] text-[var(--color-muted)]">Details</summary>
+          <p className="mt-2 line-clamp-2">{label.summaryText}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <form action={refreshLabelMetadataAction}>
+              <input type="hidden" name="labelId" value={label.id} />
+              <FormSubmitButton type="submit" size="sm" variant="ghost" pendingText="Refreshing..." title="Refresh this source profile, image, and notable releases">
+                <RefreshCcw className="mr-1 h-3.5 w-3.5" />
+                Refresh source info
+              </FormSubmitButton>
+            </form>
+            <LabelDeleteButton labelId={label.id} labelName={label.name} />
+          </div>
+          {label.notableReleasesJson !== "[]" ? (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {(() => {
+                try {
+                  const entries = JSON.parse(label.notableReleasesJson) as string[];
+                  return entries.slice(0, 4).map((entry) => <Badge key={`${label.id}-${entry}`}>{entry}</Badge>);
+                } catch {
+                  return null;
+                }
+              })()}
+            </div>
+          ) : null}
+        </details>
+      </div>
+    );
+  };
   const tabMeta: Record<TabId, { title: string; subtitle: string; icon: typeof Disc3 }> = {
     "step-1": {
       title: "Sources",
@@ -496,60 +638,47 @@ export default async function HomePage({
                   </div>
                 </summary>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <form action={queueActiveSourcesBatchAction}>
-                    <input type="hidden" name="limit" value="1" />
-                    <FormSubmitButton
-                      type="submit"
-                      size="sm"
-                      variant="secondary"
-                      pendingText="Running..."
-                      title="Run one sync step now."
-                      disabled={!canProcess || queueableActiveSourceCount <= 0}
-                    >
-                      Run one step
-                    </FormSubmitButton>
-                  </form>
-                  <form action={queueActiveSourcesBatchAction}>
-                    <input type="hidden" name="limit" value="5" />
-                    <FormSubmitButton
-                      type="submit"
-                      size="sm"
-                      variant="outline"
-                      pendingText="Running..."
-                      title="Run up to 5 queued/errored sources."
-                      disabled={!canProcess || queueableActiveSourceCount <= 0}
-                    >
-                      Run batch (up to 5)
-                    </FormSubmitButton>
-                  </form>
-                  {activeLabels.length > 0 ? (
+                  {activeStatusCounts.processing > 0 || activeStatusCounts.queued > 0 ? (
                     <form action={pauseAllActiveSourcesAction}>
                       <FormSubmitButton
                         type="submit"
                         size="sm"
-                        variant="ghost"
+                        variant="secondary"
                         pendingText="Pausing..."
-                        title="Pause all active sources at once."
-                        disabled={!canProcess}
+                        title="Pause source sync."
+                        disabled={!canProcess || activeLabels.length <= 0}
                       >
-                        Pause all active ({activeLabels.length})
+                        Pause sync
                       </FormSubmitButton>
                     </form>
                   ) : (
-                    <form action={resumePausedSourcesBatchAction}>
-                      <input type="hidden" name="limit" value="5" />
+                    <form action={startSyncAction}>
+                      <FormSubmitButton
+                        type="submit"
+                        size="sm"
+                        variant="secondary"
+                        pendingText="Starting..."
+                        title="Resume paused sources and queue active sources."
+                        disabled={!canProcess || (activeLabels.length <= 0 && pausedSourceCount <= 0)}
+                      >
+                        Start sync
+                      </FormSubmitButton>
+                    </form>
+                  )}
+                  {activeStatusCounts.error > 0 ? (
+                    <form action={retryErroredLabelsAction}>
                       <FormSubmitButton
                         type="submit"
                         size="sm"
                         variant="outline"
-                        pendingText="Resuming..."
-                        title="Resume up to 5 paused sources."
-                        disabled={!canProcess || pausedSourceCount <= 0}
+                        pendingText="Retrying..."
+                        title="Move errored sources back to queue."
+                        disabled={!canProcess}
                       >
-                        Resume paused (up to 5)
+                        Retry errors
                       </FormSubmitButton>
                     </form>
-                  )}
+                  ) : null}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
                   <span>Source sync only.</span>
@@ -664,39 +793,8 @@ export default async function HomePage({
                       >
                         Inactive ({inactiveFilteredCount})
                       </Link>
-                      <Link
-                        href={kindHref("all")}
-                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
-                          selectedSourceKind === "all"
-                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                        }`}
-                        title="Show all source kinds"
-                      >
-                        Any Kind ({queriedLabels.length})
-                      </Link>
-                      <Link
-                        href={kindHref("label")}
-                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
-                          selectedSourceKind === "label"
-                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                        }`}
-                        title="Show label sources only"
-                      >
-                        Label Sources ({queriedLabels.filter((item) => item.entityKind !== "artist").length})
-                      </Link>
-                      <Link
-                        href={kindHref("artist")}
-                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
-                          selectedSourceKind === "artist"
-                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                        }`}
-                        title="Show artist sources only"
-                      >
-                        Artists ({queriedLabels.filter((item) => item.entityKind === "artist").length})
-                      </Link>
+                      <Badge>Label sources {labelSources.length}</Badge>
+                      <Badge>Artist sources {artistSources.length}</Badge>
                     </div>
                     <form method="GET" className="mt-2 flex flex-wrap items-center gap-2">
                       <input type="hidden" name="tab" value="step-1" />
@@ -720,182 +818,32 @@ export default async function HomePage({
                       ) : null}
                     </form>
                   </div>
-                  <div className="min-w-0">
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <form action={refreshMissingLabelMetadataAction}>
-                        <FormSubmitButton type="submit" size="sm" variant="outline" pendingText="Refreshing..." title="Fetch profile and artwork for sources missing metadata">
-                          Refresh missing source info
-                        </FormSubmitButton>
-                      </form>
-                      {hasDiscogs ? (
-                        <form action={pullDiscogsWantsAction}>
-                          <FormSubmitButton
-                            type="submit"
-                            size="sm"
-                            variant="secondary"
-                            pendingText="Importing..."
-                            title="Imports your most recent 200 Discogs wants into Library. Does not auto-activate sources."
-                          >
-                            Import Recent Wishlist (200)
-                          </FormSubmitButton>
-                        </form>
-                      ) : (
-                        <Link href="/connect-discogs?next=/" className="text-xs text-[var(--color-accent)] hover:underline">
-                          Connect Discogs to pull wishlist
-                        </Link>
-                      )}
-                    </div>
-                    <p className="mt-2 text-xs text-[var(--color-muted)]">
-                      Imports recent wants into Library for review. It does not auto-activate queue sources.
-                    </p>
-                  </div>
                 </div>
               </details>
 
-              <div className="space-y-2">
-                {filteredLabels.map((label) => {
-                  const visibleLastError = getVisibleLabelError(label.lastError);
-                  const normalizedStatusRaw = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
-                  const normalizedStatus = label.tracksFullyLoaded ? "complete" : normalizedStatusRaw;
-                  const totalLoadedReleases = Math.max(0, label.loadedReleaseCount);
-                  const fetchedReleases = Math.max(0, label.fetchedReleaseCount);
-                  const progressPct = totalLoadedReleases > 0
-                    ? Math.min(100, Math.round((fetchedReleases / totalLoadedReleases) * 100))
-                    : 0;
-                  const statusLabel =
-                    normalizedStatus === "processing"
-                      ? "Processing"
-                      : normalizedStatus === "queued"
-                        ? "Queued"
-                        : normalizedStatus === "error"
-                          ? "Error"
-                          : normalizedStatus === "paused"
-                            ? "Paused"
-                          : normalizedStatus === "complete"
-                            ? "Complete"
-                            : normalizedStatus;
-                  return (
-                    <div
-                    key={label.id}
-                    className={`rounded-xl border p-3 transition ${
-                      label.active
-                        ? "border-emerald-500/60 bg-emerald-500/10 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface2)] opacity-90"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 gap-3">
-                        {label.imageUrl ? (
-                          <img
-                            src={label.imageUrl}
-                            alt={`${label.name} source`}
-                            className={`h-14 w-14 rounded-md border object-cover ${label.active ? "border-emerald-500/40" : "border-[var(--color-border)]"}`}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div
-                            className={`h-14 w-14 rounded-md border bg-[var(--color-surface)] ${label.active ? "border-emerald-500/40" : "border-[var(--color-border)]"}`}
-                            aria-hidden
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <Link href={`/labels/${label.id}`} className="line-clamp-1 text-sm font-medium hover:text-[var(--color-accent)]">{label.name}</Link>
-                          <p className="mt-1 text-xs text-[var(--color-muted)]">
-                            {fetchedReleases}/{totalLoadedReleases} releases • {progressPct}% • {label.loadedTrackCount} tracks
-                          </p>
-                          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface)]">
-                            <div
-                              className={`h-full transition-all ${normalizedStatus === "error" ? "bg-rose-400/80" : "bg-emerald-400/80"}`}
-                              style={{ width: `${progressPct}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Badge className="border-[var(--color-border)] text-[10px] uppercase">
-                          {label.entityKind === "artist" ? "Artist" : "Label"}
-                        </Badge>
-                        {label.active ? (
-                          <Badge className="border-emerald-500/70 bg-emerald-500/15 text-emerald-200">ACTIVE</Badge>
-                        ) : (
-                          <Badge className="border-zinc-600/40 text-zinc-400">inactive</Badge>
-                        )}
-                        <Badge className={normalizedStatus === "error" ? "border-rose-500/60 text-rose-200" : ""}>{statusLabel}</Badge>
-                      </div>
+              <div className="space-y-4">
+                {labelSources.length > 0 ? (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-medium">Label sources</p>
+                      <Badge>{labelSources.length}</Badge>
                     </div>
-                    {visibleLastError ? <p className="mt-2 line-clamp-2 text-xs text-red-300">Error: {visibleLastError}</p> : null}
-                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <a
-                          className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                          href={toDiscogsWebUrl(label.discogsUrl, "")}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Open on Discogs"
-                          aria-label="Open on Discogs"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                        {!label.tracksFullyLoaded ? (
-                          <form action={retryLabelAction}>
-                            <input type="hidden" name="labelId" value={label.id} />
-                            <FormSubmitButton
-                              type="submit"
-                              size="sm"
-                              variant="outline"
-                              disabled={!canProcess || normalizedStatus === "processing"}
-                              pendingText="Running step..."
-                              title="Run one immediate ingestion step for this source"
-                            >
-                              {normalizedStatus === "processing" ? "Syncing..." : normalizedStatus === "queued" ? "Queued..." : "Run one step"}
-                            </FormSubmitButton>
-                          </form>
-                        ) : null}
-                        <p className="text-xs text-[var(--color-muted)]">
-                          Updated {new Date(label.updatedAt).toLocaleDateString()} • Retries {label.retryCount}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <ProcessingToggle
-                          key={`${label.id}-${label.active ? "1" : "0"}-${label.status}`}
-                          labelId={label.id}
-                          initialActive={Boolean(label.active)}
-                          initialStatus={label.status}
-                          disabled={!canProcess}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      {labelSources.map((label) => renderSourceCard(label))}
                     </div>
-                    <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 px-2.5 py-2 text-xs text-[var(--color-muted)]">
-                      <summary className="cursor-pointer select-none text-[11px] uppercase tracking-[0.06em] text-[var(--color-muted)]">
-                        Details
-                      </summary>
-                      <p className="mt-2 line-clamp-2">{label.summaryText}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <form action={refreshLabelMetadataAction}>
-                          <input type="hidden" name="labelId" value={label.id} />
-                          <FormSubmitButton type="submit" size="sm" variant="ghost" pendingText="Refreshing..." title="Refresh this source profile, image, and notable releases">
-                            <RefreshCcw className="mr-1 h-3.5 w-3.5" />
-                            Refresh source info
-                          </FormSubmitButton>
-                        </form>
-                        <LabelDeleteButton labelId={label.id} labelName={label.name} />
-                      </div>
-                      {label.notableReleasesJson !== "[]" ? (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {(() => {
-                            try {
-                              const entries = JSON.parse(label.notableReleasesJson) as string[];
-                              return entries.slice(0, 4).map((entry) => <Badge key={`${label.id}-${entry}`}>{entry}</Badge>);
-                            } catch {
-                              return null;
-                            }
-                          })()}
-                        </div>
-                      ) : null}
-                    </details>
                   </div>
-                  );
-                })}
+                ) : null}
+                {artistSources.length > 0 ? (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-medium">Artist sources</p>
+                      <Badge>{artistSources.length}</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {artistSources.map((label) => renderSourceCard(label))}
+                    </div>
+                  </div>
+                ) : null}
                 {filteredLabels.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-3">
                     <p className="text-sm text-[var(--color-muted)]">No sources match this filter.</p>

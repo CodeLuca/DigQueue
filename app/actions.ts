@@ -64,6 +64,21 @@ function scoreLabelName(query: string, candidate: string) {
   return tokenScore + subseqScore;
 }
 
+function deriveNameFromDiscogsUrl(urlLike: string, kind: "label" | "artist", id: number) {
+  const fallback = `${kind === "artist" ? "Artist" : "Label"} ${id}`;
+  const trimmed = urlLike.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return trimmed || fallback;
+  try {
+    const parsed = new URL(trimmed);
+    const match = parsed.pathname.match(/\/(?:label|artist)\/\d+-([^/?#]+)/i);
+    if (!match?.[1]) return fallback;
+    const slug = decodeURIComponent(match[1]).replace(/[-_]+/g, " ").trim();
+    return slug || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 type LocalLabelCandidate = { id: number; title: string; score: number };
 
 async function findBestLocalLabelCandidate(
@@ -292,6 +307,9 @@ export async function addSourceAction(formData: FormData) {
     }
   }
 
+  if (/^https?:\/\//i.test(name)) {
+    name = deriveNameFromDiscogsUrl(name, entityKind, id);
+  }
   const storedLabelId = await upsertSourceById(userId, entityKind, id, name);
   try {
     await refreshSourceMetadata(storedLabelId, entityKind, userId);
@@ -407,6 +425,39 @@ export async function queueActiveSourcesBatchAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function startSyncAction() {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const now = new Date();
+
+  const allSources = await db.query.labels.findMany({
+    where: scope.labels,
+    orderBy: [asc(labels.updatedAt)],
+    columns: { id: true, active: true, status: true },
+  });
+
+  for (const source of allSources) {
+    // Resume paused sources.
+    if (!source.active && source.status === "paused") {
+      await db
+        .update(labels)
+        .set({ active: true, status: "queued", lastError: null, updatedAt: now })
+        .where(and(eq(labels.id, source.id), scope.labels));
+      continue;
+    }
+
+    // Queue active sources that are not currently processing/queued.
+    if (source.active && source.status !== "processing" && source.status !== "queued") {
+      await db
+        .update(labels)
+        .set({ status: "queued", lastError: null, updatedAt: now })
+        .where(and(eq(labels.id, source.id), scope.labels));
+    }
+  }
+
+  revalidatePath("/");
+}
+
 export async function retryErroredSourcesBatchAction(formData: FormData) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
@@ -480,11 +531,11 @@ export async function retryLabelAction(formData: FormData) {
   const labelId = Number(formData.get("labelId"));
   if (!labelId) return;
   const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), scope.labels) });
-  if (!label?.active) return;
+  if (!label) return;
 
   await db
     .update(labels)
-    .set({ status: "processing", lastError: null, updatedAt: new Date() })
+    .set({ active: true, status: "processing", lastError: null, updatedAt: new Date() })
     .where(and(eq(labels.id, labelId), scope.labels));
 
   // Kick one processing step immediately so "Reload tracks" has visible progress without requiring queue runner.

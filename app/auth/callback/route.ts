@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
 import { resolvePostAuthRedirect } from "@/lib/post-auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
@@ -15,23 +16,24 @@ function safeNext(value: string | null) {
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  const appOrigin = resolveRequestAppOrigin(request);
   const code = requestUrl.searchParams.get("code");
   const nextPath = safeNext(requestUrl.searchParams.get("next"));
 
   if (!code) {
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent("Missing OAuth callback code.")}`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent("Missing OAuth callback code.")}`, appOrigin));
   }
 
   const supabase = await getSupabaseServerClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin));
+    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, appOrigin));
   }
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) {
     const fallbackDestination = await resolvePostAuthRedirect(nextPath);
-    return NextResponse.redirect(new URL(fallbackDestination, requestUrl.origin));
+    return NextResponse.redirect(new URL(fallbackDestination, appOrigin));
   }
   const user = userData.user;
   if (user?.id) {
@@ -43,5 +45,5 @@ export async function GET(request: Request) {
   }
 
   const destination = await resolvePostAuthRedirect(nextPath);
-  return NextResponse.redirect(new URL(destination, requestUrl.origin));
+  return NextResponse.redirect(new URL(destination, appOrigin));
 }

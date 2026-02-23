@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function safeNext(value: string | null) {
@@ -11,23 +12,11 @@ function safeNext(value: string | null) {
   return value;
 }
 
-function resolveAppOrigin(request: Request) {
-  const requestUrl = new URL(request.url);
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configuredOrigin && process.env.NODE_ENV === "production") {
-    try {
-      return new URL(configuredOrigin).origin;
-    } catch {
-      // Ignore invalid NEXT_PUBLIC_APP_URL and fall back to request origin.
-    }
-  }
-  return requestUrl.origin;
-}
-
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  const appOrigin = resolveRequestAppOrigin(request);
   const nextPath = safeNext(requestUrl.searchParams.get("next"));
-  const redirectTo = new URL("/auth/callback", resolveAppOrigin(request));
+  const redirectTo = new URL("/auth/callback", appOrigin);
   redirectTo.searchParams.set("next", nextPath);
 
   const supabase = await getSupabaseServerClient();
@@ -39,7 +28,7 @@ export async function GET(request: Request) {
   });
 
   if (error || !data.url) {
-    const loginUrl = new URL("/login", requestUrl.origin);
+    const loginUrl = new URL("/login", appOrigin);
     loginUrl.searchParams.set("next", nextPath);
     loginUrl.searchParams.set("error", error?.message || "Google login failed.");
     return NextResponse.redirect(loginUrl);

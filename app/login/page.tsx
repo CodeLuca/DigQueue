@@ -94,13 +94,15 @@ export default async function LoginPage({
                 name="password"
                 type="password"
                 required
-                placeholder="Password (min 8 characters)"
+                minLength={6}
+                placeholder="Password (min 6 characters)"
                 className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
               />
               <input
                 name="confirmPassword"
                 type="password"
                 required
+                minLength={6}
                 placeholder="Confirm password"
                 className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
               />
