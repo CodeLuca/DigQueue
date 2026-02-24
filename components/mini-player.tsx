@@ -23,7 +23,6 @@ import {
   Youtube,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { parseBpmFromTexts } from "@/lib/bpm";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 declare global {
@@ -123,6 +122,11 @@ const PLAYBACK_OWNER_STORAGE_KEY = "digqueue:playback-owner";
 const PLAYBACK_OWNER_TTL_MS = 12000;
 const REQUEST_TIMEOUT_MS = 15000;
 const BULK_REQUEST_TIMEOUT_MS = 30000;
+const BPM_SAMPLE_INTERVAL_MS = 50;
+const BPM_ESTIMATE_INTERVAL_MS = 1200;
+const BPM_WINDOW_SECONDS = 16;
+const BPM_MIN = 70;
+const BPM_MAX = 200;
 type PlaybackMode = "in_order" | "shuffle";
 type ReleaseWishlistApiResponse = {
   ok?: boolean;
@@ -155,6 +159,29 @@ type PlaybackOwnerState = {
   updatedAt: number;
 };
 
+function estimateBpmFromEnvelope(samples: number[], sampleIntervalMs: number): number | null {
+  if (samples.length < 40) return null;
+  const mean = samples.reduce((acc, value) => acc + value, 0) / samples.length;
+  const centered = samples.map((value) => value - mean);
+  const minLag = Math.floor((60_000 / BPM_MAX) / sampleIntervalMs);
+  const maxLag = Math.ceil((60_000 / BPM_MIN) / sampleIntervalMs);
+  let bestLag = -1;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (let lag = minLag; lag <= maxLag; lag += 1) {
+    let score = 0;
+    for (let index = lag; index < centered.length; index += 1) {
+      score += centered[index] * centered[index - lag];
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestLag = lag;
+    }
+  }
+  if (bestLag <= 0 || !Number.isFinite(bestScore) || bestScore <= 0) return null;
+  const bpm = Math.round(60_000 / (bestLag * sampleIntervalMs));
+  return bpm >= BPM_MIN && bpm <= BPM_MAX ? bpm : null;
+}
+
 export function MiniPlayer() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab");
@@ -162,6 +189,7 @@ export function MiniPlayer() {
   const playerRef = useRef<YTPlayer | null>(null);
   const pendingPlayItemRef = useRef<QueueApiItem | null>(null);
   const currentRef = useRef<QueueApiItem | null>(null);
+  const loadNextRef = useRef<((action?: "played" | "listened" | null, currentId?: number) => Promise<boolean>) | null>(null);
   const loadNextRequestRef = useRef<Promise<boolean> | null>(null);
   const handlingEndedForIdRef = useRef<number | null>(null);
   const middlePreviewPreparedForIdRef = useRef<number | null>(null);
@@ -181,6 +209,13 @@ export function MiniPlayer() {
   const releaseLinksCacheRef = useRef(new Map<number, FinderLinksApiResponse>());
   const tabIdRef = useRef(`tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const wasPlayingBeforeHiddenRef = useRef(false);
+  const bpmCaptureStreamRef = useRef<MediaStream | null>(null);
+  const bpmAudioContextRef = useRef<AudioContext | null>(null);
+  const bpmAnalyserRef = useRef<AnalyserNode | null>(null);
+  const bpmSampleBufferRef = useRef<Float32Array | null>(null);
+  const bpmEnvelopeRef = useRef<number[]>([]);
+  const bpmSampleTimerRef = useRef<number | null>(null);
+  const bpmEstimateTimerRef = useRef<number | null>(null);
   const [current, setCurrent] = useState<QueueApiItem | null>(null);
   const [history, setHistory] = useState<QueueApiItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -202,6 +237,10 @@ export function MiniPlayer() {
   const [releaseLinksError, setReleaseLinksError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>("in_order");
+  const [liveBpm, setLiveBpm] = useState<number | null>(null);
+  const [liveBpmStatus, setLiveBpmStatus] = useState<"off" | "starting" | "detecting" | "running" | "error">("off");
+  const [liveBpmError, setLiveBpmError] = useState<string | null>(null);
+  const [liveBpmInputSource, setLiveBpmInputSource] = useState<"tab" | "mic" | null>(null);
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent || "";
@@ -402,7 +441,7 @@ export function MiniPlayer() {
     const request = (async () => {
       const activeMode = "hybrid";
       const activeOrder = playbackMode;
-      await syncQueueToListeningScope();
+      void syncQueueToListeningScope().catch(() => null);
       const activeCurrentId = currentId ?? currentRef.current?.id;
       const response = action && activeCurrentId && activeCurrentId > 0
         ? await fetch("/api/queue/next", {
@@ -441,6 +480,17 @@ export function MiniPlayer() {
       }
 
       const previousCurrent = currentRef.current;
+      const isSameQueueItem = previousCurrent?.id === item.id;
+      const isSameVideoTrack =
+        previousCurrent?.youtubeVideoId === item.youtubeVideoId &&
+        (previousCurrent?.track?.id ?? null) === (item.track?.id ?? null);
+      // Only suppress duplicate reloads for passive fetches.
+      // When user explicitly marks played/listened, allow advancing even if
+      // the next candidate points to the same media.
+      if (!action && (isSameQueueItem || isSameVideoTrack)) {
+        setCurrent(item);
+        return true;
+      }
       if (previousCurrent) {
         setHistory((prev) => [previousCurrent, ...prev].slice(0, 50));
       }
@@ -461,6 +511,10 @@ export function MiniPlayer() {
       }
     }
   }, [ensurePlaybackOwnership, isListeningStationTab, playbackMode, syncQueueToListeningScope]);
+
+  useEffect(() => {
+    loadNextRef.current = loadNext;
+  }, [loadNext]);
 
   const markReviewed = useCallback(async () => {
     if (markReviewedInFlightRef.current) return;
@@ -598,6 +652,13 @@ export function MiniPlayer() {
   const loadSpecific = useCallback(async (item: QueueApiItem) => {
     const previousCurrent = currentRef.current;
     const switchingToDifferentItem = previousCurrent?.id && previousCurrent.id !== item.id;
+    const sameVideoTrack =
+      previousCurrent?.youtubeVideoId === item.youtubeVideoId &&
+      (previousCurrent?.track?.id ?? null) === (item.track?.id ?? null);
+    if (!switchingToDifferentItem && sameVideoTrack) {
+      setCurrent(item);
+      return;
+    }
 
     if (switchingToDifferentItem && previousCurrent && previousCurrent.id > 0) {
       // Manual "play now" should advance queue state for the item being replaced.
@@ -700,7 +761,7 @@ export function MiniPlayer() {
               setPlaying(true);
               return;
             }
-            void loadNext();
+            void loadNextRef.current?.();
           },
           onStateChange: (event: { data: number }) => {
             if (event.data === window.YT.PlayerState.ENDED) {
@@ -708,7 +769,7 @@ export function MiniPlayer() {
               if (!finishedId || handlingEndedForIdRef.current === finishedId) return;
               if (manualSeekOverrideForIdRef.current === finishedId) return;
               handlingEndedForIdRef.current = finishedId;
-              void loadNext("played", finishedId);
+              void loadNextRef.current?.("played", finishedId);
             }
             if (event.data === window.YT.PlayerState.PLAYING) {
               if (!ensurePlaybackOwnership(false)) {
@@ -767,7 +828,7 @@ export function MiniPlayer() {
       playerRef.current = null;
       setReady(false);
     };
-  }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, loadNext]);
+  }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership]);
 
   const maybeAutoAdvanceAtTrackEnd = useCallback(() => {
     const player = playerRef.current;
@@ -1083,10 +1144,160 @@ export function MiniPlayer() {
     if (!current) return "Queue is empty";
     return [current.label?.name?.trim(), current.release?.title?.trim()].filter(Boolean).join(" • ");
   }, [current]);
-  const currentBpm = useMemo(() => {
-    if (typeof current?.track?.bpm === "number") return current.track.bpm;
-    return parseBpmFromTexts([current?.track?.title ?? null, current?.release?.title ?? null]);
-  }, [current?.release?.title, current?.track?.bpm, current?.track?.title]);
+  const stopLiveBpmCapture = useCallback(() => {
+    if (bpmSampleTimerRef.current) {
+      window.clearInterval(bpmSampleTimerRef.current);
+      bpmSampleTimerRef.current = null;
+    }
+    if (bpmEstimateTimerRef.current) {
+      window.clearInterval(bpmEstimateTimerRef.current);
+      bpmEstimateTimerRef.current = null;
+    }
+    bpmEnvelopeRef.current = [];
+    bpmSampleBufferRef.current = null;
+    bpmAnalyserRef.current = null;
+    if (bpmAudioContextRef.current) {
+      void bpmAudioContextRef.current.close().catch(() => null);
+      bpmAudioContextRef.current = null;
+    }
+    if (bpmCaptureStreamRef.current) {
+      for (const track of bpmCaptureStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      bpmCaptureStreamRef.current = null;
+    }
+    setLiveBpm(null);
+    setLiveBpmStatus("off");
+    setLiveBpmError(null);
+    setLiveBpmInputSource(null);
+  }, []);
+
+  const startLiveBpmCapture = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    if (!navigator.mediaDevices) {
+      setLiveBpmStatus("error");
+      setLiveBpmError("Live BPM capture is not supported in this browser.");
+      return;
+    }
+    stopLiveBpmCapture();
+    setLiveBpm(null);
+    setLiveBpmError(null);
+    setLiveBpmInputSource(null);
+    setLiveBpmStatus("starting");
+
+    const attachStream = (stream: MediaStream, inputSource: "tab" | "mic") => {
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        for (const track of stream.getTracks()) track.stop();
+        throw new Error(inputSource === "tab" ? "No tab audio track was shared." : "Microphone audio track unavailable.");
+      }
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.85;
+      const mediaSource = audioContext.createMediaStreamSource(stream);
+      mediaSource.connect(analyser);
+      const buffer = new Float32Array(analyser.fftSize);
+      bpmCaptureStreamRef.current = stream;
+      bpmAudioContextRef.current = audioContext;
+      bpmAnalyserRef.current = analyser;
+      bpmSampleBufferRef.current = buffer;
+      bpmEnvelopeRef.current = [];
+      setLiveBpmInputSource(inputSource);
+      setLiveBpmStatus("detecting");
+      const maxSamples = Math.floor((BPM_WINDOW_SECONDS * 1000) / BPM_SAMPLE_INTERVAL_MS);
+
+      bpmSampleTimerRef.current = window.setInterval(() => {
+        const activeAnalyser = bpmAnalyserRef.current;
+        const activeBuffer = bpmSampleBufferRef.current;
+        if (!activeAnalyser || !activeBuffer) return;
+        activeAnalyser.getFloatTimeDomainData(activeBuffer);
+        let energy = 0;
+        for (let index = 0; index < activeBuffer.length; index += 1) {
+          const sample = activeBuffer[index];
+          energy += sample * sample;
+        }
+        const rms = Math.sqrt(energy / activeBuffer.length);
+        const envelope = bpmEnvelopeRef.current;
+        envelope.push(rms);
+        if (envelope.length > maxSamples) {
+          envelope.splice(0, envelope.length - maxSamples);
+        }
+      }, BPM_SAMPLE_INTERVAL_MS);
+
+      bpmEstimateTimerRef.current = window.setInterval(() => {
+        const estimated = estimateBpmFromEnvelope(bpmEnvelopeRef.current, BPM_SAMPLE_INTERVAL_MS);
+        if (typeof estimated === "number") {
+          setLiveBpm((previous) => (typeof previous === "number" ? Math.round(previous * 0.65 + estimated * 0.35) : estimated));
+          setLiveBpmStatus("running");
+        } else {
+          setLiveBpmStatus((previous) => (previous === "running" ? "running" : "detecting"));
+        }
+      }, BPM_ESTIMATE_INTERVAL_MS);
+
+      audioTracks[0]?.addEventListener(
+        "ended",
+        () => {
+          stopLiveBpmCapture();
+        },
+        { once: true },
+      );
+    };
+
+    try {
+      if (!navigator.mediaDevices.getDisplayMedia) {
+        throw new Error("TAB_CAPTURE_UNAVAILABLE");
+      }
+      const tabStream = await navigator.mediaDevices.getDisplayMedia({
+        audio: true,
+        video: true,
+      } as DisplayMediaStreamOptions);
+      try {
+        attachStream(tabStream, "tab");
+        return;
+      } catch (attachError) {
+        for (const track of tabStream.getTracks()) track.stop();
+        throw attachError;
+      }
+    } catch {
+      try {
+        if (!navigator.mediaDevices.getUserMedia) {
+          throw new Error("MIC_CAPTURE_UNAVAILABLE");
+        }
+        const micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+          video: false,
+        });
+        attachStream(micStream, "mic");
+        setActionNotice("Live BPM is using microphone input (tab audio unavailable).");
+        return;
+      } catch (micError) {
+        stopLiveBpmCapture();
+        setLiveBpmStatus("error");
+        setLiveBpmError(micError instanceof Error ? micError.message : "Unable to start live BPM capture.");
+      }
+    }
+  }, [stopLiveBpmCapture]);
+
+  useEffect(() => {
+    return () => {
+      stopLiveBpmCapture();
+    };
+  }, [stopLiveBpmCapture]);
+
+  const currentBpmLabel = useMemo(() => {
+    if (liveBpmStatus === "error") return liveBpmError ?? "Live BPM unavailable";
+    if (liveBpmStatus === "starting") return "Starting live BPM…";
+    if (liveBpmStatus === "detecting") return "Detecting BPM…";
+    if (liveBpmStatus === "running" && typeof liveBpm === "number") return `${liveBpm} BPM`;
+    return "Live BPM off";
+  }, [liveBpm, liveBpmError, liveBpmStatus]);
+  const currentBpmValue = typeof liveBpm === "number" ? String(liveBpm) : "--";
+  const bpmInputLabel = liveBpmInputSource === "mic" ? "Mic input" : liveBpmInputSource === "tab" ? "Tab audio" : null;
 
   const currentReleaseId = current?.release?.id;
 
@@ -1675,7 +1886,36 @@ export function MiniPlayer() {
           </div>
           <div className="truncate text-xs text-[var(--color-muted)]">{currentArtistLine}</div>
           <div className="truncate text-xs text-[var(--color-muted)]">{releaseMeta}</div>
-          {typeof currentBpm === "number" ? <div className="truncate text-xs text-[var(--color-muted)]">{currentBpm} BPM</div> : null}
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-muted)]">
+            <span
+              className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+                liveBpmStatus === "running"
+                  ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-100"
+                  : "border-[var(--color-border)] text-[var(--color-text)]"
+              }`}
+              aria-live="polite"
+            >
+              BPM {currentBpmValue}{bpmInputLabel ? ` · ${bpmInputLabel === "Mic input" ? "mic" : "tab"}` : ""}
+            </span>
+            {liveBpmStatus !== "running" ? <span className="truncate text-[10px]">{currentBpmLabel}</span> : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-5 rounded-md border border-[var(--color-border)] px-1.5 text-[10px]"
+              onClick={() => {
+                if (liveBpmStatus === "off" || liveBpmStatus === "error") {
+                  void startLiveBpmCapture();
+                } else {
+                  stopLiveBpmCapture();
+                }
+              }}
+              title={liveBpmStatus === "off" || liveBpmStatus === "error" ? "Enable live BPM from shared tab audio" : "Stop live BPM detection"}
+              aria-label={liveBpmStatus === "off" || liveBpmStatus === "error" ? "Enable live BPM" : "Stop live BPM"}
+            >
+              {liveBpmStatus === "off" || liveBpmStatus === "error" ? "BPM" : "Stop"}
+            </Button>
+          </div>
           <div className="mt-1 flex items-center gap-1.5 sm:gap-2">
             <span className="w-8 text-right text-[11px] text-[var(--color-muted)] sm:w-10">{formatTime(sliderValue)}</span>
             <input
@@ -1702,7 +1942,172 @@ export function MiniPlayer() {
             <span className="w-8 text-[11px] text-[var(--color-muted)] sm:w-10">{formatTime(sliderMax)}</span>
           </div>
         </div>
-        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:w-auto md:overflow-visible md:pb-0">
+        <div className="mt-2 flex w-full flex-col gap-2 md:hidden">
+          <div className="grid grid-cols-4 gap-2">
+            <Button variant="ghost" size="sm" className="h-10 w-full rounded-md border border-[var(--color-border)]" onClick={() => loadPrev()} aria-label="Previous">
+              <SkipBack className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-10 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-accent)] p-0 text-black hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0"
+              onClick={() => {
+                if (!playerRef.current) return;
+                if (!current) {
+                  void loadNext();
+                  return;
+                }
+                if (playing) playerRef.current.pauseVideo();
+                else playerRef.current.playVideo();
+              }}
+              aria-label="Play Pause"
+            >
+              {playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-10 w-full rounded-md border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38"
+              onClick={() => void markReviewed()}
+              disabled={!current?.track?.id || todoLoading !== null}
+              title="Mark current track reviewed and move to next track"
+              aria-label="Mark current track reviewed and move to next track"
+            >
+              {todoLoading === "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void markEntireReleaseReviewed()}
+              disabled={!current?.release?.id || todoLoading !== null}
+              className="h-10 w-full rounded-md border border-amber-400/60 bg-amber-500/22 p-0 text-black hover:bg-amber-500/32"
+              title="Mark entire release reviewed and skip to next release"
+              aria-label="Mark entire release reviewed and skip to next release"
+            >
+              {todoLoading === "reviewed_release" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCheck className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <details>
+            <summary className="cursor-pointer list-none rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] px-3 py-2 text-xs text-[var(--color-muted)]">
+              More controls
+            </summary>
+            <div className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-2">
+              <div className="grid grid-cols-4 gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={expandedOpen ? "secondary" : "ghost"}
+                  className={iconButtonClass}
+                  onClick={() => setExpandedOpen((prev) => !prev)}
+                  disabled={!current}
+                  title={expandedOpen ? "Collapse release details" : "Expand release details"}
+                  aria-label={expandedOpen ? "Collapse release details" : "Expand release details"}
+                >
+                  {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={queueOpen ? "secondary" : "ghost"}
+                  className={iconButtonClass}
+                  onClick={() => {
+                    const next = !queueOpen;
+                    setQueueOpen(next);
+                    if (next) void fetchQueueItems();
+                  }}
+                  title="Open queue"
+                  aria-label="Open queue"
+                >
+                  <ListOrdered className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={current?.track?.saved ? "secondary" : "ghost"}
+                  className={iconButtonClass}
+                  onClick={() => void toggleSaved()}
+                  disabled={!current?.track?.id || todoLoading !== null}
+                  aria-label={current?.track?.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}
+                  title={current?.track?.saved ? "Saved track (local only)" : "Save track (local only)"}
+                >
+                  {todoLoading === "saved" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : current?.track?.saved ? (
+                    <HeartOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Heart className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={current?.release?.wishlist ? "secondary" : "ghost"}
+                  className={`${iconButtonClass} ${
+                    current?.release?.wishlist
+                      ? "border-amber-500/60 bg-amber-500/15 text-black hover:bg-amber-500/25 hover:text-black"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                  }`}
+                  onClick={() => void toggleCurrentReleaseWishlist()}
+                  disabled={!current?.release?.id || wishlistLoading}
+                  title={current?.release?.wishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
+                  aria-label={current?.release?.wishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
+                >
+                  {current?.release?.wishlist ? (
+                    <BookmarkCheck className="h-5 w-5 stroke-[2.4]" />
+                  ) : (
+                    <BookmarkPlus className="h-5 w-5 stroke-[2.4]" />
+                  )}
+                </Button>
+                {current?.youtubeVideoId ? (
+                  <a
+                    href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
+                    title="Open on YouTube"
+                    aria-label="Open on YouTube"
+                  >
+                    <Youtube className="h-3.5 w-3.5" />
+                  </a>
+                ) : null}
+              </div>
+              <div className="mt-1.5 grid grid-cols-2 gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={playbackMode === "in_order" ? "secondary" : "ghost"}
+                  className="h-9 w-full justify-center text-xs"
+                  onClick={() => setGlobalPlaybackMode("in_order")}
+                  aria-label="Playback mode one by one"
+                  title="Play one after another in queue order"
+                >
+                  <ListOrdered className="mr-1 h-3.5 w-3.5" />
+                  1-by-1
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={playbackMode === "shuffle" ? "secondary" : "ghost"}
+                  className="h-9 w-full justify-center text-xs"
+                  onClick={() => setGlobalPlaybackMode("shuffle")}
+                  aria-label="Playback mode shuffle"
+                  title="Shuffle through pending queue items"
+                >
+                  <Shuffle className="mr-1 h-3.5 w-3.5" />
+                  Shuffle
+                </Button>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div className="hidden w-full items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:flex md:w-auto md:overflow-visible md:pb-0">
           <details className="shrink-0 md:hidden">
             <summary className="cursor-pointer list-none rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] px-3 py-1 text-xs text-[var(--color-muted)]">
               More

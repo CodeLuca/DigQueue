@@ -455,6 +455,24 @@ export async function startSyncAction() {
     }
   }
 
+  // Kick one source step immediately so Sync does not sit in "idle" after clicking Start.
+  const firstQueued = await db.query.labels.findFirst({
+    where: and(eq(labels.active, true), eq(labels.status, "queued"), scope.labels),
+    orderBy: [asc(labels.updatedAt)],
+    columns: { id: true },
+  });
+  if (firstQueued) {
+    await db
+      .update(labels)
+      .set({ status: "processing", lastError: null, updatedAt: new Date() })
+      .where(and(eq(labels.id, firstQueued.id), scope.labels));
+    try {
+      await processSingleReleaseForSource(firstQueued.id, userId);
+    } catch {
+      // Keep daemon-driven retries; start action should stay resilient.
+    }
+  }
+
   revalidatePath("/");
 }
 

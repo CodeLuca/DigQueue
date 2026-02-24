@@ -5,7 +5,7 @@ import { AppNav } from "@/components/app-nav";
 import { LabelSyncDaemon } from "@/components/label-sync-daemon";
 import { MiniPlayer } from "@/components/mini-player";
 
-const publicRoutes = new Set(["/welcome", "/login", "/register", "/reset-password", "/connect-discogs", "/how-to-use"]);
+const publicRoutes = new Set(["/welcome", "/login", "/register", "/reset-password", "/how-to-use"]);
 
 export function ChromeShell() {
   const pathname = usePathname();

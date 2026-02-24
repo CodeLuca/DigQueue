@@ -25,16 +25,19 @@ export default async function ConnectDiscogsPage({
         ) : null}
 
         <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
-          <p className="text-sm">
-            Use one click to authorize Discogs.
-          </p>
+          <p className="text-sm font-medium">What will happen</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--color-muted)]">
+            <li>Click <span className="mono">Connect Discogs</span>.</li>
+            <li>Approve access on Discogs.</li>
+            <li>You are redirected back and DigQueue starts wishlist sync.</li>
+          </ol>
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {userId ? (
             <a
               href={`/api/discogs/oauth/start?next=${encodeURIComponent(nextPath)}`}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80 sm:w-auto"
             >
               Connect Discogs
               <ArrowRight className="h-4 w-4" />
@@ -42,7 +45,7 @@ export default async function ConnectDiscogsPage({
           ) : (
             <Link
               href="/login"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80 sm:w-auto"
             >
               Login First
               <ArrowRight className="h-4 w-4" />

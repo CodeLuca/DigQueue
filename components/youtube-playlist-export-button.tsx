@@ -106,7 +106,7 @@ export function YoutubePlaylistExportButton(props: Props) {
         {!props.youtubeConnected ? (
           <a
             href={props.connectHref}
-            className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-3 py-1.5 text-xs font-bold text-black shadow-[0_6px_16px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c]"
+            className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-3 py-1.5 text-xs font-bold !text-black shadow-[0_6px_16px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c]"
           >
             Connect YouTube
           </a>

@@ -1,18 +1,14 @@
 export const dynamic = "force-dynamic";
 
-import { Disc3, ExternalLink, Youtube } from "lucide-react";
+import { Disc3, ExternalLink } from "lucide-react";
 import { clearSessionAction } from "@/app/auth-actions";
-import { clearApiKeysAction, disconnectDiscogsAction, disconnectYoutubeAction } from "@/app/settings/actions";
-import { ApiKeyTester } from "@/components/api-key-tester";
+import { disconnectDiscogsAction } from "@/app/settings/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaybackModeSettings } from "@/components/playback-mode-settings";
-import { getApiKeys, getEffectiveApiKeys, maskSecret } from "@/lib/api-keys";
+import { getApiKeys } from "@/lib/api-keys";
 import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
-import { env } from "@/lib/env";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
 
 function sanitizeDiscogsErrorMessage(message: string | undefined) {
   if (!message) return null;
@@ -29,51 +25,16 @@ function sanitizeDiscogsErrorMessage(message: string | undefined) {
   return message;
 }
 
-function sanitizeYoutubeErrorMessage(message: string | undefined) {
-  if (!message) return null;
-  const lower = message.toLowerCase();
-  if (lower.includes("failed query:") || lower.includes("params:") || lower.includes("database")) {
-    return "Temporary database issue while saving YouTube connection. Please retry.";
-  }
-  if (lower.includes("not configured")) {
-    return "YouTube OAuth is not configured for this deployment yet.";
-  }
-  return message;
-}
-
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ discogs?: string; discogs_error?: string; youtube?: string; youtube_error?: string }>;
+  searchParams: Promise<{ discogs?: string; discogs_error?: string }>;
 }) {
   const params = await searchParams;
   const savedKeys = await getApiKeys();
-  const effectiveKeys = await getEffectiveApiKeys();
-  const youtubeOAuth = await getYoutubeOAuthConnectionStatus();
-  const supabase = await getSupabaseServerClient();
-  const { data: authData } = await supabase.auth.getUser();
-  const currentUserId = authData.user?.id || "";
-  const currentUserEmail = String(authData.user?.email || "").toLowerCase();
-  const configuredAdminUserId = env.SUPABASE_APP_USER_ID?.trim() || "";
-  const configuredAdminUserEmail = env.SUPABASE_APP_USER_EMAIL?.trim().toLowerCase() || "";
-  const hasExplicitAdmin = Boolean(configuredAdminUserId || configuredAdminUserEmail);
-  const isAdmin =
-    (configuredAdminUserId ? currentUserId === configuredAdminUserId : false) ||
-    (configuredAdminUserEmail ? currentUserEmail === configuredAdminUserEmail : false) ||
-    !hasExplicitAdmin;
-  const provider = String(authData.user?.app_metadata?.provider || "").toLowerCase();
-  const signInMethod = provider === "google" ? "Google" : provider === "email" || !provider ? "Email/Password" : provider;
-  const savedYoutubeKey = savedKeys.youtubeApiKey || env.YOUTUBE_API_KEY || null;
   const discogsSavedAuth = parseDiscogsStoredAuth(savedKeys.discogsToken);
-  const discogsConnected = discogsSavedAuth?.kind === "oauth" || Boolean(effectiveKeys.discogsToken);
-  const discogsMode =
-    discogsSavedAuth?.kind === "oauth"
-      ? "Personal OAuth"
-      : effectiveKeys.discogsToken
-        ? "Workspace Token"
-        : "Not connected";
+  const discogsConnected = discogsSavedAuth?.kind === "oauth";
   const discogsError = sanitizeDiscogsErrorMessage(params.discogs_error);
-  const youtubeError = sanitizeYoutubeErrorMessage(params.youtube_error);
 
   return (
     <main className="pb-player-safe mx-auto max-w-[980px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
@@ -89,7 +50,7 @@ export default async function SettingsPage({
 
       {params.discogs === "connected" ? (
         <div className="mb-4 rounded-lg border border-emerald-500/50 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.08))] p-3 text-sm text-emerald-200">
-          Discogs connected successfully. Wishlist pull and sync are now linked to this account.
+          Discogs personal OAuth connected successfully.
         </div>
       ) : null}
       {discogsError ? (
@@ -97,17 +58,6 @@ export default async function SettingsPage({
           Discogs connect failed: {discogsError}
         </div>
       ) : null}
-      {params.youtube === "connected" ? (
-        <div className="mb-4 rounded-lg border border-emerald-500/50 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.08))] p-3 text-sm text-emerald-200">
-          YouTube connected successfully. Library saved tracks can now be exported to a playlist.
-        </div>
-      ) : null}
-      {youtubeError ? (
-        <div className="mb-4 rounded-lg border border-rose-500/50 bg-[linear-gradient(135deg,rgba(244,63,94,0.16),rgba(244,63,94,0.06))] p-3 text-sm text-rose-200">
-          YouTube connect failed: {youtubeError}
-        </div>
-      ) : null}
-
       <Card className="mb-4 overflow-hidden">
         <CardHeader className="border-b border-[var(--color-border)] bg-[linear-gradient(120deg,rgba(231,181,102,0.12),rgba(231,181,102,0.02))]">
           <CardTitle className="text-xl">Integrations</CardTitle>
@@ -115,23 +65,32 @@ export default async function SettingsPage({
         <CardContent className="space-y-4 p-4 md:p-5">
           <div className="flex flex-wrap gap-2 text-xs">
             <Badge className={discogsConnected ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200" : "border-amber-600/50 text-amber-300"}>
-              {discogsConnected ? "Discogs Connected" : "Discogs Not Connected"}
-            </Badge>
-            <Badge className={effectiveKeys.youtubeApiKey ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200" : "border-amber-600/50 text-amber-300"}>
-              {effectiveKeys.youtubeApiKey ? "YouTube Active" : "YouTube Missing"}
-            </Badge>
-            <Badge
-              className={
-                youtubeOAuth.connected
-                  ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200"
-                  : youtubeOAuth.configured
-                    ? "border-amber-600/50 text-amber-300"
-                    : "border-zinc-600/50 text-zinc-400"
-              }
-            >
-              {youtubeOAuth.connected ? "YouTube Playlist Export Connected" : youtubeOAuth.configured ? "YouTube Playlist Export Not Connected" : "YouTube Playlist Export Not Configured"}
+              {discogsConnected ? "Discogs Personal Connected" : "Discogs Not Connected"}
             </Badge>
           </div>
+
+          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
+            <p className="text-sm font-semibold">Discogs quick setup</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-[var(--color-muted)]">
+              <li>Click Connect Discogs (below or in the guided page).</li>
+              <li>Authorize in Discogs and return here automatically.</li>
+              <li>Go to Listening Station and run “Retry wishlist sync now” once.</li>
+            </ol>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {discogsConnected ? (
+                <span className="rounded-md border border-emerald-500/50 bg-emerald-500/12 px-3 py-1.5 text-xs text-emerald-200">
+                  Discogs is connected. You can start pulling wishlist data now.
+                </span>
+              ) : (
+                <a
+                  href="/connect-discogs?next=/settings"
+                  className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-semibold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
+                >
+                  Open guided Discogs connect
+                </a>
+              )}
+            </div>
+          </section>
 
           <div className="grid gap-3 md:grid-cols-2">
             <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
@@ -140,85 +99,25 @@ export default async function SettingsPage({
                 Discogs
               </p>
               <p className="text-sm">
-                Status: <span className="mono">{discogsConnected ? `Connected (${discogsMode})` : "Not connected"}</span>
+                Status: <span className="mono">{discogsConnected ? "Connected (Personal OAuth)" : "Not connected"}</span>
               </p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">Connect once for personal sync. Workspace token mode supports backend ingest/search without user-linked OAuth sync.</p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                {discogsConnected
+                  ? "Personal OAuth is linked to your account."
+                  : "Not connected yet. Connect Discogs to link your personal account."}
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {discogsConnected ? (
                   <form action={disconnectDiscogsAction}>
                     <Button type="submit" variant="outline">Disconnect Discogs</Button>
                   </form>
                 ) : (
-                  <a href="/api/discogs/oauth/start?next=/settings" className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80">
+                  <a href="/api/discogs/oauth/start?next=/settings" className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-semibold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80">
                     Connect Discogs
                   </a>
                 )}
               </div>
             </section>
-
-            <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
-              <p className="mb-2 inline-flex items-center gap-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
-                <Youtube className="h-3.5 w-3.5 text-[var(--color-accent)]" />
-                YouTube
-              </p>
-              <p className="text-sm">
-                Search key:{" "}
-                <span className="mono">
-                  {effectiveKeys.youtubeApiKey ? "Connected" : "Missing"}
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">Used for YouTube match/search during ingestion.</p>
-              <p className="mt-2 text-sm">
-                Playlist export:{" "}
-                <span className="mono">
-                  {youtubeOAuth.connected ? `Connected${youtubeOAuth.channelTitle ? ` (${youtubeOAuth.channelTitle})` : ""}` : "Not connected"}
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">
-                Separate from sign-in. Export control appears only on the Library page.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {youtubeOAuth.connected ? (
-                  <form action={disconnectYoutubeAction}>
-                    <Button type="submit" variant="outline">Disconnect YouTube</Button>
-                  </form>
-                ) : youtubeOAuth.configured ? (
-                  <a href="/api/youtube/oauth/start?next=/settings" className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80">
-                    Connect YouTube
-                  </a>
-                ) : (
-                  <span className="rounded-md border border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                    Playlist export is not enabled on this deployment yet.
-                  </span>
-                )}
-              </div>
-              {isAdmin ? (
-                <details className="mt-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
-                  <summary className="cursor-pointer text-xs font-medium text-[var(--color-muted)]">Advanced (Admin)</summary>
-                  <div className="mt-2 space-y-2 text-xs text-[var(--color-muted)]">
-                    <p>Backend API key: <span className="mono">{maskSecret(savedYoutubeKey)}</span></p>
-                    {!youtubeOAuth.configured ? <p>Set <span className="mono">YOUTUBE_OAUTH_CLIENT_ID</span> and <span className="mono">YOUTUBE_OAUTH_CLIENT_SECRET</span> to enable playlist export.</p> : null}
-                    <form action={clearApiKeysAction}>
-                      <Button type="submit" variant="outline">Clear Local Keys</Button>
-                    </form>
-                  </div>
-                </details>
-              ) : null}
-            </section>
-          </div>
-
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-            <p className="mb-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">Account + YouTube Scenarios</p>
-            <div className="space-y-1.5 text-xs text-[var(--color-muted)]">
-              <p>Sign-in method: <span className="mono">{signInMethod}</span>.</p>
-              <p>If you sign in with Email/Password, YouTube playlist export still works after clicking <span className="mono">Connect YouTube</span>.</p>
-              <p>If you sign in with Google, login alone does not grant playlist write permission; <span className="mono">Connect YouTube</span> still asks for explicit consent.</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-            <p className="mb-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">Health Check</p>
-            <ApiKeyTester />
           </div>
         </CardContent>
       </Card>

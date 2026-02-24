@@ -59,7 +59,15 @@ export function SyncSavedToDiscogsButton({ enabled }: { enabled: boolean }) {
 
   return (
     <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
-      <Button type="button" size="sm" variant="secondary" disabled={!enabled || pending} onClick={() => void run()}>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="border-[var(--color-border)]"
+        disabled={!enabled || pending}
+        onClick={() => void run()}
+        title="Push releases from your locally saved tracks to your Discogs wishlist. Already-wishlisted items are skipped."
+      >
         {pending ? "Sending..." : "Send Saved To Discogs Wishlist"}
       </Button>
       {message ? <p className="text-xs text-[var(--color-muted)]">{message}</p> : null}

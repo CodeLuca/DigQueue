@@ -45,9 +45,9 @@ export function ProcessingToggle({
         variant={initialActive ? "secondary" : "outline"}
         onClick={() => void setRemoteActive(!initialActive)}
         disabled={disabled || pending}
-        title={initialActive ? "Deactivate label and pause ingestion" : "Activate label and enqueue ingestion"}
+        title={initialActive ? "Deactivate label and pause ingestion" : "Activate label"}
       >
-        {pending ? "..." : initialActive ? "Deactivate" : "Activate + Queue"}
+        {pending ? "..." : initialActive ? "Deactivate" : "Activate"}
       </Button>
       {errorMessage ? <p className="text-[11px] text-red-300">{errorMessage}</p> : null}
     </div>

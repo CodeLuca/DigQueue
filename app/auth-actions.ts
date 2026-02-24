@@ -82,10 +82,20 @@ export async function registerWithPasswordAction(formData: FormData) {
   if (error) {
     const message = friendlyAuthError(error.message || "", "Registration failed.");
     if (/already registered|user already exists|already been registered/i.test(message)) {
+      const existingSignIn = await supabase.auth.signInWithPassword({ email, password });
+      if (!existingSignIn.error && existingSignIn.data.user) {
+        try {
+          await ensureDefaultSourcesForUser(existingSignIn.data.user.id);
+        } catch {
+          // Non-blocking: login should still proceed.
+        }
+        const destination = await resolvePostAuthRedirect(nextPath);
+        redirect(destination);
+      }
       redirect(withAuthQuery("/login", {
         next: nextPath,
         email,
-        notice: "Account already exists. Login instead.",
+        error: "Account already exists. Use the correct password to login.",
       }));
     }
     redirect(withAuthQuery("/login", { mode: "register", next: nextPath, email, error: message }));

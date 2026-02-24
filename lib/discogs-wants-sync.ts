@@ -393,10 +393,15 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
 export async function getDiscogsWantsSyncStatus() {
   const userId = await requireCurrentAppUserId();
   const statusKey = scopedAutoSyncStatusCacheKey(userId);
-  const row = await db.query.apiCache.findFirst({
-    where: and(eq(apiCache.key, statusKey), eq(apiCache.userId, userId)),
-    columns: { responseJson: true, fetchedAt: true },
-  });
+  let row: { responseJson: string; fetchedAt: Date } | null = null;
+  try {
+    row = await db.query.apiCache.findFirst({
+      where: and(eq(apiCache.key, statusKey), eq(apiCache.userId, userId)),
+      columns: { responseJson: true, fetchedAt: true },
+    }) ?? null;
+  } catch {
+    return null;
+  }
   if (!row) return null;
   try {
     const parsed = JSON.parse(row.responseJson) as WantsSyncSnapshot;

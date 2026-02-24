@@ -28,6 +28,7 @@ export async function captureReleaseSignals(
   fallbackArtist?: string | null,
   fallbackYear?: number | null,
   userId?: string,
+  storedReleaseId?: number,
 ) {
   const primaryArtist =
     clean(release.artists_sort) ??
@@ -47,7 +48,7 @@ export async function captureReleaseSignals(
   ];
 
   await upsertReleaseSignals({
-    releaseId: release.id,
+    releaseId: storedReleaseId ?? release.id,
     primaryArtist,
     styles,
     genres,

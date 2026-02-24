@@ -30,6 +30,16 @@ export function LabelSyncDaemon() {
   useEffect(() => {
     runningRef.current = true;
 
+    const shouldRefreshCurrentView = () => {
+      if (pathname.startsWith("/labels/")) return true;
+      if (pathname !== "/") return false;
+      if (typeof window === "undefined") return true;
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      // Only force-refresh on Sources tab where ingestion progress is managed.
+      return !tab || tab === "step-1";
+    };
+
     const tick = async () => {
       if (!runningRef.current) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") {
@@ -71,7 +81,7 @@ export function LabelSyncDaemon() {
         }
 
         const now = Date.now();
-        if ((pathname === "/" || pathname.startsWith("/labels/")) && now - lastRefreshAtRef.current > REFRESH_MIN_GAP_MS) {
+        if (shouldRefreshCurrentView() && now - lastRefreshAtRef.current > REFRESH_MIN_GAP_MS) {
           lastRefreshAtRef.current = now;
           router.refresh();
         }

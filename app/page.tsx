@@ -637,7 +637,7 @@ export default async function HomePage({
                     </div>
                   </div>
                 </summary>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="mt-2 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {activeStatusCounts.processing > 0 || activeStatusCounts.queued > 0 ? (
                     <form action={pauseAllActiveSourcesAction}>
                       <FormSubmitButton
@@ -1020,7 +1020,7 @@ export default async function HomePage({
                   Needs Review
                 </Link>
               </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {showLibraryItemsSection ? <Badge>Saved Tracks {totalSavedCount}</Badge> : null}
                   <Badge>Wishlisted Records {totalWishlistedRecords}</Badge>
                   {selectedLibraryView === "history" ? <Badge>History Items {historyCount}</Badge> : null}
@@ -1031,12 +1031,13 @@ export default async function HomePage({
               <div className="min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-2.5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Actions</p>
                 {showLibraryItemsSection && hasDiscogs ? (
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <div className="mt-1.5 flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                   <form action={pullDiscogsWantsAction}>
                     <FormSubmitButton
                       type="submit"
                       size="sm"
                       variant="outline"
+                      className="w-full sm:w-auto"
                       pendingText="Importing..."
                       title="Imports your most recent 200 Discogs wants into Library. Does not auto-activate sources."
                     >
@@ -1049,6 +1050,7 @@ export default async function HomePage({
                       type="submit"
                       size="sm"
                       variant="outline"
+                      className="w-full sm:w-auto"
                       pendingText="Syncing..."
                       title="Trigger a manual Discogs wants sync now instead of waiting for the 1-minute auto check."
                     >

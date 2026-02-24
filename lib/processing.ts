@@ -579,7 +579,18 @@ export async function chooseTrackMatch(trackId: number, youtubeMatchId: number, 
 export async function nextQueueItem(userId: string, currentId?: number, mode: "track" | "release" | "hybrid" = "track") {
   const scope = userScope(userId);
   if (currentId) {
+    const currentItem = await db.query.queueItems.findFirst({
+      where: and(eq(queueItems.id, currentId), scope.queueItems),
+      columns: { id: true, trackId: true },
+    });
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), scope.queueItems));
+    // Prevent replaying the same track from duplicate pending queue entries.
+    if (currentItem?.trackId) {
+      await db
+        .update(queueItems)
+        .set({ status: "played" })
+        .where(and(eq(queueItems.trackId, currentItem.trackId), eq(queueItems.status, "pending"), scope.queueItems));
+    }
   }
 
   const existing = await getNextPendingQueueItem(userId, mode, NEXT_QUEUE_CANDIDATE_LIMIT, false);
@@ -590,7 +601,18 @@ export async function nextQueueItem(userId: string, currentId?: number, mode: "t
 export async function nextQueueItemShuffled(userId: string, currentId?: number, mode: "track" | "release" | "hybrid" = "track") {
   const scope = userScope(userId);
   if (currentId) {
+    const currentItem = await db.query.queueItems.findFirst({
+      where: and(eq(queueItems.id, currentId), scope.queueItems),
+      columns: { id: true, trackId: true },
+    });
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), scope.queueItems));
+    // Prevent replaying the same track from duplicate pending queue entries.
+    if (currentItem?.trackId) {
+      await db
+        .update(queueItems)
+        .set({ status: "played" })
+        .where(and(eq(queueItems.trackId, currentItem.trackId), eq(queueItems.status, "pending"), scope.queueItems));
+    }
   }
 
   const existing = await getNextPendingQueueItem(userId, mode, SHUFFLE_QUEUE_CANDIDATE_LIMIT, true);
