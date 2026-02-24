@@ -1,5 +1,4 @@
-import { getApiKeys } from "@/lib/api-keys";
-import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
+import { getEffectiveApiKeys } from "@/lib/api-keys";
 
 const DEFAULT_LISTENING_PATH = "/?tab=step-2";
 const DEFAULT_CONNECT_DISCOGS_PATH = `/connect-discogs?next=${encodeURIComponent(DEFAULT_LISTENING_PATH)}`;
@@ -12,9 +11,8 @@ export async function resolvePostAuthRedirect(nextPath: string) {
   if (!isGuidedOnboardingCandidate(nextPath)) return nextPath;
 
   try {
-    const keys = await getApiKeys();
-    const storedDiscogsAuth = parseDiscogsStoredAuth(keys.discogsToken);
-    if (storedDiscogsAuth?.kind === "oauth") return nextPath;
+    const keys = await getEffectiveApiKeys();
+    if (Boolean(keys.discogsToken)) return nextPath;
   } catch {
     // Non-blocking: if key lookup fails, keep standard destination.
     return nextPath;
