@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
@@ -180,14 +179,6 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
                   >
                     {loadingId === item.id ? "..." : "Play Again"}
                   </Button>
-                  {item.release?.id ? (
-                    <Link
-                      href={`/releases/${item.release.id}`}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--color-border)] px-2 py-1.5 text-xs hover:bg-[var(--color-surface)] sm:h-auto sm:justify-start"
-                    >
-                      Release
-                    </Link>
-                  ) : null}
                   <a
                     className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
                     href={discogsHref}

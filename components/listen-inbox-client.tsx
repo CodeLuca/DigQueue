@@ -339,6 +339,8 @@ export function ListenInboxClient({
       .map(([id, name]) => ({ id, name, discogsUrl: undefined } satisfies LabelOption));
   }, [sourceFilteredRows]);
   const effectiveLabelOptions = useMemo(() => {
+    // Library view should only list sources that actually have visible items.
+    if (!showQueueFilters) return rowDerivedLabelOptions;
     if (!labelOptions || labelOptions.length === 0) return rowDerivedLabelOptions;
     const merged = new Map<number, LabelOption>();
     for (const item of rowDerivedLabelOptions) merged.set(item.id, item);
@@ -346,7 +348,7 @@ export function ListenInboxClient({
       if (!merged.has(item.id)) merged.set(item.id, item);
     }
     return [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [labelOptions, rowDerivedLabelOptions]);
+  }, [labelOptions, rowDerivedLabelOptions, showQueueFilters]);
   const activeLabelIds = useMemo(() => new Set((labelOptions ?? []).map((item) => item.id)), [labelOptions]);
 
   const selectedLabelStillExists = selectedLabelId !== null && effectiveLabelOptions.some((item) => item.id === selectedLabelId);
@@ -435,6 +437,10 @@ export function ListenInboxClient({
   const selectedVisibleRows = useMemo(
     () => visibleRows.filter((row) => selectedSet.has(row.trackId)),
     [selectedSet, visibleRows],
+  );
+  const visibleNeedsReviewRows = useMemo(
+    () => visibleRows.filter((row) => !row.listened && ((row.playedCount ?? 0) > 0 || Boolean(row.wasPlayed))),
+    [visibleRows],
   );
   const scopedTrackIds = useMemo(() => scopedRows.map((row) => row.trackId), [scopedRows]);
 
@@ -754,6 +760,16 @@ export function ListenInboxClient({
     setFeedback(value ? `Saved ${ids.length} tracks.` : `Removed ${ids.length} saved tracks.`);
     router.refresh();
   }, [router, selectedVisibleRows, showQueueFilters]);
+
+  const bulkMarkVisiblePlayedReviewed = useCallback(async () => {
+    const ids = visibleNeedsReviewRows.map((row) => row.trackId);
+    if (ids.length === 0) return;
+    await updateTracks({ trackIds: ids, field: "listened", mode: "set", value: true });
+    setRows((prev) => prev.map((row) => (ids.includes(row.trackId) ? { ...row, listened: true, isUpNext: false } : row)));
+    setSelectedTrackIds((prev) => prev.filter((id) => !ids.includes(id)));
+    setFeedback(`Marked ${ids.length} played tracks reviewed.`);
+    router.refresh();
+  }, [router, visibleNeedsReviewRows]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1135,6 +1151,20 @@ export function ListenInboxClient({
                       Clear
                     </Button>
                   </div>
+                  {showQueueFilters && visibleNeedsReviewRows.length > 0 ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="w-full justify-center"
+                      onClick={() => void bulkMarkVisiblePlayedReviewed()}
+                      disabled={visibleNeedsReviewRows.length === 0}
+                      title="Mark all played tracks in this view as reviewed"
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      Mark all played reviewed ({visibleNeedsReviewRows.length})
+                    </Button>
+                  ) : null}
                 </div>
               </details>
 
@@ -1310,6 +1340,20 @@ export function ListenInboxClient({
               Mark selected reviewed
             </Button>
           ) : null}
+          {showQueueFilters && visibleNeedsReviewRows.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="w-full justify-center sm:w-auto sm:justify-start"
+              onClick={() => void bulkMarkVisiblePlayedReviewed()}
+              disabled={visibleNeedsReviewRows.length === 0}
+              title="Mark all played tracks in this view as reviewed"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Mark all played reviewed ({visibleNeedsReviewRows.length})
+            </Button>
+          ) : null}
           {selectedVisibleRows.length > 0 ? (
             <>
               <Button
@@ -1369,16 +1413,15 @@ export function ListenInboxClient({
           const needsMark = hasPlayedHistory && !item.listened;
           const wasPlayed = hasPlayedHistory && !needsMark;
           const labelIsActive = activeLabelIds.has(item.labelId);
+          const hasPlayableVideo = Boolean(item.youtubeVideoId) && item.videoEmbeddable !== false;
           const playUnavailableReason = youtubeQuotaExceeded
             ? "YouTube quota reached. Queue/play is temporarily disabled."
-            : !showQueueFilters && !labelIsActive
-                ? "This track belongs to an inactive label. Click 'Add + activate label' first, then try Play Now."
-                : !item.youtubeVideoId
-                    ? "No playable video is linked yet. Add and activate the label, then reprocess to generate playable matches."
-            : item.videoEmbeddable === false
-                ? "Private or restricted video selected. Choose another match to play."
-                : null;
-          const canPlay = playUnavailableReason === null;
+            : !hasPlayableVideo
+                ? "No playable video exists for this track."
+                : !showQueueFilters && !labelIsActive
+                    ? "This source is inactive in Library. Activate it, then try Play Now."
+                    : null;
+          const canPlay = playUnavailableReason === null && hasPlayableVideo;
 
           return (
             <div
@@ -1408,7 +1451,7 @@ export function ListenInboxClient({
                         <p className="line-clamp-1 text-xs text-[var(--color-muted)]">{artistLine}</p>
                       ) : null;
                     })()}
-                    <p className="line-clamp-1 text-sm font-medium">
+                    <p className="line-clamp-2 text-sm font-medium leading-snug">
                       {item.position}
                       {" "}
                       {item.trackTitle}
@@ -1468,12 +1511,6 @@ export function ListenInboxClient({
                           <span>{item.duration}</span>
                         </>
                       ) : null}
-                      {typeof item.bpm === "number" ? (
-                        <>
-                          <span>•</span>
-                          <span>{item.bpm} BPM</span>
-                        </>
-                      ) : null}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-1">
                       {isPlaying ? <Badge className="border-emerald-600/50 text-emerald-300">Now Playing</Badge> : null}
@@ -1491,10 +1528,95 @@ export function ListenInboxClient({
                     </div>
                   </div>
                 </div>
+                {showQueueFilters ? (
+                  <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
+                    <a
+                      href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+                      title="Open on Discogs"
+                      aria-label="Open on Discogs"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                    <span
+                      className={`group relative inline-flex h-10 w-full min-w-0 ${canPlay ? "" : "cursor-not-allowed"}`}
+                      aria-label={playUnavailableReason ?? "Play"}
+                    >
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-10 w-full justify-center"
+                        onClick={() => void playRow(item.trackId)}
+                        disabled={!canPlay}
+                        title="Play now in the mini-player"
+                        aria-label="Play now"
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                        Play Now
+                      </Button>
+                      {!canPlay && playUnavailableReason ? (
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute -top-2 left-1/2 z-20 w-64 -translate-x-1/2 -translate-y-full rounded-md border border-amber-500/40 bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1.5 text-[11px] leading-snug text-amber-100 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                        >
+                          {playUnavailableReason}
+                        </span>
+                      ) : null}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-10 w-full justify-center rounded-md border border-emerald-400/60 bg-emerald-500/28 text-emerald-50 hover:bg-emerald-500/38"
+                      onClick={() => void markRowListened(item.trackId)}
+                      title="Mark this track reviewed and move to next track"
+                      aria-label="Mark this track reviewed and move to next track"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void markRowReleaseListened(item.releaseId, item.trackId, item.releaseDiscogsUrl)}
+                      disabled={reviewingReleaseId === item.releaseId}
+                      className="h-10 w-full justify-center rounded-md border border-amber-400/60 bg-amber-500/22 text-black hover:bg-amber-500/32"
+                      title="Mark entire release reviewed and skip to next release"
+                      aria-label="Mark entire release reviewed and skip to next release"
+                    >
+                      {reviewingReleaseId === item.releaseId ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={item.saved ? "secondary" : "ghost"}
+                      className="col-span-2 h-10 w-full justify-center"
+                      onClick={() => void toggleRowSaved(item.trackId)}
+                      title="Track save is local only and does not add to your Discogs wantlist."
+                      aria-label={item.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}
+                    >
+                      {item.saved ? (
+                        <>
+                          <HeartOff className="h-3.5 w-3.5" />
+                          Saved
+                        </>
+                      ) : (
+                        <>
+                          <Heart className="h-3.5 w-3.5" />
+                          Save Track
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : null}
+
                 <div
                   className={
                     showQueueFilters
-                      ? "grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:self-center sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end"
+                      ? "hidden w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:grid sm:w-[31rem] sm:self-center sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end"
                       : "flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:self-center sm:flex-nowrap sm:justify-end"
                   }
                 >
@@ -1508,18 +1630,8 @@ export function ListenInboxClient({
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
-                  {!showQueueFilters ? (
-                    <a
-                      href={`/releases/${item.releaseId}`}
-                      className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--color-border)] px-3 text-sm text-[var(--color-text)] hover:bg-[var(--color-surface)]"
-                      title="Open release details to view all tracks and manage matches/saves."
-                      aria-label="Open release details"
-                    >
-                      Release
-                    </a>
-                  ) : null}
                   <span
-                    className={`group relative inline-flex min-w-0 sm:w-[8.5rem] ${canPlay ? "" : "cursor-not-allowed"}`}
+                    className={`group relative inline-flex w-full min-w-0 sm:w-[8.5rem] ${canPlay ? "" : "cursor-not-allowed"}`}
                     aria-label={playUnavailableReason ?? "Play"}
                   >
                     <Button
