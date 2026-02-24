@@ -19,11 +19,11 @@ import {
   Loader2,
   Shuffle,
   SkipBack,
-  SkipForward,
   X,
   Youtube,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { parseBpmFromTexts } from "@/lib/bpm";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 declare global {
@@ -54,7 +54,7 @@ type QueueApiItem = {
   youtubeVideoId: string;
   priority?: number;
   source?: string;
-  track?: { id: number; title: string; artistsText?: string | null; saved?: boolean; listened?: boolean } | null;
+  track?: { id: number; title: string; artistsText?: string | null; saved?: boolean; listened?: boolean; bpm?: number | null } | null;
   release?: {
     id?: number;
     title: string;
@@ -157,7 +157,6 @@ export function MiniPlayer() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab");
   const isListeningStationTab = activeTab === "step-2" || activeTab === "step-3";
-  const isLibraryTab = activeTab === "library" || activeTab === "wishlist" || activeTab === "played-reviewed";
   const playerRef = useRef<YTPlayer | null>(null);
   const pendingPlayItemRef = useRef<QueueApiItem | null>(null);
   const currentRef = useRef<QueueApiItem | null>(null);
@@ -168,6 +167,10 @@ export function MiniPlayer() {
   const middlePreviewAdvancedForIdRef = useRef<number | null>(null);
   const manualSeekOverrideForIdRef = useRef<number | null>(null);
   const middlePreviewSeekPendingForIdRef = useRef<number | null>(null);
+  const markReviewedInFlightRef = useRef(false);
+  const markReleaseReviewedInFlightRef = useRef(false);
+  const toggleSavedInFlightRef = useRef(false);
+  const toggleWishlistInFlightRef = useRef(false);
   const listeningScopeTrackIdsRef = useRef<number[]>([]);
   const listeningScopeEnabledRef = useRef(false);
   const syncedScopeKeyRef = useRef<string>("");
@@ -458,6 +461,8 @@ export function MiniPlayer() {
   }, [ensurePlaybackOwnership, isListeningStationTab, playbackMode, syncQueueToListeningScope]);
 
   const markReviewed = useCallback(async () => {
+    if (markReviewedInFlightRef.current) return;
+    markReviewedInFlightRef.current = true;
     const trackId = current?.track?.id ?? null;
     setTodoLoading("reviewed");
     try {
@@ -476,13 +481,16 @@ export function MiniPlayer() {
     } catch (error) {
       setActionNotice(error instanceof Error ? error.message : "Unable to update track.");
     } finally {
+      markReviewedInFlightRef.current = false;
       setTodoLoading(null);
     }
   }, [current?.track?.id, loadNext, updateTrackTodo]);
 
   const markEntireReleaseReviewed = useCallback(async () => {
+    if (markReleaseReviewedInFlightRef.current) return;
     const releaseId = current?.release?.id;
     if (!releaseId) return;
+    markReleaseReviewedInFlightRef.current = true;
     setTodoLoading("reviewed_release");
     try {
       const body = await markReleaseReviewed(releaseId);
@@ -504,13 +512,18 @@ export function MiniPlayer() {
       if (!advanced || currentRef.current?.release?.id === releaseId) {
         setActionNotice("Release marked reviewed. End of queue reached.");
       }
+    } catch (error) {
+      setActionNotice(error instanceof Error ? error.message : "Unable to mark release reviewed.");
     } finally {
+      markReleaseReviewedInFlightRef.current = false;
       setTodoLoading(null);
     }
   }, [current?.release?.id, loadNext, markReleaseReviewed]);
 
   const toggleSaved = useCallback(async () => {
+    if (toggleSavedInFlightRef.current) return;
     if (!current?.track?.id) return;
+    toggleSavedInFlightRef.current = true;
     setTodoLoading("saved");
     try {
       const trackId = current.track.id;
@@ -540,13 +553,16 @@ export function MiniPlayer() {
     } catch (error) {
       setActionNotice(error instanceof Error ? error.message : "Unable to update track.");
     } finally {
+      toggleSavedInFlightRef.current = false;
       setTodoLoading(null);
     }
   }, [current?.track?.id, playing, updateTrackTodo]);
 
   const toggleCurrentReleaseWishlist = useCallback(async () => {
+    if (toggleWishlistInFlightRef.current) return;
     const releaseId = current?.release?.id;
     if (!releaseId) return;
+    toggleWishlistInFlightRef.current = true;
     const currentWishlist = Boolean(current?.release?.wishlist);
     setWishlistLoading(true);
     try {
@@ -560,7 +576,10 @@ export function MiniPlayer() {
           detail: { releaseId, releaseIds: result.affectedReleaseIds, value: result.wishlist },
         }),
       );
+    } catch (error) {
+      setActionNotice(error instanceof Error ? error.message : "Unable to update record wishlist.");
     } finally {
+      toggleWishlistInFlightRef.current = false;
       setWishlistLoading(false);
     }
   }, [current?.release?.id, current?.release?.wishlist, updateReleaseWishlist]);
@@ -721,6 +740,30 @@ export function MiniPlayer() {
     };
   }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, loadNext]);
 
+  const maybeAutoAdvanceAtTrackEnd = useCallback(() => {
+    const player = playerRef.current;
+    const itemId = currentRef.current?.id;
+    if (!player || !itemId) return;
+    if (manualSeekOverrideForIdRef.current === itemId) return;
+    if (handlingEndedForIdRef.current === itemId) return;
+
+    const nextDuration = player.getDuration?.() ?? 0;
+    const nextCurrent = player.getCurrentTime?.() ?? 0;
+    if (!Number.isFinite(nextDuration) || !Number.isFinite(nextCurrent) || nextDuration <= 0) return;
+
+    const remaining = nextDuration - nextCurrent;
+    if (remaining > 0.45) return;
+
+    const endedState = typeof window !== "undefined" && window.YT?.PlayerState ? window.YT.PlayerState.ENDED : 0;
+    const pausedState = typeof window !== "undefined" && window.YT?.PlayerState ? window.YT.PlayerState.PAUSED : 2;
+    const state = player.getPlayerState?.();
+    const shouldAdvance = state === endedState || (state === pausedState && (playing || wasPlayingBeforeHiddenRef.current));
+    if (!shouldAdvance) return;
+
+    handlingEndedForIdRef.current = itemId;
+    void loadNext("played", itemId);
+  }, [loadNext, playing]);
+
   useEffect(() => {
     const onVisibilityChange = () => {
       if (typeof document === "undefined") return;
@@ -728,6 +771,7 @@ export function MiniPlayer() {
         wasPlayingBeforeHiddenRef.current = playing;
         return;
       }
+      maybeAutoAdvanceAtTrackEnd();
       const shouldResume = wasPlayingBeforeHiddenRef.current;
       wasPlayingBeforeHiddenRef.current = false;
       if (!shouldResume || !isIOS || !playerRef.current || !ready || !currentRef.current) return;
@@ -763,7 +807,7 @@ export function MiniPlayer() {
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, isIOS, playing, ready]);
+  }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, isIOS, maybeAutoAdvanceAtTrackEnd, playing, ready]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
@@ -863,9 +907,12 @@ export function MiniPlayer() {
         handlingEndedForIdRef.current = itemId;
         void loadNext("played", itemId);
       }
+
+      // Fallback for background-tab throttling where iframe "ENDED" can be missed.
+      maybeAutoAdvanceAtTrackEnd();
     }, 200);
     return () => window.clearInterval(interval);
-  }, [loadNext, ready]);
+  }, [loadNext, maybeAutoAdvanceAtTrackEnd, ready]);
 
   useEffect(() => {
     const playPause = () => {
@@ -911,6 +958,63 @@ export function MiniPlayer() {
   }, [current, ensurePlaybackOwnership, loadNext, loadPrev, loadSpecific, markReviewed, playing, ready]);
 
   useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      const tag = target.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    };
+
+    const playPause = () => {
+      if (!playerRef.current || !ready) return;
+      if (!current) {
+        void loadNext();
+        return;
+      }
+      if (playing) {
+        playerRef.current.pauseVideo();
+      } else {
+        if (!ensurePlaybackOwnership()) return;
+        playerRef.current.playVideo();
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat || isEditableTarget(event.target)) return;
+      const code = event.code;
+      const key = event.key;
+
+      if (code === "MediaTrackNext" || key === "MediaTrackNext" || key === "MediaNextTrack" || key === "AudioTrackNext") {
+        event.preventDefault();
+        void loadNext("played");
+        return;
+      }
+
+      if (code === "MediaTrackPrevious" || key === "MediaTrackPrevious" || key === "MediaPreviousTrack" || key === "AudioTrackPrevious") {
+        event.preventDefault();
+        loadPrev();
+        return;
+      }
+
+      if (
+        code === "MediaPlayPause" ||
+        key === "MediaPlayPause" ||
+        key === "AudioPlay" ||
+        key === "AudioPause" ||
+        key === "AudioPlayPause"
+      ) {
+        event.preventDefault();
+        playPause();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [current, ensurePlaybackOwnership, loadNext, loadPrev, playing, ready]);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
       if (!playing) return;
       const owner = readPlaybackOwner();
@@ -950,6 +1054,10 @@ export function MiniPlayer() {
     if (!current) return "Queue is empty";
     return [current.label?.name?.trim(), current.release?.title?.trim()].filter(Boolean).join(" • ");
   }, [current]);
+  const currentBpm = useMemo(() => {
+    if (typeof current?.track?.bpm === "number") return current.track.bpm;
+    return parseBpmFromTexts([current?.track?.title ?? null, current?.release?.title ?? null]);
+  }, [current?.release?.title, current?.track?.bpm, current?.track?.title]);
 
   const currentReleaseId = current?.release?.id;
 
@@ -1538,6 +1646,7 @@ export function MiniPlayer() {
           </div>
           <div className="truncate text-xs text-[var(--color-muted)]">{currentArtistLine}</div>
           <div className="truncate text-xs text-[var(--color-muted)]">{releaseMeta}</div>
+          {typeof currentBpm === "number" ? <div className="truncate text-xs text-[var(--color-muted)]">{currentBpm} BPM</div> : null}
           <div className="mt-1 flex items-center gap-1.5 sm:gap-2">
             <span className="w-8 text-right text-[11px] text-[var(--color-muted)] sm:w-10">{formatTime(sliderValue)}</span>
             <input
@@ -1569,126 +1678,196 @@ export function MiniPlayer() {
             <summary className="cursor-pointer list-none rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] px-3 py-1 text-xs text-[var(--color-muted)]">
               More
             </summary>
-            <div className="mt-2 flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
-              <Button
-                type="button"
-                size="sm"
-                variant={expandedOpen ? "secondary" : "ghost"}
-                className={iconButtonClass}
-                onClick={() => setExpandedOpen((prev) => !prev)}
-                disabled={!current}
-                title={expandedOpen ? "Collapse release details" : "Expand release details"}
-                aria-label={expandedOpen ? "Collapse release details" : "Expand release details"}
-              >
-                {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={queueOpen ? "secondary" : "ghost"}
-                className={iconButtonClass}
-                onClick={() => {
-                  const next = !queueOpen;
-                  setQueueOpen(next);
-                  if (next) void fetchQueueItems();
-                }}
-                title="Open queue"
-                aria-label="Open queue"
-              >
-                <ListOrdered className="h-3.5 w-3.5" />
-              </Button>
-              {current?.youtubeVideoId ? (
-                <a
-                  href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
-                  title="Open on YouTube"
-                  aria-label="Open on YouTube"
+            <div className="mt-2 w-[min(92vw,22rem)] rounded-xl border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-2">
+              <div className="grid grid-cols-4 gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={expandedOpen ? "secondary" : "ghost"}
+                  className={iconButtonClass}
+                  onClick={() => setExpandedOpen((prev) => !prev)}
+                  disabled={!current}
+                  title={expandedOpen ? "Collapse release details" : "Expand release details"}
+                  aria-label={expandedOpen ? "Collapse release details" : "Expand release details"}
                 >
-                  <Youtube className="h-3.5 w-3.5" />
-                </a>
-              ) : null}
+                  {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={queueOpen ? "secondary" : "ghost"}
+                  className={iconButtonClass}
+                  onClick={() => {
+                    const next = !queueOpen;
+                    setQueueOpen(next);
+                    if (next) void fetchQueueItems();
+                  }}
+                  title="Open queue"
+                  aria-label="Open queue"
+                >
+                  <ListOrdered className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={current?.track?.saved ? "secondary" : "ghost"}
+                  className={iconButtonClass}
+                  onClick={() => void toggleSaved()}
+                  disabled={!current?.track?.id || todoLoading !== null}
+                  aria-label={current?.track?.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}
+                  title={current?.track?.saved ? "Saved track (local only)" : "Save track (local only)"}
+                >
+                  {todoLoading === "saved" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : current?.track?.saved ? (
+                    <HeartOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Heart className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={current?.release?.wishlist ? "secondary" : "ghost"}
+                  className={`${iconButtonClass} ${
+                    current?.release?.wishlist
+                      ? "border-amber-500/60 bg-amber-500/15 text-black hover:bg-amber-500/25 hover:text-black"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
+                  }`}
+                  onClick={() => void toggleCurrentReleaseWishlist()}
+                  disabled={!current?.release?.id || wishlistLoading}
+                  title={current?.release?.wishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
+                  aria-label={current?.release?.wishlist ? "Remove from Discogs wishlist" : "Add to Discogs wishlist"}
+                >
+                  {current?.release?.wishlist ? (
+                    <BookmarkCheck className="h-5 w-5 stroke-[2.4]" />
+                  ) : (
+                    <BookmarkPlus className="h-5 w-5 stroke-[2.4]" />
+                  )}
+                </Button>
+                {current?.youtubeVideoId ? (
+                  <a
+                    href={`https://www.youtube.com/watch?v=${current.youtubeVideoId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
+                    title="Open on YouTube"
+                    aria-label="Open on YouTube"
+                  >
+                    <Youtube className="h-3.5 w-3.5" />
+                  </a>
+                ) : null}
+              </div>
+              <div className="mt-1.5 grid grid-cols-2 gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={playbackMode === "in_order" ? "secondary" : "ghost"}
+                  className="h-9 w-full justify-center text-xs"
+                  onClick={() => setGlobalPlaybackMode("in_order")}
+                  aria-label="Playback mode one by one"
+                  title="Play one after another in queue order"
+                >
+                  <ListOrdered className="mr-1 h-3.5 w-3.5" />
+                  1-by-1
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={playbackMode === "shuffle" ? "secondary" : "ghost"}
+                  className="h-9 w-full justify-center text-xs"
+                  onClick={() => setGlobalPlaybackMode("shuffle")}
+                  aria-label="Playback mode shuffle"
+                  title="Shuffle through pending queue items"
+                >
+                  <Shuffle className="mr-1 h-3.5 w-3.5" />
+                  Shuffle
+                </Button>
+              </div>
             </div>
           </details>
 
-          <div className="hidden shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1 md:flex">
-            <span className="group relative inline-flex">
-              <Button
-                type="button"
-                size="sm"
-                variant={expandedOpen ? "secondary" : "ghost"}
-                className={iconButtonClass}
-                onClick={() => setExpandedOpen((prev) => !prev)}
-                disabled={!current}
-                title={expandedOpen ? "Collapse release details" : "Expand release details"}
-                aria-label={expandedOpen ? "Collapse release details" : "Expand release details"}
-              >
-                {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-              </Button>
-              <span role="tooltip" className={tooltipClass}>
-                {expandedOpen ? "Collapse release details" : "Expand release details"}
-              </span>
-            </span>
-            <span className="group relative inline-flex">
-              <Button
-                type="button"
-                size="sm"
-                variant={queueOpen ? "secondary" : "ghost"}
-                className={iconButtonClass}
-                onClick={() => {
-                  const next = !queueOpen;
-                  setQueueOpen(next);
-                  if (next) void fetchQueueItems();
-                }}
-                title="Open queue"
-                aria-label="Open queue"
-              >
-                <ListOrdered className="h-3.5 w-3.5" />
-              </Button>
-              <span role="tooltip" className={tooltipClass}>Open queue</span>
-            </span>
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.25)] md:hidden">
+            <Button variant="ghost" size="sm" className={iconButtonClass} onClick={() => loadPrev()} aria-label="Previous">
+              <SkipBack className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-accent)] p-0 text-black hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0 sm:h-10 sm:w-10"
+              onClick={() => {
+                if (!playerRef.current) return;
+                if (!current) {
+                  void loadNext();
+                  return;
+                }
+                if (playing) playerRef.current.pauseVideo();
+                else playerRef.current.playVideo();
+              }}
+              aria-label="Play Pause"
+            >
+              {playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+            </Button>
+          </div>
+
+          <div className="hidden shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.25)] md:flex">
+            <Button variant="ghost" size="sm" className={iconButtonClass} onClick={() => loadPrev()} aria-label="Previous">
+              <SkipBack className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-accent)] p-0 text-black hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0 sm:h-10 sm:w-10"
+              onClick={() => {
+                if (!playerRef.current) return;
+                if (!current) {
+                  void loadNext();
+                  return;
+                }
+                if (playing) playerRef.current.pauseVideo();
+                else playerRef.current.playVideo();
+              }}
+              aria-label="Play Pause"
+            >
+              {playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+            </Button>
           </div>
           <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1">
-            {!isLibraryTab ? (
-              <span className="group relative inline-flex">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-9 w-9 rounded-full border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-0 sm:h-10 sm:w-10"
-                  onClick={() => void markReviewed()}
-                  disabled={!current?.track?.id || todoLoading !== null}
-                  title="Mark current track reviewed and move to next track"
-                  aria-label="Mark current track reviewed and move to next track"
-                >
-                  {todoLoading === "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />}
-                </Button>
-                <span role="tooltip" className={tooltipClass}>Mark current track reviewed and move to next track</span>
-              </span>
-            ) : null}
-            {!isLibraryTab ? (
-              <span className="group relative inline-flex">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-9 w-9 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-amber-100 hover:bg-amber-500/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-0 sm:h-10 sm:w-10"
-                  onClick={() => void markEntireReleaseReviewed()}
-                  disabled={!current?.release?.id || todoLoading !== null}
-                  title="Mark entire release reviewed and skip to next release"
-                  aria-label="Mark entire release reviewed and skip to next release"
-                >
-                  {todoLoading === "reviewed_release" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCheck className="h-4 w-4 sm:h-5 sm:w-5" />
-                  )}
-                </Button>
-                <span role="tooltip" className={tooltipClass}>Mark entire release reviewed and skip to next release</span>
-              </span>
-            ) : null}
             <span className="group relative inline-flex">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-9 w-9 rounded-full border border-emerald-400/60 bg-emerald-500/28 p-0 text-emerald-50 hover:bg-emerald-500/38 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-0 sm:h-10 sm:w-10"
+                onClick={() => void markReviewed()}
+                disabled={!current?.track?.id || todoLoading !== null}
+                title="Mark current track reviewed and move to next track"
+                aria-label="Mark current track reviewed and move to next track"
+              >
+                {todoLoading === "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />}
+              </Button>
+              <span role="tooltip" className={tooltipClass}>Mark current track reviewed and move to next track</span>
+            </span>
+            <span className="group relative inline-flex">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-9 w-9 rounded-full border border-amber-400/60 bg-amber-500/22 p-0 text-black hover:bg-amber-500/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-0 sm:h-10 sm:w-10"
+                onClick={() => void markEntireReleaseReviewed()}
+                disabled={!current?.release?.id || todoLoading !== null}
+                title="Mark entire release reviewed and skip to next release"
+                aria-label="Mark entire release reviewed and skip to next release"
+              >
+                {todoLoading === "reviewed_release" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                )}
+              </Button>
+              <span role="tooltip" className={tooltipClass}>Mark entire release reviewed and skip to next release</span>
+            </span>
+            <span className="group relative hidden md:inline-flex">
               <Button
                 type="button"
                 size="sm"
@@ -1715,17 +1894,17 @@ export function MiniPlayer() {
                   ? "Updating saved track..."
                   : current?.track?.saved
                     ? "Track saved locally. Does not add to your Discogs wantlist."
-                    : "Save track locally. Does not add to your Discogs wantlist."}
+                  : "Save track locally. Does not add to your Discogs wantlist."}
               </span>
             </span>
-            <span className="group relative inline-flex">
+            <span className="group relative hidden md:inline-flex">
               <Button
                 type="button"
                 size="sm"
                 variant={current?.release?.wishlist ? "secondary" : "ghost"}
                 className={`h-9 w-9 sm:h-10 sm:w-10 ${iconButtonClass} ${
                   current?.release?.wishlist
-                    ? "border-amber-500/60 bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 hover:text-amber-100"
+                    ? "border-amber-500/60 bg-amber-500/15 text-black hover:bg-amber-500/25 hover:text-black"
                     : "text-[var(--color-muted)] hover:text-[var(--color-text)]"
                 }`}
                 onClick={() => void toggleCurrentReleaseWishlist()}
@@ -1785,7 +1964,7 @@ export function MiniPlayer() {
             </span>
           </span>
         ) : null}
-        <div className="flex shrink-0 items-center gap-1 rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1">
+        <div className="hidden shrink-0 items-center gap-1 rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 md:flex">
           <Button
             type="button"
             variant={playbackMode === "in_order" ? "secondary" : "ghost"}
@@ -1811,30 +1990,42 @@ export function MiniPlayer() {
             Shuffle
           </Button>
         </div>
-        <div className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.25)]">
-          <Button variant="ghost" size="sm" className={iconButtonClass} onClick={() => loadPrev()} aria-label="Previous">
-            <SkipBack className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="h-9 w-9 rounded-full border border-[var(--color-border)] bg-[var(--color-accent)] p-0 text-black hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0 sm:h-10 sm:w-10"
-            onClick={() => {
-              if (!playerRef.current) return;
-              if (!current) {
-                void loadNext();
-                return;
-              }
-              if (playing) playerRef.current.pauseVideo();
-              else playerRef.current.playVideo();
-            }}
-            aria-label="Play Pause"
-          >
-            {playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
-          </Button>
-          <Button variant="ghost" size="sm" className={iconButtonClass} onClick={() => void loadNext("played")} aria-label="Next">
-            <SkipForward className="h-4 w-4" />
-          </Button>
+        <div className="hidden shrink-0 items-center gap-1 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_85%,black_15%)] p-1 md:flex">
+          <span className="group relative inline-flex">
+            <Button
+              type="button"
+              size="sm"
+              variant={expandedOpen ? "secondary" : "ghost"}
+              className={iconButtonClass}
+              onClick={() => setExpandedOpen((prev) => !prev)}
+              disabled={!current}
+              title={expandedOpen ? "Collapse release details" : "Expand release details"}
+              aria-label={expandedOpen ? "Collapse release details" : "Expand release details"}
+            >
+              {expandedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+            </Button>
+            <span role="tooltip" className={tooltipClass}>
+              {expandedOpen ? "Collapse release details" : "Expand release details"}
+            </span>
+          </span>
+          <span className="group relative inline-flex">
+            <Button
+              type="button"
+              size="sm"
+              variant={queueOpen ? "secondary" : "ghost"}
+              className={iconButtonClass}
+              onClick={() => {
+                const next = !queueOpen;
+                setQueueOpen(next);
+                if (next) void fetchQueueItems();
+              }}
+              title="Open queue"
+              aria-label="Open queue"
+            >
+              <ListOrdered className="h-3.5 w-3.5" />
+            </Button>
+            <span role="tooltip" className={tooltipClass}>Open queue</span>
+          </span>
         </div>
       </div>
       {isIOS ? (

@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { labels, queueItems, releases, sourceReleases, tracks, youtubeMatches } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
+import { parseBpmFromTexts } from "@/lib/bpm";
 import { db } from "@/lib/db";
 import { buildDeepRecommendations, buildExternalRecommendations } from "@/lib/recommendations";
 import { isTransientLabelError } from "@/lib/utils";
@@ -22,6 +23,7 @@ type InboxRow = {
   trackArtists: string | null;
   position: string;
   duration: string | null;
+  bpm: number | null;
   listened: boolean;
   saved: boolean;
   releaseId: number;
@@ -88,6 +90,7 @@ function dedupeInboxRows(rows: InboxRow[]) {
 
     deduped.push({
       ...primary,
+      bpm: variants.find((row) => typeof row.bpm === "number")?.bpm ?? primary.bpm ?? null,
       listened,
       saved: variants.some((row) => row.saved),
       releaseWishlist,
@@ -653,6 +656,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
 
     return {
       ...row,
+      bpm: parseBpmFromTexts([row.trackTitle, row.releaseTitle]),
       hasChosenVideo: Boolean(row.hasChosenVideo),
       isUpNext: pendingSet.has(row.trackId),
       playedCount: playedCountByTrack.get(row.trackId) ?? 0,
@@ -717,6 +721,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
 
         return {
           ...row,
+          bpm: parseBpmFromTexts([row.trackTitle, row.releaseTitle]),
           hasChosenVideo: Boolean(row.hasChosenVideo),
           isUpNext: pendingSet.has(row.trackId),
           playedCount: playedCountByTrack.get(row.trackId) ?? 0,
@@ -790,6 +795,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
 
     return {
       ...row,
+      bpm: parseBpmFromTexts([row.trackTitle, row.releaseTitle]),
       hasChosenVideo: Boolean(row.hasChosenVideo),
       isUpNext: pendingSet.has(row.trackId),
       playedCount: playedCountByTrack.get(row.trackId) ?? 0,
@@ -854,6 +860,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
 
         return {
           ...row,
+          bpm: parseBpmFromTexts([row.trackTitle, row.releaseTitle]),
           hasChosenVideo: Boolean(row.hasChosenVideo),
           isUpNext: pendingSet.has(row.trackId),
           playedCount: playedCountByTrack.get(row.trackId) ?? 0,
@@ -944,6 +951,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
 
     return {
       ...row,
+      bpm: parseBpmFromTexts([row.trackTitle, row.releaseTitle]),
       hasChosenVideo: Boolean(row.hasChosenVideo),
       isUpNext: pendingSet.has(row.trackId),
       playedCount: playedCountByTrack.get(row.trackId) ?? 0,
@@ -1024,6 +1032,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
 
         return {
           ...row,
+          bpm: parseBpmFromTexts([row.trackTitle, row.releaseTitle]),
           hasChosenVideo: Boolean(row.hasChosenVideo),
           isUpNext: pendingSet.has(row.trackId),
           playedCount: playedCountByTrack.get(row.trackId) ?? 0,

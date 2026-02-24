@@ -31,6 +31,7 @@ type ListenRow = {
   trackArtists?: string | null;
   position: string;
   duration: string | null;
+  bpm?: number | null;
   listened: boolean;
   saved: boolean;
   releaseId: number;
@@ -62,7 +63,7 @@ type LabelOption = {
 type QueueApiItem = {
   id: number;
   youtubeVideoId: string;
-  track?: { id: number; title: string } | null;
+  track?: { id: number; title: string; bpm?: number | null } | null;
   release?: {
     id?: number;
     title: string;
@@ -242,7 +243,7 @@ function createOptimisticPlayItem(row: ListenRow): QueueApiItem | null {
   return {
     id: -row.trackId,
     youtubeVideoId: row.youtubeVideoId,
-    track: { id: row.trackId, title: row.trackTitle },
+    track: { id: row.trackId, title: row.trackTitle, bpm: row.bpm ?? null },
     release: {
       id: row.releaseId,
       title: row.releaseTitle,
@@ -413,7 +414,7 @@ export function ListenInboxClient({
   const activeCursor = Math.max(0, Math.min(cursor, Math.max(0, visibleRows.length - 1)));
   const current = visibleRows[activeCursor] ?? null;
   const filterButtonClass = (active: boolean) =>
-    `inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 ${
+    `inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 sm:px-3 sm:text-sm ${
       active
         ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface2)_80%)] text-[var(--color-text)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]"
         : "border-[var(--color-border)] bg-[var(--color-surface)]/45 text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]"
@@ -1016,7 +1017,7 @@ export function ListenInboxClient({
           </div>
 
           {showWishlistSourceFilter ? (
-            <div className="flex flex-wrap items-center gap-1 text-xs">
+            <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 text-xs [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
                 <button
                   type="button"
@@ -1070,13 +1071,13 @@ export function ListenInboxClient({
                   Filters & Bulk
                 </summary>
                 <div className="mt-2 space-y-2">
-                  <div className="inline-flex flex-wrap items-center gap-1">
+                  <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <button type="button" onClick={() => { setStateView("all"); setCursor(0); }} className={filterButtonClass(stateView === "all")} aria-pressed={stateView === "all"}>All ({queueFilterCounts.all})</button>
                     <button type="button" onClick={() => { setStateView("needs_review"); setCursor(0); }} className={filterButtonClass(stateView === "needs_review")} aria-pressed={stateView === "needs_review"}>Needs Review ({queueFilterCounts.needsReview})</button>
                     <button type="button" onClick={() => { setStateView("reviewed"); setCursor(0); }} className={filterButtonClass(stateView === "reviewed")} aria-pressed={stateView === "reviewed"}>Reviewed ({queueFilterCounts.reviewed})</button>
                     <button type="button" onClick={() => { setStateView("played"); setCursor(0); }} className={filterButtonClass(stateView === "played")} aria-pressed={stateView === "played"}>Played ({queueFilterCounts.played})</button>
                   </div>
-                  <div className="inline-flex flex-wrap items-center gap-1">
+                  <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <button
                       type="button"
                       onClick={() => { setHideReviewed((prev) => !prev); setCursor(0); }}
@@ -1105,19 +1106,19 @@ export function ListenInboxClient({
                   </div>
                   {advancedFiltersOpen ? (
                     <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-2">
-                      <div className="inline-flex flex-wrap items-center gap-1">
+                      <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                         <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Source</span>
                         <button type="button" onClick={() => setSourceFilter("all")} className={filterButtonClass(sourceFilter === "all")} aria-pressed={sourceFilter === "all"}>All ({sourceFilterCounts.all})</button>
                         <button type="button" onClick={() => setSourceFilter("saved")} className={filterButtonClass(sourceFilter === "saved")} aria-pressed={sourceFilter === "saved"}>Saved ({sourceFilterCounts.saved})</button>
                         <button type="button" onClick={() => setSourceFilter("wishlisted")} className={filterButtonClass(sourceFilter === "wishlisted")} aria-pressed={sourceFilter === "wishlisted"}>Wishlisted ({sourceFilterCounts.wishlisted})</button>
                       </div>
-                      <div className="inline-flex flex-wrap items-center gap-1">
+                      <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                         <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Video</span>
                         <button type="button" onClick={() => setVideoFilter("all")} className={filterButtonClass(videoFilter === "all")} aria-pressed={videoFilter === "all"}>Any ({videoFilterCounts.all})</button>
                         <button type="button" onClick={() => setVideoFilter("playable")} className={filterButtonClass(videoFilter === "playable")} aria-pressed={videoFilter === "playable"}>Playable ({videoFilterCounts.playable})</button>
                         <button type="button" onClick={() => setVideoFilter("no_video_or_private")} className={filterButtonClass(videoFilter === "no_video_or_private")} aria-pressed={videoFilter === "no_video_or_private"}>No video/private ({videoFilterCounts.noVideoOrPrivate})</button>
                       </div>
-                      <div className="inline-flex flex-wrap items-center gap-1">
+                      <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                         <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">Playback</span>
                         <button type="button" onClick={() => setGlobalPlaybackMode("in_order")} className={filterButtonClass(playbackMode === "in_order")} aria-pressed={playbackMode === "in_order"}><ListOrdered className="mr-1 inline h-3 w-3" />In Order</button>
                         <button type="button" onClick={() => setGlobalPlaybackMode("shuffle")} className={filterButtonClass(playbackMode === "shuffle")} aria-pressed={playbackMode === "shuffle"}><Shuffle className="mr-1 inline h-3 w-3" />Shuffle</button>
@@ -1465,6 +1466,12 @@ export function ListenInboxClient({
                         <>
                           <span>•</span>
                           <span>{item.duration}</span>
+                        </>
+                      ) : null}
+                      {typeof item.bpm === "number" ? (
+                        <>
+                          <span>•</span>
+                          <span>{item.bpm} BPM</span>
                         </>
                       ) : null}
                     </div>
