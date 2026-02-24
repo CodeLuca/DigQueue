@@ -94,14 +94,14 @@ async function setLegacyApiKeysRow(input: {
   userId: string;
   discogsToken: string | null;
   youtubeApiKey: string | null;
-  now: Date;
+  nowMs: number;
 }) {
   const updated = await db.execute(sql`
     update app_secrets
     set
       discogs_token = ${input.discogsToken},
       youtube_api_key = ${input.youtubeApiKey},
-      updated_at = ${input.now}
+      updated_at = ${input.nowMs}
     where user_id = ${input.userId}::uuid
     returning id
   `);
@@ -116,7 +116,7 @@ async function setLegacyApiKeysRow(input: {
     try {
       await db.execute(sql`
         insert into app_secrets (id, user_id, discogs_token, youtube_api_key, updated_at)
-        values (${secretRowId}, ${input.userId}::uuid, ${input.discogsToken}, ${input.youtubeApiKey}, ${input.now})
+        values (${secretRowId}, ${input.userId}::uuid, ${input.discogsToken}, ${input.youtubeApiKey}, ${input.nowMs})
       `);
       cache = null;
       return;
@@ -300,7 +300,7 @@ export async function setApiKeys(input: {
           userId,
           discogsToken,
           youtubeApiKey,
-          now,
+          nowMs: now.getTime(),
         });
         return;
       }
