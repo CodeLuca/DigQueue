@@ -1392,7 +1392,7 @@ export function ListenInboxClient({
               }`}
               onMouseEnter={() => setCursor(index)}
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                   <input
                     type="checkbox"
@@ -1494,8 +1494,8 @@ export function ListenInboxClient({
                 <div
                   className={
                     showQueueFilters
-                      ? "grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:self-start sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end"
-                      : "flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:self-start sm:flex-nowrap sm:justify-end"
+                      ? "grid w-full grid-cols-[auto_minmax(0,1fr)] gap-2 sm:ml-auto sm:w-[31rem] sm:self-center sm:grid-cols-[2.25rem_8.5rem_2.25rem_2.25rem_8.5rem] sm:items-center sm:justify-end"
+                      : "flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:self-center sm:flex-nowrap sm:justify-end"
                   }
                 >
                   <a
