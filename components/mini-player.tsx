@@ -33,6 +33,7 @@ declare global {
       PlayerState: { ENDED: number; PLAYING: number; PAUSED: number };
     };
     onYouTubeIframeAPIReady?: () => void;
+    __digqueueSingletonPlayer?: YTPlayer | null;
   }
 }
 
@@ -41,6 +42,7 @@ type YTPlayer = {
   playVideo: () => void;
   pauseVideo: () => void;
   stopVideo?: () => void;
+  destroy?: () => void;
   mute?: () => void;
   unMute?: () => void;
   seekTo: (seconds: number, allowSeekAhead?: boolean) => void;
@@ -673,6 +675,17 @@ export function MiniPlayer() {
   useEffect(() => {
     const initPlayer = () => {
       if (!window.YT?.Player || playerRef.current) return;
+      const singleton = window.__digqueueSingletonPlayer;
+      if (singleton) {
+        try {
+          singleton.stopVideo?.();
+          singleton.pauseVideo();
+          singleton.destroy?.();
+        } catch {
+          // Ignore stale singleton teardown errors.
+        }
+        window.__digqueueSingletonPlayer = null;
+      }
       playerRef.current = new window.YT.Player("digqueue-youtube-player", {
         playerVars: { autoplay: 1, rel: 0, modestbranding: 1 },
         events: {
@@ -716,6 +729,7 @@ export function MiniPlayer() {
           },
         },
       });
+      window.__digqueueSingletonPlayer = playerRef.current;
     };
 
     if (window.YT?.Player) {
@@ -737,6 +751,21 @@ export function MiniPlayer() {
 
     return () => {
       window.onYouTubeIframeAPIReady = undefined;
+      const activePlayer = playerRef.current;
+      if (activePlayer) {
+        try {
+          activePlayer.stopVideo?.();
+          activePlayer.pauseVideo();
+          activePlayer.destroy?.();
+        } catch {
+          // Ignore teardown errors during unmount.
+        }
+      }
+      if (window.__digqueueSingletonPlayer === activePlayer) {
+        window.__digqueueSingletonPlayer = null;
+      }
+      playerRef.current = null;
+      setReady(false);
     };
   }, [clearPlaybackOwnerIfOwned, ensurePlaybackOwnership, loadNext]);
 
@@ -1802,7 +1831,10 @@ export function MiniPlayer() {
                   return;
                 }
                 if (playing) playerRef.current.pauseVideo();
-                else playerRef.current.playVideo();
+                else {
+                  if (!ensurePlaybackOwnership()) return;
+                  playerRef.current.playVideo();
+                }
               }}
               aria-label="Play Pause"
             >
@@ -1825,7 +1857,10 @@ export function MiniPlayer() {
                   return;
                 }
                 if (playing) playerRef.current.pauseVideo();
-                else playerRef.current.playVideo();
+                else {
+                  if (!ensurePlaybackOwnership()) return;
+                  playerRef.current.playVideo();
+                }
               }}
               aria-label="Play Pause"
             >
