@@ -70,6 +70,7 @@ export async function GET(request: Request) {
     revalidatePath("/connect-discogs");
     return NextResponse.redirect(new URL(`${nextPath}${nextPath.includes("?") ? "&" : "?"}discogs=connected`, appOrigin));
   } catch (error) {
+    console.error("[discogs-oauth-callback] failed to persist oauth token", error);
     const message = sanitizeDiscogsErrorMessage(error instanceof Error ? error.message : "Unable to finish Discogs OAuth.");
     return NextResponse.redirect(new URL(`/settings?discogs_error=${encodeURIComponent(message)}`, appOrigin));
   }

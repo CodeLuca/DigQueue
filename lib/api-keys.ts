@@ -153,14 +153,8 @@ export async function getApiKeys(options?: { strict?: boolean }): Promise<ApiKey
   } catch (error) {
     if (isMissingAppSecretsOauthColumnError(error)) {
       row = await getLegacyAppSecretsRow(userId);
-    } else if (options?.strict) {
-      throw error;
-    }
-    if (row) {
-      // handled via legacy shape
-    } else if (options?.strict) {
-      throw error;
     } else {
+      if (options?.strict) throw error;
       // Keep app usable when DB connectivity is temporarily unavailable.
       // Intentionally ignore and fall back to null keys.
     }
