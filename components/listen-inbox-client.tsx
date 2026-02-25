@@ -1424,7 +1424,7 @@ export function ListenInboxClient({
             ? "YouTube quota reached. Queue/play is temporarily disabled."
             : null;
           const playHint = !hasPlayableVideo
-            ? "No linked playable video yet. Play Now will try to find one."
+            ? "No linked playable video yet. Play Now will search and queue one."
             : null;
           const canPlay = hardPlayBlockReason === null;
           const isPlayLoading = loadingTrackId === item.trackId;
