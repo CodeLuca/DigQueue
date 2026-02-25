@@ -3,10 +3,11 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const ACTIVE_TICK_MS = 2000;
-const IDLE_TICK_MS = 3500;
+const ACTIVE_TICK_MS = 2200;
+const IDLE_TICK_MS = 4500;
+const BACKGROUND_TICK_MS = 10000;
 const ERROR_TICK_MS = 10000;
-const REFRESH_MIN_GAP_MS = 1500;
+const REFRESH_MIN_GAP_MS = 2800;
 
 type NextSourceResponse = {
   nextSourceId?: number | null;
@@ -40,10 +41,20 @@ export function LabelSyncDaemon() {
       return !tab || tab === "step-1";
     };
 
+    const isHighPrioritySyncView = () => {
+      if (pathname.startsWith("/labels/")) return true;
+      if (pathname !== "/") return false;
+      if (typeof window === "undefined") return true;
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      return !tab || tab === "step-1";
+    };
+
     const tick = async () => {
       if (!runningRef.current) return;
+      const highPriority = isHighPrioritySyncView();
       if (typeof document !== "undefined" && document.visibilityState !== "visible") {
-        window.setTimeout(tick, IDLE_TICK_MS);
+        window.setTimeout(tick, highPriority ? IDLE_TICK_MS : BACKGROUND_TICK_MS);
         return;
       }
       try {
@@ -64,19 +75,7 @@ export function LabelSyncDaemon() {
         }
         const nextSourceId = nextData.nextSourceId ?? nextData.nextLabelId ?? null;
         if (!nextSourceId) {
-          window.setTimeout(tick, IDLE_TICK_MS);
-          return;
-        }
-
-        const processResponse = await fetch("/api/worker/process", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sourceId: nextSourceId }),
-        });
-        if (!processResponse.ok) {
-          // Back off aggressively on mutation failures to avoid lock-step retry storms.
-          const backoff = processResponse.status === 429 ? ERROR_TICK_MS * 2 : ERROR_TICK_MS;
-          window.setTimeout(tick, backoff);
+          window.setTimeout(tick, highPriority ? IDLE_TICK_MS : BACKGROUND_TICK_MS);
           return;
         }
 
@@ -86,7 +85,7 @@ export function LabelSyncDaemon() {
           router.refresh();
         }
 
-        window.setTimeout(tick, ACTIVE_TICK_MS);
+        window.setTimeout(tick, highPriority ? ACTIVE_TICK_MS : BACKGROUND_TICK_MS);
       } catch {
         window.setTimeout(tick, ERROR_TICK_MS);
       }

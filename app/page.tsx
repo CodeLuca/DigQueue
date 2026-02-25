@@ -40,7 +40,7 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
-import { getDiscogsWantsSyncStatus, syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
+import { getDiscogsWantsSyncStatus } from "@/lib/discogs-wants-sync";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
 import { readSyncTelemetry } from "@/lib/sync-telemetry";
 import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
@@ -105,8 +105,6 @@ export default async function HomePage({
   const hasDiscogs = Boolean(keys.discogsToken);
   const wantsSyncStatus = hasDiscogs ? await getDiscogsWantsSyncStatus().catch(() => null) : null;
   if (hasDiscogs && showLibraryItemsSection) {
-    // Warm local wants state in background; don't block wishlist navigation.
-    void syncDiscogsWantsToLocal().catch(() => null);
     // Warm Bandcamp cache in background while rendering from cached snapshot.
     void getBandcampWishlistData().catch(() => null);
   }

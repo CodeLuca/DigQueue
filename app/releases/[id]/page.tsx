@@ -133,7 +133,7 @@ export default async function ReleasePage({
       </Card>
 
       <section className="mt-4 grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
-        <a href={toDiscogsWebUrl(release.discogsUrl, `/release/${release.id}`)} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Open on Discogs</a>
+        <a href={toDiscogsWebUrl(release.discogsUrl, "")} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Open on Discogs</a>
         <a href={`https://bandcamp.com/search?q=${encodeURIComponent(`${release.artist} ${release.title}`)}`} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Quick Bandcamp Search</a>
         <a href={`https://www.juno.co.uk/search/?q[all][]=${encodeURIComponent(`${release.artist} ${release.title}`)}`} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Search on Juno</a>
         <a href={`https://www.hardwax.com/?search=${encodeURIComponent(`${release.artist} ${release.title}`)}`} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Search on Hardwax</a>

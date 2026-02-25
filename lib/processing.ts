@@ -290,6 +290,13 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
   if (!source.active) return { done: false, message: "Source inactive." };
 
   try {
+    if (source.status !== "processing") {
+      await db
+        .update(labels)
+        .set({ status: "processing", lastError: null, updatedAt: new Date() })
+        .where(and(eq(labels.id, sourceId), scope.labels));
+    }
+
     await writeSyncTelemetry(userId, {
       sourceId,
       sourceName: source.name,

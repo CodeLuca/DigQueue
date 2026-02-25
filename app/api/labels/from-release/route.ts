@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { fetchDiscogsRelease } from "@/lib/discogs";
 import { toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshSourceMetadata } from "@/lib/label-metadata";
+import { processSingleReleaseForSource } from "@/lib/processing";
 
 const schema = z.object({
   releaseId: z.number().int().positive(),
@@ -102,6 +103,12 @@ export async function POST(request: Request) {
       discoveredAt: now,
     })
     .onConflictDoNothing();
+
+  try {
+    await processSingleReleaseForSource(labelId, userId);
+  } catch {
+    // Non-blocking: daemon continues sync if immediate step fails.
+  }
 
   return NextResponse.json({ ok: true, labelId });
 }

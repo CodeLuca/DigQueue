@@ -1399,7 +1399,7 @@ export function MiniPlayer() {
       return `https://www.discogs.com${releaseDetails.uri.trim()}`;
     }
     if (!current?.release?.id) return null;
-    return toDiscogsWebUrl(current.release.discogsUrl ?? "", `/release/${current.release.id}`);
+    return toDiscogsWebUrl(current.release.discogsUrl ?? "", "");
   }, [current?.release?.discogsUrl, current?.release?.id, releaseDetails?.uri]);
 
   const releaseVideoUrl = useMemo(
@@ -1925,7 +1925,7 @@ export function MiniPlayer() {
             {current?.release ? (
               <a
                 className="ml-1 inline-flex align-middle text-[var(--color-muted)] hover:text-[var(--color-text)]"
-                href={toDiscogsWebUrl(current?.release?.discogsUrl ?? "", current?.release?.id ? `/release/${current.release.id}` : "")}
+                href={toDiscogsWebUrl(current?.release?.discogsUrl ?? "", "")}
                 target="_blank"
                 rel="noreferrer"
                 title="Open release on Discogs"

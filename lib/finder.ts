@@ -131,7 +131,7 @@ export async function findReleaseLinks(releaseId: number) {
   const fallbackProviders: FinderCandidate[] = [
     {
       provider: "discogs",
-      url: toDiscogsWebUrl(release.discogsUrl, `/release/${release.id}`),
+      url: toDiscogsWebUrl(release.discogsUrl, ""),
       title: "Open on Discogs",
       confidence: "high",
       score: 100,

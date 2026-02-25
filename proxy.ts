@@ -73,8 +73,32 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const { data } = await supabase.auth.getUser();
-  const hasUser = Boolean(data.user?.id);
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
+
+  let hasUser = false;
+  let authCheckFailed = false;
+  try {
+    // Fast path: read session from cookies without always triggering a remote auth call.
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    hasUser = Boolean(sessionData.session?.user?.id);
+    authCheckFailed = Boolean(sessionError);
+    if (!hasUser && hasAuthCookie && !authCheckFailed) {
+      const { data, error } = await supabase.auth.getUser();
+      hasUser = Boolean(data.user?.id);
+      authCheckFailed = Boolean(error);
+    }
+  } catch {
+    authCheckFailed = true;
+  }
+
+  if (authCheckFailed && hasAuthCookie) {
+    // Avoid random logout redirects when upstream auth validation flakes.
+    // Route handlers/pages will still enforce auth as needed.
+    return withNoStore(response);
+  }
+
   if (hasUser) return withNoStore(response);
 
   if (pathname.startsWith("/api/")) {

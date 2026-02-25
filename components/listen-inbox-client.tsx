@@ -44,6 +44,7 @@ type ListenRow = {
   importSource?: string | null;
   labelId: number;
   labelName: string;
+  labelActive?: boolean;
   hasChosenVideo?: boolean;
   youtubeVideoId?: string | null;
   videoEmbeddable?: boolean | null;
@@ -299,6 +300,7 @@ export function ListenInboxClient({
   const [reviewingReleaseId, setReviewingReleaseId] = useState<number | null>(null);
   const [addedLabelReleaseIds, setAddedLabelReleaseIds] = useState<number[]>([]);
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
+  const [loadingTrackId, setLoadingTrackId] = useState<number | null>(null);
   const router = useRouter();
 
   const sourceFilteredRows = useMemo(
@@ -495,6 +497,7 @@ export function ListenInboxClient({
 
   const playRow = useCallback(async (trackId: number) => {
     if (youtubeQuotaExceeded) return;
+    setLoadingTrackId(trackId);
     const row = rows.find((item) => item.trackId === trackId);
     const optimisticItem = row ? createOptimisticPlayItem(row) : null;
     try {
@@ -519,9 +522,7 @@ export function ListenInboxClient({
       void syncUpNextFromQueue();
     } catch (error) {
       if (error instanceof Error && error.message === "NO_MATCH") {
-        setRows((prev) => prev.filter((row) => row.trackId !== trackId));
-        setFeedback(null);
-        router.refresh();
+        setFeedback("No playable video found yet for this track. Try again in a few seconds.");
         return;
       }
       if (error instanceof Error && error.message === "YOUTUBE_QUOTA_EXCEEDED") {
@@ -537,8 +538,10 @@ export function ListenInboxClient({
       }
       const message = error instanceof Error ? error.message : "Unable to queue track.";
       setFeedback(message);
+    } finally {
+      setLoadingTrackId((current) => (current === trackId ? null : current));
     }
-  }, [router, rows, syncUpNextFromQueue, youtubeQuotaExceeded]);
+  }, [rows, syncUpNextFromQueue, youtubeQuotaExceeded]);
 
   const clearYoutubeQuotaExceeded = useCallback(() => {
     setYoutubeQuotaExceeded(false);
@@ -705,6 +708,7 @@ export function ListenInboxClient({
     setFeedback("Adding and activating label...");
     try {
       await addLabelFromRelease(releaseId);
+      setRows((prev) => prev.map((row) => (row.releaseId === releaseId ? { ...row, labelActive: true } : row)));
       setAddedLabelReleaseIds((prev) => (prev.includes(releaseId) ? prev : [...prev, releaseId]));
       setFeedback("Label added and activated.");
       router.refresh();
@@ -861,7 +865,7 @@ export function ListenInboxClient({
           ),
         );
       }
-      if (!labelFilterTouched && !didAutoSelectPlayerLabel && selectedLabelId === null && nextTrackId) {
+      if (showQueueFilters && !labelFilterTouched && !didAutoSelectPlayerLabel && selectedLabelId === null && nextTrackId) {
         const playerLabelId = labelIdByTrackId.get(nextTrackId);
         if (playerLabelId) {
           setSelectedLabelId(playerLabelId);
@@ -873,7 +877,7 @@ export function ListenInboxClient({
 
     window.addEventListener("digqueue:player-current", onPlayerCurrent as EventListener);
     return () => window.removeEventListener("digqueue:player-current", onPlayerCurrent as EventListener);
-  }, [didAutoSelectPlayerLabel, labelFilterTouched, labelIdByTrackId, selectedLabelId, syncUpNextFromQueue]);
+  }, [didAutoSelectPlayerLabel, labelFilterTouched, labelIdByTrackId, selectedLabelId, showQueueFilters, syncUpNextFromQueue]);
 
   useEffect(() => {
     const onTrackTodoUpdated = (event: Event) => {
@@ -1015,7 +1019,7 @@ export function ListenInboxClient({
             </Button>
             {activeLabel?.discogsUrl ? (
               <a
-                href={toDiscogsWebUrl(activeLabel.discogsUrl, `/label/${activeLabel.id}`)}
+                href={toDiscogsWebUrl(activeLabel.discogsUrl, "")}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-md border border-[var(--color-border)] p-2 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
@@ -1412,16 +1416,18 @@ export function ListenInboxClient({
           const hasPlayedHistory = playedCount > 0;
           const needsMark = hasPlayedHistory && !item.listened;
           const wasPlayed = hasPlayedHistory && !needsMark;
-          const labelIsActive = activeLabelIds.has(item.labelId);
-          const hasPlayableVideo = Boolean(item.youtubeVideoId) && item.videoEmbeddable !== false;
-          const playUnavailableReason = youtubeQuotaExceeded
+          const labelIsActive = Boolean(item.labelActive) || activeLabelIds.has(item.labelId);
+          const hasPlayableVideo =
+            Boolean(item.youtubeVideoId) &&
+            (item.playbackSource === "discogs" || item.videoEmbeddable !== false);
+          const hardPlayBlockReason = youtubeQuotaExceeded
             ? "YouTube quota reached. Queue/play is temporarily disabled."
-            : !hasPlayableVideo
-                ? "No playable video exists for this track."
-                : !showQueueFilters && !labelIsActive
-                    ? "This source is inactive in Library. Activate it, then try Play Now."
-                    : null;
-          const canPlay = playUnavailableReason === null && hasPlayableVideo;
+            : null;
+          const playHint = !hasPlayableVideo
+            ? "No linked playable video yet. Play Now will try to find one."
+            : null;
+          const canPlay = hardPlayBlockReason === null;
+          const isPlayLoading = loadingTrackId === item.trackId;
 
           return (
             <div
@@ -1457,7 +1463,7 @@ export function ListenInboxClient({
                       {item.trackTitle}
                       <a
                         className="ml-1 inline-flex align-middle text-[var(--color-muted)] hover:text-[var(--color-text)]"
-                        href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
+                        href={toDiscogsWebUrl(item.releaseDiscogsUrl, "")}
                         target="_blank"
                         rel="noreferrer"
                         title="Open release on Discogs"
@@ -1531,7 +1537,7 @@ export function ListenInboxClient({
                 {showQueueFilters ? (
                   <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
                     <a
-                      href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
+                      href={toDiscogsWebUrl(item.releaseDiscogsUrl, "")}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-10 w-full items-center justify-center rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
@@ -1542,7 +1548,7 @@ export function ListenInboxClient({
                     </a>
                     <span
                       className={`group relative inline-flex h-10 w-full min-w-0 ${canPlay ? "" : "cursor-not-allowed"}`}
-                      aria-label={playUnavailableReason ?? "Play"}
+                      aria-label={hardPlayBlockReason ?? playHint ?? "Play"}
                     >
                       <Button
                         type="button"
@@ -1550,19 +1556,27 @@ export function ListenInboxClient({
                         variant="secondary"
                         className="h-10 w-full justify-center"
                         onClick={() => void playRow(item.trackId)}
-                        disabled={!canPlay}
+                        disabled={!canPlay || isPlayLoading}
                         title="Play now in the mini-player"
                         aria-label="Play now"
                       >
-                        <Play className="h-3.5 w-3.5" />
-                        Play Now
+                        {isPlayLoading ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                        {isPlayLoading ? "Loading..." : "Play Now"}
                       </Button>
-                      {!canPlay && playUnavailableReason ? (
+                      {!canPlay && hardPlayBlockReason ? (
                         <span
                           role="tooltip"
                           className="pointer-events-none absolute -top-2 left-1/2 z-20 w-64 -translate-x-1/2 -translate-y-full rounded-md border border-amber-500/40 bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1.5 text-[11px] leading-snug text-amber-100 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
                         >
-                          {playUnavailableReason}
+                          {hardPlayBlockReason}
+                        </span>
+                      ) : null}
+                      {canPlay && playHint ? (
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute -top-2 left-1/2 z-20 w-64 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1.5 text-[11px] leading-snug text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                        >
+                          {playHint}
                         </span>
                       ) : null}
                     </span>
@@ -1621,7 +1635,7 @@ export function ListenInboxClient({
                   }
                 >
                   <a
-                    href={toDiscogsWebUrl(item.releaseDiscogsUrl, `/release/${item.releaseId}`)}
+                    href={toDiscogsWebUrl(item.releaseDiscogsUrl, "")}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
@@ -1632,7 +1646,7 @@ export function ListenInboxClient({
                   </a>
                   <span
                     className={`group relative inline-flex w-full min-w-0 sm:w-[8.5rem] ${canPlay ? "" : "cursor-not-allowed"}`}
-                    aria-label={playUnavailableReason ?? "Play"}
+                    aria-label={hardPlayBlockReason ?? playHint ?? "Play"}
                   >
                     <Button
                       type="button"
@@ -1640,19 +1654,27 @@ export function ListenInboxClient({
                       variant="secondary"
                       className="w-full justify-center sm:w-[8.5rem] sm:justify-center"
                       onClick={() => void playRow(item.trackId)}
-                      disabled={!canPlay}
+                      disabled={!canPlay || isPlayLoading}
                       title="Play now in the mini-player"
                       aria-label="Play now"
                     >
-                      <Play className="h-3.5 w-3.5" />
-                      Play Now
+                      {isPlayLoading ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                      {isPlayLoading ? "Loading..." : "Play Now"}
                     </Button>
-                    {!canPlay && playUnavailableReason ? (
+                    {!canPlay && hardPlayBlockReason ? (
                       <span
                         role="tooltip"
                         className="pointer-events-none absolute -top-2 left-1/2 z-20 w-64 -translate-x-1/2 -translate-y-full rounded-md border border-amber-500/40 bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1.5 text-[11px] leading-snug text-amber-100 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
                       >
-                        {playUnavailableReason}
+                        {hardPlayBlockReason}
+                      </span>
+                    ) : null}
+                    {canPlay && playHint ? (
+                      <span
+                        role="tooltip"
+                        className="pointer-events-none absolute -top-2 left-1/2 z-20 w-64 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1.5 text-[11px] leading-snug text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                      >
+                        {playHint}
                       </span>
                     ) : null}
                   </span>

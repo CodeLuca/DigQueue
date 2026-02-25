@@ -58,12 +58,6 @@ export async function POST(request: Request) {
 
   const release = await db.query.releases.findFirst({ where: and(eq(releases.id, track.releaseId), eq(releases.userId, userId)) });
   const label = release ? await db.query.labels.findFirst({ where: and(eq(labels.id, release.labelId), eq(labels.userId, userId)) }) : null;
-  if (label && !label.active) {
-    return NextResponse.json(
-      { ok: false, reason: "label_inactive", error: "Label is inactive. Activate it to queue tracks." },
-      { status: 409 },
-    );
-  }
 
   let chosenMatch = null;
   if (parsed.data.matchId) {
@@ -79,10 +73,19 @@ export async function POST(request: Request) {
   } else {
     chosenMatch =
       (await db.query.youtubeMatches.findFirst({
-        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
+        where: and(
+          eq(youtubeMatches.trackId, track.id),
+          eq(youtubeMatches.chosen, true),
+          eq(youtubeMatches.embeddable, true),
+          eq(youtubeMatches.userId, userId),
+        ),
       })) ?? (await db.query.youtubeMatches.findFirst({
-        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)),
+        where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.embeddable, true), eq(youtubeMatches.userId, userId)),
       }));
+  }
+
+  if (chosenMatch && chosenMatch.embeddable === false) {
+    chosenMatch = null;
   }
 
   if (!chosenMatch) {
@@ -138,19 +141,33 @@ export async function POST(request: Request) {
 
   if (!chosenMatch) {
     try {
-      const query = buildYoutubeQuery({
+      const primaryQuery = buildYoutubeQuery({
         primaryArtist: track.artistsText || release?.artist,
         trackTitle: track.title,
         labelName: label?.name,
         catno: release?.catno,
       });
-      const ytResults = await searchYoutube(query);
-      const scored = ytResults.map((item) => ({
-        videoId: item.id.videoId,
-        title: item.snippet.title,
-        channelTitle: item.snippet.channelTitle,
-        score: scoreYoutubeMatch(query, item.snippet.title),
-      }));
+      const broadQuery = `${track.artistsText || release?.artist || ""} ${track.title}`.trim();
+      const bareQuery = track.title.trim();
+
+      const searchQueries = [primaryQuery, broadQuery, bareQuery].filter((value, index, all) => value.length > 0 && all.indexOf(value) === index);
+      const seenIds = new Set<string>();
+      const scored: Array<{ videoId: string; title: string; channelTitle: string; score: number }> = [];
+      for (const query of searchQueries) {
+        const ytResults = await searchYoutube(query);
+        for (const item of ytResults) {
+          const videoId = item.id.videoId;
+          if (!videoId || seenIds.has(videoId)) continue;
+          seenIds.add(videoId);
+          scored.push({
+            videoId,
+            title: item.snippet.title,
+            channelTitle: item.snippet.channelTitle,
+            score: scoreYoutubeMatch(query, item.snippet.title),
+          });
+        }
+        if (scored.length >= 8) break;
+      }
 
       if (scored.length > 0) {
         await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));

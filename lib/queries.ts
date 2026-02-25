@@ -36,6 +36,7 @@ type InboxRow = {
   importSource: string;
   labelId: number;
   labelName: string;
+  labelActive: boolean;
   hasChosenVideo: boolean;
   youtubeVideoId: string | null;
   videoEmbeddable: boolean | null;
@@ -88,17 +89,20 @@ function dedupeInboxRows(rows: InboxRow[]) {
     const playedCount = Math.max(...variants.map((row) => row.playedCount));
     const listened = variants.some((row) => row.listened);
 
+    const hasEmbeddableTrue = variants.some((row) => row.videoEmbeddable === true);
+    const hasEmbeddableFalse = variants.some((row) => row.videoEmbeddable === false);
+    const hasEmbeddableKnown = variants.some((row) => row.videoEmbeddable !== null);
+
     deduped.push({
       ...primary,
+      labelActive: variants.some((row) => row.labelActive),
       bpm: variants.find((row) => typeof row.bpm === "number")?.bpm ?? primary.bpm ?? null,
       listened,
       saved: variants.some((row) => row.saved),
       releaseWishlist,
       hasChosenVideo: variants.some((row) => row.hasChosenVideo),
       youtubeVideoId: variants.find((row) => row.youtubeVideoId)?.youtubeVideoId ?? null,
-      videoEmbeddable: variants.some((row) => row.videoEmbeddable === false)
-        ? false
-        : variants.find((row) => row.videoEmbeddable !== null)?.videoEmbeddable ?? null,
+      videoEmbeddable: hasEmbeddableTrue ? true : hasEmbeddableFalse ? false : hasEmbeddableKnown ? (variants.find((row) => row.videoEmbeddable !== null)?.videoEmbeddable ?? null) : null,
       isUpNext: variants.some((row) => row.isUpNext),
       playedCount,
       wasPlayed: playedCount > 0,
@@ -108,6 +112,88 @@ function dedupeInboxRows(rows: InboxRow[]) {
   }
 
   return deduped;
+}
+
+type PlaybackRow = {
+  trackId: number;
+  hasChosenVideo: unknown;
+  youtubeVideoId: string | null;
+  videoEmbeddable: boolean | null;
+  matchChannelTitle?: string | null;
+};
+
+async function backfillPlayableRows<T extends PlaybackRow>(rows: T[], userId: string) {
+  const missingTrackIds = [
+    ...new Set(
+      rows
+        .filter((row) => !row.youtubeVideoId)
+        .map((row) => row.trackId)
+        .filter((id) => Number.isFinite(id) && id > 0),
+    ),
+  ];
+  if (missingTrackIds.length === 0) return rows;
+
+  const matchRows = await db.query.youtubeMatches.findMany({
+    where: and(inArray(youtubeMatches.trackId, missingTrackIds), eq(youtubeMatches.userId, userId)),
+    columns: {
+      trackId: true,
+      videoId: true,
+      channelTitle: true,
+      embeddable: true,
+      chosen: true,
+      score: true,
+      id: true,
+    },
+    orderBy: [desc(youtubeMatches.chosen), desc(youtubeMatches.embeddable), desc(youtubeMatches.score), desc(youtubeMatches.id)],
+  });
+  const bestMatchByTrack = new Map<number, (typeof matchRows)[number]>();
+  for (const row of matchRows) {
+    if (!bestMatchByTrack.has(row.trackId)) bestMatchByTrack.set(row.trackId, row);
+  }
+
+  const stillMissingTrackIds = missingTrackIds.filter((trackId) => !bestMatchByTrack.has(trackId));
+  const queueRows =
+    stillMissingTrackIds.length > 0
+      ? await db.query.queueItems.findMany({
+          where: and(
+            inArray(queueItems.trackId, stillMissingTrackIds),
+            eq(queueItems.userId, userId),
+            eq(queueItems.status, "pending"),
+          ),
+          columns: { trackId: true, youtubeVideoId: true, id: true },
+          orderBy: [desc(queueItems.id)],
+        })
+      : [];
+  const queuedVideoByTrack = new Map<number, string>();
+  for (const row of queueRows) {
+    if (typeof row.trackId !== "number" || !row.youtubeVideoId) continue;
+    if (!queuedVideoByTrack.has(row.trackId)) queuedVideoByTrack.set(row.trackId, row.youtubeVideoId);
+  }
+
+  return rows.map((row) => {
+    if (row.youtubeVideoId) return row;
+    const match = bestMatchByTrack.get(row.trackId);
+    if (match) {
+      return {
+        ...row,
+        hasChosenVideo: true,
+        youtubeVideoId: match.videoId,
+        videoEmbeddable: match.embeddable,
+        matchChannelTitle: match.channelTitle,
+      };
+    }
+    const queuedVideoId = queuedVideoByTrack.get(row.trackId);
+    if (queuedVideoId) {
+      return {
+        ...row,
+        hasChosenVideo: true,
+        youtubeVideoId: queuedVideoId,
+        videoEmbeddable: true,
+        matchChannelTitle: row.matchChannelTitle ?? "Queue",
+      };
+    }
+    return row;
+  });
 }
 
 type DashboardTab = "step-1" | "step-2" | "library" | "wishlist" | "played-reviewed" | "recommendations";
@@ -633,6 +719,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
       importSource: releases.importSource,
       labelId: labels.id,
       labelName: labels.name,
+      labelActive: labels.active,
       hasChosenVideo: isNotNull(youtubeMatches.id),
       youtubeVideoId: youtubeMatches.videoId,
       videoEmbeddable: youtubeMatches.embeddable,
@@ -647,10 +734,11 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
     .orderBy(desc(tracks.saved), asc(labels.name), asc(releases.releaseOrder), asc(tracks.id))
     .limit(600);
 
-  const trackIds = rows.map((row) => row.trackId);
+  const hydratedRows = await backfillPlayableRows(rows, userId);
+  const trackIds = hydratedRows.map((row) => row.trackId);
   const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
-  const enrichedRows = rows.map((row) => {
+  const enrichedRows = hydratedRows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =
       row.matchChannelTitle === "Discogs" ? "discogs" : row.hasChosenVideo ? "youtube" : null;
 
@@ -699,6 +787,7 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
           importSource: releases.importSource,
           labelId: labels.id,
           labelName: labels.name,
+          labelActive: labels.active,
           hasChosenVideo: isNotNull(youtubeMatches.id),
           youtubeVideoId: youtubeMatches.videoId,
           videoEmbeddable: youtubeMatches.embeddable,
@@ -712,10 +801,11 @@ export async function getToListenData(labelId?: number, onlyPlayable = true) {
         .orderBy(desc(tracks.saved), asc(labels.name), asc(releases.releaseOrder), asc(tracks.id))
         .limit(600);
 
-      const trackIds = rows.map((row) => row.trackId);
+      const hydratedRows = await backfillPlayableRows(rows, userId);
+      const trackIds = hydratedRows.map((row) => row.trackId);
       const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
-      const enrichedRows = rows.map((row) => {
+      const enrichedRows = hydratedRows.map((row) => {
         const playbackSource: "discogs" | "youtube" | null =
           row.matchChannelTitle === "Discogs" ? "discogs" : row.hasChosenVideo ? "youtube" : null;
 
@@ -748,8 +838,8 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
   const scope = userScope(userId);
   try {
     const whereClause = labelId
-      ? and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), eq(sourceReleases.sourceId, labelId), scope.tracks, scope.releases, scope.sourceReleases, scope.labels)
-      : and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), scope.tracks, scope.releases, scope.sourceReleases, scope.labels);
+      ? and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), eq(releases.labelId, labelId), scope.tracks, scope.releases, scope.labels)
+      : and(or(eq(tracks.saved, true), eq(releases.wishlist, true)), scope.tracks, scope.releases, scope.labels);
     const playableClause = onlyPlayable ? isNotNull(youtubeMatches.id) : undefined;
     const combinedWhere = playableClause ? and(whereClause, playableClause, scope.youtubeMatches) : whereClause;
 
@@ -772,6 +862,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
       importSource: releases.importSource,
       labelId: labels.id,
       labelName: labels.name,
+      labelActive: labels.active,
       hasChosenVideo: isNotNull(youtubeMatches.id),
       youtubeVideoId: youtubeMatches.videoId,
       videoEmbeddable: youtubeMatches.embeddable,
@@ -779,17 +870,17 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
     })
     .from(tracks)
     .innerJoin(releases, eq(tracks.releaseId, releases.id))
-    .innerJoin(sourceReleases, eq(sourceReleases.releaseId, releases.id))
-    .innerJoin(labels, eq(sourceReleases.sourceId, labels.id))
+    .innerJoin(labels, eq(releases.labelId, labels.id))
     .leftJoin(youtubeMatches, and(eq(youtubeMatches.trackId, tracks.id), eq(youtubeMatches.chosen, true)))
     .where(combinedWhere)
     .orderBy(asc(tracks.listened), asc(labels.name), asc(releases.releaseOrder), asc(tracks.id))
-    .limit(600);
+    .limit(450);
 
-  const trackIds = rows.map((row) => row.trackId);
+  const hydratedRows = await backfillPlayableRows(rows, userId);
+  const trackIds = hydratedRows.map((row) => row.trackId);
   const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
-  const enrichedRows = rows.map((row) => {
+  const enrichedRows = hydratedRows.map((row) => {
     const playbackSource: "discogs" | "youtube" | null =
       row.matchChannelTitle === "Discogs" ? "discogs" : row.hasChosenVideo ? "youtube" : null;
 
@@ -838,6 +929,7 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
           importSource: releases.importSource,
           labelId: labels.id,
           labelName: labels.name,
+          labelActive: labels.active,
           hasChosenVideo: isNotNull(youtubeMatches.id),
           youtubeVideoId: youtubeMatches.videoId,
           videoEmbeddable: youtubeMatches.embeddable,
@@ -851,10 +943,11 @@ export async function getWishlistData(labelId?: number, onlyPlayable = false) {
         .orderBy(asc(tracks.listened), asc(labels.name), asc(releases.releaseOrder), asc(tracks.id))
         .limit(600);
 
-      const trackIds = rows.map((row) => row.trackId);
+      const hydratedRows = await backfillPlayableRows(rows, userId);
+      const trackIds = hydratedRows.map((row) => row.trackId);
       const { pendingSet, playedCountByTrack, playedLastIdByTrack } = await getQueueTrackState(trackIds, scope.queueItems);
 
-      const enrichedRows = rows.map((row) => {
+      const enrichedRows = hydratedRows.map((row) => {
         const playbackSource: "discogs" | "youtube" | null =
           row.matchChannelTitle === "Discogs" ? "discogs" : row.hasChosenVideo ? "youtube" : null;
 
@@ -928,6 +1021,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
       importSource: releases.importSource,
       labelId: labels.id,
       labelName: labels.name,
+      labelActive: labels.active,
       hasChosenVideo: isNotNull(youtubeMatches.id),
       youtubeVideoId: youtubeMatches.videoId,
       videoEmbeddable: youtubeMatches.embeddable,
@@ -1010,6 +1104,7 @@ export async function getPlayedReviewedData(labelId?: number, onlyPlayable = fal
           importSource: releases.importSource,
           labelId: labels.id,
           labelName: labels.name,
+          labelActive: labels.active,
           hasChosenVideo: isNotNull(youtubeMatches.id),
           youtubeVideoId: youtubeMatches.videoId,
           videoEmbeddable: youtubeMatches.embeddable,

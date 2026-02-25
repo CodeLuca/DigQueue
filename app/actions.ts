@@ -330,6 +330,12 @@ export async function addSourceAction(formData: FormData) {
   } catch {
     // Non-blocking: metadata enrichment should not block adding labels.
   }
+  try {
+    // Kick one immediate processing step so newly added sources do not sit in queued state.
+    await processSingleReleaseForSource(storedLabelId, userId);
+  } catch {
+    // Background daemon continues processing even if the immediate kick fails.
+  }
   revalidatePath("/");
   const sourceName = encodeURIComponent(name.length > 80 ? `${name.slice(0, 77)}...` : name);
   redirect(`/?tab=step-1&notice=${encodeURIComponent(`Queued ${entityKind} source`)}&source=${sourceName}`);

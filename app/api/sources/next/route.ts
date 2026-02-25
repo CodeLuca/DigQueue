@@ -40,9 +40,10 @@ export async function GET() {
 
       const hasPendingReleases = pending.length > 0;
       const paginationFinished = source.currentPage >= source.totalPages;
+      const hasStartedPagination = source.currentPage > 1;
       const activeLock: { lockKey: string } | null = null;
 
-      if (!hasPendingReleases && paginationFinished) {
+      if (!hasPendingReleases && paginationFinished && hasStartedPagination) {
         await db
           .update(labels)
           .set({
@@ -61,7 +62,7 @@ export async function GET() {
         await db
           .update(labels)
           .set({
-            status: hasPendingReleases || !paginationFinished ? "queued" : "complete",
+            status: hasPendingReleases || !paginationFinished || !hasStartedPagination ? "queued" : "complete",
             updatedAt: new Date(),
             lastError: null,
           })
@@ -70,7 +71,7 @@ export async function GET() {
         await db
           .update(labels)
           .set({
-            status: hasPendingReleases || !paginationFinished ? "queued" : "complete",
+            status: hasPendingReleases || !paginationFinished || !hasStartedPagination ? "queued" : "complete",
             updatedAt: new Date(),
             lastError: null,
           })

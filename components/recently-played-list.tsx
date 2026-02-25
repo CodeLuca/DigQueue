@@ -141,7 +141,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
           const trackArtist = item.track?.artistsText || item.release?.artist || "Unknown artist";
           const releaseTitle = item.release?.title || "Unknown release";
           const labelName = item.label?.name || "Unknown label";
-          const discogsHref = toDiscogsWebUrl(item.release?.discogsUrl ?? "", item.release?.id ? `/release/${item.release.id}` : "");
+          const discogsHref = toDiscogsWebUrl(item.release?.discogsUrl ?? "", "");
           return (
             <div key={item.id} className="rounded-md border border-[var(--color-border)] px-2 py-1.5">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
