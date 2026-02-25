@@ -116,6 +116,24 @@ export async function POST(request: Request) {
     }
   }
 
+  // Fallback for historical tracks: reuse the most recent queued/played video
+  // so old library items can still play even if match rows were pruned/missed.
+  if (!chosenMatch) {
+    const historicalQueueItem = await db.query.queueItems.findFirst({
+      where: and(eq(queueItems.trackId, track.id), eq(queueItems.userId, userId)),
+      columns: { youtubeVideoId: true, id: true },
+      orderBy: [desc(queueItems.id)],
+    });
+    if (historicalQueueItem?.youtubeVideoId) {
+      chosenMatch = {
+        videoId: historicalQueueItem.youtubeVideoId,
+        title: "Previously played",
+        channelTitle: "History",
+        embeddable: true,
+      };
+    }
+  }
+
   if (!chosenMatch) {
     if (release) {
       const discogsReleaseVideo = await getFirstDiscogsReleaseYoutubeVideoId(release.id);
