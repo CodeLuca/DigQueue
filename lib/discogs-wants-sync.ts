@@ -179,9 +179,14 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
     const wantedExternalSet = new Set(wantedItems.map((item) => item.releaseId));
     const allReleaseRows = await db.query.releases.findMany({
       where: releasesScope,
-      columns: { id: true, discogsUrl: true },
+      columns: { id: true, labelId: true, discogsUrl: true, wishlist: true, importSource: true },
     });
-    const allReleaseIds = allReleaseRows.map((item) => item.id);
+    const releaseById = new Map(allReleaseRows.map((row) => [row.id, row] as const));
+    const activeLabelRows = await db.query.labels.findMany({
+      where: and(eq(labels.userId, userId), eq(labels.active, true)),
+      columns: { id: true },
+    });
+    const activeLabelIds = new Set(activeLabelRows.map((row) => row.id));
     const existingReleaseIdsByExternal = new Map<number, number[]>();
     for (const row of allReleaseRows) {
       const externalId = parseReleaseIdFromDiscogsUrl(row.discogsUrl);
@@ -197,16 +202,52 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
       })
       .map((row) => row.id);
 
-    const releaseIdChunks = chunk(allReleaseIds, 500);
-    for (const ids of releaseIdChunks) {
+    const loadedWantedSet = new Set(loadedWantedReleaseIds);
+    const toUnsetWishlist = allReleaseRows.filter((row) => row.wishlist && !loadedWantedSet.has(row.id)).map((row) => row.id);
+    const toSetWishlist = allReleaseRows.filter((row) => !row.wishlist && loadedWantedSet.has(row.id)).map((row) => row.id);
+
+    let progressCount = 0;
+    const totalProgressSteps = wantedItems.length + toUnsetWishlist.length + toSetWishlist.length;
+    await writeAutoSyncStatus(userId, {
+      mode,
+      status: "running",
+      phase: "updating_existing",
+      startedAt: startedAt.toISOString(),
+      processedCount: progressCount,
+      totalCount: totalProgressSteps,
+      maxItems,
+    });
+
+    const unsetChunks = chunk(toUnsetWishlist, 250);
+    for (const ids of unsetChunks) {
       if (ids.length === 0) continue;
       await db.update(releases).set({ wishlist: false }).where(and(inArray(releases.id, ids), releasesScope));
+      progressCount += ids.length;
+      await writeAutoSyncStatus(userId, {
+        mode,
+        status: "running",
+        phase: "updating_existing",
+        startedAt: startedAt.toISOString(),
+        processedCount: progressCount,
+        totalCount: totalProgressSteps,
+        maxItems,
+      });
     }
 
-    const loadedWantedChunks = chunk(loadedWantedReleaseIds, 500);
-    for (const ids of loadedWantedChunks) {
+    const setChunks = chunk(toSetWishlist, 250);
+    for (const ids of setChunks) {
       if (ids.length === 0) continue;
       await db.update(releases).set({ wishlist: true }).where(and(inArray(releases.id, ids), releasesScope));
+      progressCount += ids.length;
+      await writeAutoSyncStatus(userId, {
+        mode,
+        status: "running",
+        phase: "updating_existing",
+        startedAt: startedAt.toISOString(),
+        processedCount: progressCount,
+        totalCount: totalProgressSteps,
+        maxItems,
+      });
     }
 
     const missingWanted = wantedItems.filter((item) => (existingReleaseIdsByExternal.get(item.releaseId) ?? []).length === 0);
@@ -215,9 +256,15 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
     for (let idx = 0; idx < wantedItems.length; idx += 1) {
       const item = wantedItems[idx];
       const matchedReleaseIds = existingReleaseIdsByExternal.get(item.releaseId) ?? [];
+      const eligibleMatchedReleaseIds = matchedReleaseIds.filter((releaseId) => {
+        const row = releaseById.get(releaseId);
+        if (!row) return false;
+        const fromActiveSource = row.labelId ? activeLabelIds.has(row.labelId) : false;
+        return fromActiveSource || row.wishlist || row.importSource === "discogs_want";
+      });
       const labelSourceId = await ensureWantLabelSource(item.labelId, item.labelName);
 
-      if (matchedReleaseIds.length > 0) {
+      if (eligibleMatchedReleaseIds.length > 0) {
         if (labelSourceId) {
           await db
             .update(releases)
@@ -225,8 +272,8 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
               labelId: labelSourceId,
               importSource: "discogs_want",
             })
-            .where(and(inArray(releases.id, matchedReleaseIds), releasesScope));
-          for (const releaseId of matchedReleaseIds) {
+            .where(and(inArray(releases.id, eligibleMatchedReleaseIds), releasesScope));
+          for (const releaseId of eligibleMatchedReleaseIds) {
             await db
               .insert(sourceReleases)
               .values({
@@ -242,17 +289,18 @@ export async function syncDiscogsWantsToLocal(options?: { force?: boolean; maxIt
           await db
             .update(releases)
             .set({ importSource: "discogs_want" })
-            .where(and(inArray(releases.id, matchedReleaseIds), releasesScope));
+            .where(and(inArray(releases.id, eligibleMatchedReleaseIds), releasesScope));
         }
       }
-      if ((idx + 1) % 50 === 0 || idx + 1 === wantedItems.length) {
+      progressCount += 1;
+      if ((idx + 1) % 20 === 0 || idx + 1 === wantedItems.length) {
         await writeAutoSyncStatus(userId, {
           mode,
           status: "running",
           phase: "updating_existing",
           startedAt: startedAt.toISOString(),
-          processedCount: idx + 1,
-          totalCount: wantedItems.length,
+          processedCount: progressCount,
+          totalCount: totalProgressSteps,
           maxItems,
         });
       }

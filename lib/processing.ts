@@ -34,6 +34,9 @@ function safeErrorMessage(error: unknown) {
     if (pgCode === "53300") {
       return "Database is temporarily overloaded. Retry in a few seconds.";
     }
+    if (normalized.includes("failed query:")) {
+      return "Temporary database write failure. Retry in a few seconds.";
+    }
     return raw.slice(0, 1200);
   }
   return String(error).slice(0, 1200);
@@ -52,6 +55,8 @@ function isTransientDatabaseError(error: unknown) {
     pgCode === "40P01" || // deadlock_detected
     pgCode === "40001" || // serialization_failure
     normalized.includes("maxclientsinsessionmode") ||
+    normalized.includes("failed query:") ||
+    normalized.includes("temporary database write failure") ||
     normalized.includes("sqlite_busy") ||
     normalized.includes("database is locked")
   );
@@ -111,16 +116,32 @@ export async function ensureSourceReleasePage(sourceId: number, userId: string) 
       })
       .onConflictDoNothing();
 
-    await db
-      .insert(sourceReleases)
-      .values({
-        sourceId,
-        releaseId: storedReleaseId,
-        userId,
-        releaseOrder: index + (source.currentPage - 1) * 100,
-        discoveredAt: now,
-      })
-      .onConflictDoNothing();
+    const persistedRelease = await db.query.releases.findFirst({
+      where: and(eq(releases.id, storedReleaseId), scope.releases),
+      columns: { id: true },
+    });
+    if (!persistedRelease) {
+      // If a transient write failure happened on the release row, skip source mapping this cycle.
+      continue;
+    }
+
+    try {
+      await db
+        .insert(sourceReleases)
+        .values({
+          sourceId,
+          releaseId: storedReleaseId,
+          userId,
+          releaseOrder: index + (source.currentPage - 1) * 100,
+          discoveredAt: now,
+        })
+        .onConflictDoNothing();
+    } catch (error) {
+      if (isTransientDatabaseError(error)) {
+        continue;
+      }
+      throw error;
+    }
   }
 
   await db

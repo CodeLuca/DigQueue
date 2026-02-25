@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const ACTIVE_TICK_MS = 4000;
-const IDLE_TICK_MS = 7000;
+const ACTIVE_TICK_MS = 2000;
+const IDLE_TICK_MS = 3500;
 const ERROR_TICK_MS = 10000;
-const REFRESH_MIN_GAP_MS = 4500;
+const REFRESH_MIN_GAP_MS = 1500;
 
 type NextSourceResponse = {
   nextSourceId?: number | null;

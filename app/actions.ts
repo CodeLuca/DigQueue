@@ -2,6 +2,7 @@
 
 import { and, asc, desc, eq, inArray, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { apiCache, labels, queueItems, releases, sourceReleases, tracks } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
@@ -81,6 +82,18 @@ function deriveNameFromDiscogsUrl(urlLike: string, kind: "label" | "artist", id:
 
 type LocalLabelCandidate = { id: number; title: string; score: number };
 
+function chooseBestDiscogsSearchResult(
+  query: string,
+  results: Array<{ id: number; title: string }>,
+): { id: number; title: string } | null {
+  const ranked = results
+    .map((item) => ({ ...item, score: scoreLabelName(query, item.title) }))
+    .sort((a, b) => b.score - a.score);
+  const top = ranked[0];
+  if (!top) return null;
+  return { id: top.id, title: top.title };
+}
+
 async function findBestLocalLabelCandidate(
   userId: string,
   query: string,
@@ -141,8 +154,8 @@ async function findBestLocalLabelCandidate(
   const top = ranked[0];
   const second = ranked[1];
   if (!top) return null;
-  if (top.score < 82) return null;
-  if (second && top.score - second.score < 8) return null;
+  if (top.score < 64) return null;
+  if (second && top.score - second.score < 4) return null;
   return top;
 }
 
@@ -190,7 +203,7 @@ async function upsertSourceById(userId: string, kind: "label" | "artist", id: nu
       name: fallbackName || `${kind === "artist" ? "Artist" : "Label"} ${id}`,
       discogsUrl: `https://www.discogs.com/${kind}/${id}`,
       sourceType: "workspace",
-      active: false,
+      active: true,
       status: "queued",
       currentPage: 1,
       totalPages: 1,
@@ -208,6 +221,7 @@ async function upsertSourceById(userId: string, kind: "label" | "artist", id: nu
         discogsUrl: `https://www.discogs.com/${kind}/${id}`,
         updatedAt: now,
         sourceType: "workspace",
+        active: true,
         status: "queued",
         lastError: null,
       },
@@ -299,10 +313,10 @@ export async function addSourceAction(formData: FormData) {
         name = cachedMatch.title;
       } else {
         const search = entityKind === "artist" ? await searchDiscogsArtists(raw) : await searchDiscogsLabels(raw);
-        const first = search.results[0];
-        if (!first) throw new Error(`No ${entityKind} found from search.`);
-        id = first.id;
-        name = first.title;
+        const best = chooseBestDiscogsSearchResult(raw, search.results);
+        if (!best) throw new Error(`No ${entityKind} found from search.`);
+        id = best.id;
+        name = best.title;
       }
     }
   }
@@ -317,6 +331,8 @@ export async function addSourceAction(formData: FormData) {
     // Non-blocking: metadata enrichment should not block adding labels.
   }
   revalidatePath("/");
+  const sourceName = encodeURIComponent(name.length > 80 ? `${name.slice(0, 77)}...` : name);
+  redirect(`/?tab=step-1&notice=${encodeURIComponent(`Queued ${entityKind} source`)}&source=${sourceName}`);
 }
 
 export async function addLabelAction(formData: FormData) {
@@ -437,8 +453,8 @@ export async function startSyncAction() {
   });
 
   for (const source of allSources) {
-    // Resume paused sources.
-    if (!source.active && source.status === "paused") {
+    // Resume/activate inactive sources unless they are already fully complete.
+    if (!source.active && source.status !== "complete") {
       await db
         .update(labels)
         .set({ active: true, status: "queued", lastError: null, updatedAt: now })

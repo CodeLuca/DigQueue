@@ -71,10 +71,10 @@ function getDisplaySourceName(name: string, discogsUrl: string, kind: "label" | 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ listenLabel?: string; tab?: string; labelState?: string; sourceKind?: string; labelQuery?: string; libraryView?: string }>;
+  searchParams: Promise<{ listenLabel?: string; tab?: string; labelState?: string; sourceKind?: string; labelQuery?: string; libraryView?: string; notice?: string; source?: string }>;
 }) {
   const userId = await requireCurrentAppUserId();
-  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView } = await searchParams;
+  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView, notice, source } = await searchParams;
   const tabIds = ["step-1", "step-2", "library", "recommendations"] as const;
   type TabId = (typeof tabIds)[number];
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
@@ -190,6 +190,15 @@ export default async function HomePage({
     },
     { queued: 0, processing: 0, error: 0, paused: 0, complete: 0, other: 0 },
   );
+  const queuedSources = activeLabels
+    .filter((label) => {
+      const normalized = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
+      const effective = label.tracksFullyLoaded ? "complete" : normalized;
+      return effective === "queued";
+    })
+    .sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime());
+  const nextQueuedSource = queuedSources[0] ?? null;
+  const queuedPreviewNames = queuedSources.slice(0, 3).map((label) => getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label"));
   const pausedSourceCount = data.labels.filter((label) => !label.active && label.status === "paused").length;
   const retryableActiveSourceCount = activeLabels.filter((label) => label.status === "error").length;
   const showIngestionPanelOpen =
@@ -287,6 +296,7 @@ export default async function HomePage({
               : normalizedStatus === "complete"
                 ? "Complete"
                 : normalizedStatus;
+    const needsSourceInfoRefresh = !label.imageUrl || !label.blurb || label.notableReleasesJson === "[]";
     return (
       <div
         key={label.id}
@@ -380,13 +390,15 @@ export default async function HomePage({
           <summary className="cursor-pointer select-none text-[11px] uppercase tracking-[0.06em] text-[var(--color-muted)]">Details</summary>
           <p className="mt-2 line-clamp-2">{label.summaryText}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <form action={refreshLabelMetadataAction}>
-              <input type="hidden" name="labelId" value={label.id} />
-              <FormSubmitButton type="submit" size="sm" variant="ghost" pendingText="Refreshing..." title="Refresh this source profile, image, and notable releases">
-                <RefreshCcw className="mr-1 h-3.5 w-3.5" />
-                Refresh source info
-              </FormSubmitButton>
-            </form>
+            {needsSourceInfoRefresh ? (
+              <form action={refreshLabelMetadataAction}>
+                <input type="hidden" name="labelId" value={label.id} />
+                <FormSubmitButton type="submit" size="sm" variant="ghost" pendingText="Refreshing..." title="Refresh this source profile, image, and notable releases">
+                  <RefreshCcw className="mr-1 h-3.5 w-3.5" />
+                  Refresh source info
+                </FormSubmitButton>
+              </form>
+            ) : null}
             <LabelDeleteButton labelId={label.id} labelName={label.name} />
           </div>
           {label.notableReleasesJson !== "[]" ? (
@@ -603,6 +615,12 @@ export default async function HomePage({
                   <Link href="/connect-discogs?next=/" className="mt-2 inline-block text-xs text-[var(--color-accent)] hover:underline">Connect Discogs</Link>
                 </div>
               ) : null}
+              {notice ? (
+                <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                  {notice}
+                  {source ? <span className="ml-1 text-emerald-100">- {source}</span> : null}
+                </div>
+              ) : null}
 
               <form action={addSourceAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Input id="label-input" name="source" placeholder="Paste Discogs source URL, ID, or name (label or artist)" required />
@@ -620,6 +638,8 @@ export default async function HomePage({
                       <p className="mt-1 text-xs text-[var(--color-muted)]">
                         {activeStatusCounts.processing > 0
                           ? "Sync is active."
+                          : activeStatusCounts.queued > 0
+                            ? "Sync is queued and will start shortly."
                           : "Sync is idle."}
                       </p>
                     </div>
@@ -684,6 +704,12 @@ export default async function HomePage({
                   <span>Source sync only.</span>
                   {hasDiscogs ? <WishlistSyncStatus initialStatus={wantsSyncStatus} compact /> : null}
                 </div>
+                {nextQueuedSource && activeStatusCounts.processing === 0 ? (
+                  <p className="mt-2 text-xs text-[var(--color-muted)]">
+                    Next in queue: {getDisplaySourceName(nextQueuedSource.name, nextQueuedSource.discogsUrl, nextQueuedSource.entityKind === "artist" ? "artist" : "label")} (1/{activeStatusCounts.queued})
+                    {queuedPreviewNames.length > 1 ? ` - Then: ${queuedPreviewNames.slice(1).join(", ")}` : ""}
+                  </p>
+                ) : null}
                 <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
                   {syncTelemetry?.sourceName ? (
                     <p className="text-[var(--color-text)]">

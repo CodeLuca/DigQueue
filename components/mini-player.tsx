@@ -125,6 +125,7 @@ const BULK_REQUEST_TIMEOUT_MS = 30000;
 const BPM_SAMPLE_INTERVAL_MS = 50;
 const BPM_ESTIMATE_INTERVAL_MS = 1200;
 const BPM_WINDOW_SECONDS = 16;
+const BPM_AVG_WINDOW_SIZE = 6;
 const BPM_MIN = 70;
 const BPM_MAX = 200;
 type PlaybackMode = "in_order" | "shuffle";
@@ -182,6 +183,13 @@ function estimateBpmFromEnvelope(samples: number[], sampleIntervalMs: number): n
   return bpm >= BPM_MIN && bpm <= BPM_MAX ? bpm : null;
 }
 
+function normalizeElectronicBpm(raw: number) {
+  let bpm = raw;
+  while (bpm < 110) bpm *= 2;
+  while (bpm > 165) bpm = Math.round(bpm / 2);
+  return Math.round(bpm);
+}
+
 export function MiniPlayer() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab");
@@ -214,8 +222,10 @@ export function MiniPlayer() {
   const bpmAnalyserRef = useRef<AnalyserNode | null>(null);
   const bpmSampleBufferRef = useRef<Float32Array | null>(null);
   const bpmEnvelopeRef = useRef<number[]>([]);
+  const bpmEstimateHistoryRef = useRef<number[]>([]);
   const bpmSampleTimerRef = useRef<number | null>(null);
   const bpmEstimateTimerRef = useRef<number | null>(null);
+  const liveBpmStatusRef = useRef<"off" | "starting" | "detecting" | "running" | "error">("off");
   const [current, setCurrent] = useState<QueueApiItem | null>(null);
   const [history, setHistory] = useState<QueueApiItem[]>([]);
   const [ready, setReady] = useState(false);
@@ -238,9 +248,14 @@ export function MiniPlayer() {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>("in_order");
   const [liveBpm, setLiveBpm] = useState<number | null>(null);
+  const [liveBpmConfidence, setLiveBpmConfidence] = useState<"low" | "mid" | "high">("low");
   const [liveBpmStatus, setLiveBpmStatus] = useState<"off" | "starting" | "detecting" | "running" | "error">("off");
   const [liveBpmError, setLiveBpmError] = useState<string | null>(null);
   const [liveBpmInputSource, setLiveBpmInputSource] = useState<"tab" | "mic" | null>(null);
+
+  useEffect(() => {
+    liveBpmStatusRef.current = liveBpmStatus;
+  }, [liveBpmStatus]);
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent || "";
@@ -1154,6 +1169,7 @@ export function MiniPlayer() {
       bpmEstimateTimerRef.current = null;
     }
     bpmEnvelopeRef.current = [];
+    bpmEstimateHistoryRef.current = [];
     bpmSampleBufferRef.current = null;
     bpmAnalyserRef.current = null;
     if (bpmAudioContextRef.current) {
@@ -1167,6 +1183,7 @@ export function MiniPlayer() {
       bpmCaptureStreamRef.current = null;
     }
     setLiveBpm(null);
+    setLiveBpmConfidence("low");
     setLiveBpmStatus("off");
     setLiveBpmError(null);
     setLiveBpmInputSource(null);
@@ -1181,6 +1198,7 @@ export function MiniPlayer() {
     }
     stopLiveBpmCapture();
     setLiveBpm(null);
+    setLiveBpmConfidence("low");
     setLiveBpmError(null);
     setLiveBpmInputSource(null);
     setLiveBpmStatus("starting");
@@ -1192,6 +1210,7 @@ export function MiniPlayer() {
         throw new Error(inputSource === "tab" ? "No tab audio track was shared." : "Microphone audio track unavailable.");
       }
       const audioContext = new AudioContext();
+      void audioContext.resume().catch(() => null);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.85;
@@ -1203,6 +1222,8 @@ export function MiniPlayer() {
       bpmAnalyserRef.current = analyser;
       bpmSampleBufferRef.current = buffer;
       bpmEnvelopeRef.current = [];
+      bpmEstimateHistoryRef.current = [];
+      setLiveBpmConfidence("low");
       setLiveBpmInputSource(inputSource);
       setLiveBpmStatus("detecting");
       const maxSamples = Math.floor((BPM_WINDOW_SECONDS * 1000) / BPM_SAMPLE_INTERVAL_MS);
@@ -1228,9 +1249,24 @@ export function MiniPlayer() {
       bpmEstimateTimerRef.current = window.setInterval(() => {
         const estimated = estimateBpmFromEnvelope(bpmEnvelopeRef.current, BPM_SAMPLE_INTERVAL_MS);
         if (typeof estimated === "number") {
-          setLiveBpm((previous) => (typeof previous === "number" ? Math.round(previous * 0.65 + estimated * 0.35) : estimated));
+          const history = bpmEstimateHistoryRef.current;
+          history.push(normalizeElectronicBpm(estimated));
+          if (history.length > BPM_AVG_WINDOW_SIZE) {
+            history.splice(0, history.length - BPM_AVG_WINDOW_SIZE);
+          }
+          const avg = Math.round(history.reduce((sum, value) => sum + value, 0) / history.length);
+          const variance =
+            history.length > 1
+              ? history.reduce((sum, value) => sum + (value - avg) * (value - avg), 0) / history.length
+              : 99;
+          const stdDev = Math.sqrt(variance);
+          const confidence: "low" | "mid" | "high" =
+            history.length >= 4 && stdDev <= 2 ? "high" : history.length >= 3 && stdDev <= 4 ? "mid" : "low";
+          setLiveBpmConfidence(confidence);
+          setLiveBpm(confidence === "low" ? null : avg);
           setLiveBpmStatus("running");
         } else {
+          setLiveBpmConfidence("low");
           setLiveBpmStatus((previous) => (previous === "running" ? "running" : "detecting"));
         }
       }, BPM_ESTIMATE_INTERVAL_MS);
@@ -1289,14 +1325,29 @@ export function MiniPlayer() {
     };
   }, [stopLiveBpmCapture]);
 
+  useEffect(() => {
+    const status = liveBpmStatusRef.current;
+    if (status === "off" || status === "error") return;
+    // New track/video: clear previous estimates so old BPM does not carry over.
+    bpmEnvelopeRef.current = [];
+    bpmEstimateHistoryRef.current = [];
+    setLiveBpm(null);
+    setLiveBpmConfidence("low");
+    setLiveBpmStatus("detecting");
+  }, [current?.youtubeVideoId]);
+
   const currentBpmLabel = useMemo(() => {
-    if (liveBpmStatus === "error") return liveBpmError ?? "Live BPM unavailable";
-    if (liveBpmStatus === "starting") return "Starting live BPM…";
-    if (liveBpmStatus === "detecting") return "Detecting BPM…";
-    if (liveBpmStatus === "running" && typeof liveBpm === "number") return `${liveBpm} BPM`;
-    return "Live BPM off";
-  }, [liveBpm, liveBpmError, liveBpmStatus]);
-  const currentBpmValue = typeof liveBpm === "number" ? String(liveBpm) : "--";
+    if (liveBpmStatus === "error") return liveBpmError ?? "BPM unavailable";
+    if (liveBpmStatus === "starting" || liveBpmStatus === "detecting") return "Detecting";
+    if (liveBpmStatus === "running" && typeof liveBpm === "number") return liveBpmConfidence === "high" ? "Stable" : "Estimating";
+    return "Off";
+  }, [liveBpm, liveBpmConfidence, liveBpmError, liveBpmStatus]);
+  const currentBpmValue =
+    typeof liveBpm === "number"
+      ? liveBpmConfidence === "high"
+        ? String(liveBpm)
+        : `~${liveBpm}`
+      : "--";
   const bpmInputLabel = liveBpmInputSource === "mic" ? "Mic input" : liveBpmInputSource === "tab" ? "Tab audio" : null;
 
   const currentReleaseId = current?.release?.id;
