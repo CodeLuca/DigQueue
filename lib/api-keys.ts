@@ -30,10 +30,19 @@ const DB_RETRY_BASE_MS = 180;
 
 function isMissingAppSecretsOauthColumnError(error: unknown) {
   if (!(error instanceof Error)) return false;
-  const message = error.message.toLowerCase();
-  return message.includes("app_secrets")
-    && message.includes("does not exist")
-    && message.includes("youtube_oauth_");
+  const top = error as Error & { cause?: unknown };
+  const message = top.message.toLowerCase();
+  const cause = top.cause as { code?: string; message?: string } | undefined;
+  const causeMessage = String(cause?.message || "").toLowerCase();
+
+  const topLooksLikeMissingColumn = message.includes("app_secrets")
+    && message.includes("youtube_oauth_")
+    && message.includes("failed query:");
+  const causeIsMissingColumn = cause?.code === "42703"
+    || (causeMessage.includes("column") && causeMessage.includes("does not exist"));
+  const causeReferencesOauthColumn = causeMessage.includes("youtube_oauth_");
+
+  return topLooksLikeMissingColumn && (causeIsMissingColumn || causeReferencesOauthColumn);
 }
 
 function decodeStoredSecret(value: string | null | undefined) {
