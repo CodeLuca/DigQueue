@@ -1726,6 +1726,18 @@ export function ListenInboxClient({
                       const isAdded = addedLabelReleaseIds.includes(item.releaseId);
                       const isBusy = isAdding;
                       const canAddLabel = !labelIsActive;
+                      if (!canAddLabel) {
+                        return (
+                          <span
+                            className="inline-flex w-full items-center justify-center rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 sm:w-[12rem]"
+                            aria-label="Label active"
+                            title="Label is already active"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Label active
+                          </span>
+                        );
+                      }
                       return (
                     <Button
                       type="button"
@@ -1735,7 +1747,7 @@ export function ListenInboxClient({
                         if (!canAddLabel) return;
                         void addRowLabel(item.releaseId);
                       }}
-                      disabled={isBusy || !canAddLabel || isAdded}
+                      disabled={isBusy || isAdded}
                       title="Add this release label to DigQueue and activate it for processing."
                       aria-label="Add and activate label"
                       className="w-full justify-center border-[var(--color-border)] hover:border-[var(--color-accent)] hover:bg-[var(--color-surface2)] hover:text-[var(--color-text)] disabled:opacity-100 sm:w-[12rem]"
@@ -1745,9 +1757,7 @@ export function ListenInboxClient({
                         ? "Adding..."
                         : isAdded
                           ? "Added"
-                          : !canAddLabel
-                            ? "Label active"
-                            : "Add + activate label"}
+                        : "Add + activate label"}
                     </Button>
                       );
                     })()
