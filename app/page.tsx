@@ -47,7 +47,7 @@ import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { getDiscogsWantsSyncStatus } from "@/lib/discogs-wants-sync";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
-import { classifySourceFailure, getFailureCategoryMeta, type FailureCategory } from "@/lib/source-failures";
+import { getFailureCategoryMeta, groupSourceFailuresByCategory } from "@/lib/source-failures";
 import { readSyncTelemetry } from "@/lib/sync-telemetry";
 import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
 import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
@@ -280,19 +280,7 @@ export default async function HomePage({
   const reviewedCount = reviewedRows.length;
   const needsReviewCount = needsReviewRows.length;
   const totalWishlistedRecords = data.metrics.wishlistedRecords;
-  const failureGroups = (() => {
-    const grouped = new Map<FailureCategory, Array<{ label: (typeof data.erroredLabels)[number]; error: string }>>();
-    for (const label of data.erroredLabels) {
-      const visibleError = getVisibleLabelError(label.lastError) || "Unknown source failure.";
-      const category = classifySourceFailure(visibleError);
-      const current = grouped.get(category) ?? [];
-      current.push({ label, error: visibleError });
-      grouped.set(category, current);
-    }
-    return [...grouped.entries()]
-      .map(([category, items]) => ({ category, items }))
-      .sort((a, b) => b.items.length - a.items.length);
-  })();
+  const failureGroups = groupSourceFailuresByCategory(data.erroredLabels, (label) => getVisibleLabelError(label.lastError) || "Unknown source failure.");
   const renderSourceCard = (label: (typeof data.labels)[number]) => {
     const displayName = getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label");
     const visibleLastError = getVisibleLabelError(label.lastError);

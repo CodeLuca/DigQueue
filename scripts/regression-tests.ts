@@ -31,7 +31,7 @@ import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { parsePositiveSourceIds } from "../lib/source-id-list";
-import { classifySourceFailure, getFailureCategoryMeta } from "../lib/source-failures";
+import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
@@ -203,6 +203,19 @@ async function run() {
   assert.equal(getFailureCategoryMeta("unknown").label, "Unknown");
   assert.deepEqual(parsePositiveSourceIds("1,2,2, x, -1, 4"), [1, 2, 4]);
   assert.deepEqual(parsePositiveSourceIds("10,11,12", 2), [10, 11]);
+  const groupedFailures = groupSourceFailuresByCategory(
+    [
+      { id: 1, lastError: "OAuth token expired" },
+      { id: 2, lastError: "Discogs error 429" },
+      { id: 3, lastError: "Discogs error 429" },
+      { id: 4, lastError: "" },
+    ],
+    (row) => row.lastError,
+  );
+  assert.equal(groupedFailures[0]?.category, "rate_limit");
+  assert.equal(groupedFailures[0]?.items.length, 2);
+  assert.equal(groupedFailures[1]?.category, "auth");
+  assert.equal(groupedFailures[2]?.category, "unknown");
 
   // OAuth temp cookie parsing coverage.
   const encodedDiscogs = encodeDiscogsOAuthPending({

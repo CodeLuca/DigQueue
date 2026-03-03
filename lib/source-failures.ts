@@ -1,5 +1,10 @@
 export type FailureCategory = "auth" | "rate_limit" | "provider" | "database" | "data" | "unknown";
 
+export type GroupedSourceFailures<T> = Array<{
+  category: FailureCategory;
+  items: Array<{ label: T; error: string }>;
+}>;
+
 export function classifySourceFailure(error: string | null | undefined): FailureCategory {
   const value = (error || "").toLowerCase();
   if (!value) return "unknown";
@@ -101,4 +106,21 @@ export function getFailureCategoryMeta(category: FailureCategory) {
     href: "",
     hrefLabel: "",
   };
+}
+
+export function groupSourceFailuresByCategory<T>(
+  items: T[],
+  resolveVisibleError: (item: T) => string,
+): GroupedSourceFailures<T> {
+  const grouped = new Map<FailureCategory, Array<{ label: T; error: string }>>();
+  for (const item of items) {
+    const visibleError = resolveVisibleError(item) || "Unknown source failure.";
+    const category = classifySourceFailure(visibleError);
+    const current = grouped.get(category) ?? [];
+    current.push({ label: item, error: visibleError });
+    grouped.set(category, current);
+  }
+  return [...grouped.entries()]
+    .map(([category, groupedItems]) => ({ category, items: groupedItems }))
+    .sort((a, b) => b.items.length - a.items.length);
 }
