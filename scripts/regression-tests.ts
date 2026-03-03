@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
+import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { normalizeNextPath } from "../lib/next-path";
 import {
   decodeDiscogsOAuthPending,
@@ -56,6 +57,18 @@ function run() {
   assert.equal(
     normalizeNextPath("/settings", { fallback: "/settings" }),
     "/settings",
+  );
+  assert.equal(
+    sanitizeDiscogsConnectionErrorMessage("failed query: timeout"),
+    "Temporary database connectivity issue while saving Discogs connection. Please retry.",
+  );
+  assert.equal(
+    sanitizeDiscogsConnectionErrorMessage("Discogs OAuth state mismatch."),
+    "Discogs OAuth state mismatch.",
+  );
+  assert.equal(
+    sanitizeDiscogsConnectionErrorMessage(""),
+    null,
   );
 
   // Discogs URL canonicalization coverage.

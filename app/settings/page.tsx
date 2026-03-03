@@ -8,22 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaybackModeSettings } from "@/components/playback-mode-settings";
 import { getApiKeys } from "@/lib/api-keys";
+import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
-
-function sanitizeDiscogsErrorMessage(message: string | undefined) {
-  if (!message) return null;
-  const lower = message.toLowerCase();
-  if (
-    lower.includes("failed query:") ||
-    lower.includes("params:") ||
-    lower.includes("circuit breaker open") ||
-    lower.includes("unable to establish connection to upstream database") ||
-    lower.includes("getaddrinfo enotfound")
-  ) {
-    return "Temporary database connectivity issue while saving Discogs connection. Please retry.";
-  }
-  return message;
-}
 
 export default async function SettingsPage({
   searchParams,
@@ -34,7 +20,7 @@ export default async function SettingsPage({
   const savedKeys = await getApiKeys();
   const discogsSavedAuth = parseDiscogsStoredAuth(savedKeys.discogsToken);
   const discogsConnected = discogsSavedAuth?.kind === "oauth";
-  const discogsError = sanitizeDiscogsErrorMessage(params.discogs_error);
+  const discogsError = sanitizeDiscogsConnectionErrorMessage(params.discogs_error);
 
   return (
     <main className="pb-player-safe mx-auto max-w-[980px] px-3 py-5 sm:px-4 md:px-8 md:py-6">

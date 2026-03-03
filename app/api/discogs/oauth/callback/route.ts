@@ -5,24 +5,11 @@ import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { getApiKeys, setApiKeys } from "@/lib/api-keys";
 import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
+import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
 import { validateDiscogsOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { decodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
-
-function sanitizeDiscogsErrorMessage(message: string) {
-  const lower = message.toLowerCase();
-  if (
-    lower.includes("failed query:") ||
-    lower.includes("params:") ||
-    lower.includes("circuit breaker open") ||
-    lower.includes("unable to establish connection to upstream database") ||
-    lower.includes("getaddrinfo enotfound")
-  ) {
-    return "Temporary database connectivity issue while saving Discogs connection. Please retry.";
-  }
-  return message;
-}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -78,7 +65,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`${nextPath}${nextPath.includes("?") ? "&" : "?"}discogs=connected`, appOrigin));
   } catch (error) {
     console.error("[discogs-oauth-callback] failed to persist oauth token", error);
-    const message = sanitizeDiscogsErrorMessage(error instanceof Error ? error.message : "Unable to finish Discogs OAuth.");
+    const message =
+      sanitizeDiscogsConnectionErrorMessage(error instanceof Error ? error.message : "Unable to finish Discogs OAuth.") ||
+      "Unable to finish Discogs OAuth.";
     return NextResponse.redirect(new URL(`/settings?discogs_error=${encodeURIComponent(message)}`, appOrigin));
   }
 }
