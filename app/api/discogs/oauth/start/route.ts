@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
+import { buildDiscogsOAuthCallbackUrl } from "@/lib/discogs-oauth-callback-url";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
 import { DISCOGS_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { buildOAuthTempCookieOptions } from "@/lib/oauth-cookie-options";
@@ -23,11 +24,7 @@ export async function GET(request: Request) {
 
   try {
     const state = randomBytes(12).toString("hex");
-    const callbackUrl = new URL("/api/discogs/oauth/callback", appOrigin);
-    callbackUrl.searchParams.set("next", nextPath);
-    callbackUrl.searchParams.set("state", state);
-
-    const requestToken = await fetchDiscogsOAuthRequestToken(callbackUrl.toString());
+    const requestToken = await fetchDiscogsOAuthRequestToken(buildDiscogsOAuthCallbackUrl(appOrigin, nextPath, state));
     const cookieStore = await cookies();
     cookieStore.set(DISCOGS_OAUTH_TMP_COOKIE, encodeDiscogsOAuthPending({
       state,

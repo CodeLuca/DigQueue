@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
+import { buildDiscogsOAuthCallbackUrl } from "../lib/discogs-oauth-callback-url";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { buildOAuthCallbackLoginPath } from "../lib/oauth-callback-routing";
 import { DISCOGS_OAUTH_TMP_COOKIE, YOUTUBE_OAUTH_TMP_COOKIE } from "../lib/oauth-cookie-keys";
@@ -95,6 +96,10 @@ async function run() {
   assert.equal(getOAuthProviderLoginNextPath("youtube"), "/settings");
   assert.equal(getOAuthErrorQueryKey("discogs"), "discogs_error");
   assert.equal(getOAuthErrorQueryKey("youtube"), "youtube_error");
+  assert.equal(
+    buildDiscogsOAuthCallbackUrl("https://digqueue.local", "/settings?tab=step-2", "abc"),
+    "https://digqueue.local/api/discogs/oauth/callback?next=%2Fsettings%3Ftab%3Dstep-2&state=abc",
+  );
   assert.equal(getInvalidOAuthCallbackMessage("discogs"), "Invalid Discogs OAuth callback.");
   assert.equal(getInvalidOAuthCallbackMessage("youtube"), "Invalid YouTube OAuth callback.");
   assert.equal(getOAuthStateMismatchMessage("discogs"), "Discogs OAuth state mismatch.");
