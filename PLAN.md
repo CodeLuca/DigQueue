@@ -21,7 +21,7 @@
 - [~] Job control UX: batch controls exist; grouped Failure Center + run history/throughput are shipped, but deeper remediation workflows still need improvement
 
 ## Next Iterations
-1. Failure center phase 2: one-click remediation actions per category (e.g. reconnect OAuth, clear stale locks, targeted retry).
-2. Processing observability phase 2: persistent timeline, per-source last-success timestamp, and run duration percentiles.
+1. Failure center phase 2: expand remediation actions per category beyond targeted retry (e.g. reconnect OAuth shortcut, clear stale locks).
+2. Processing observability phase 2: persistent timeline and run duration percentiles (per-source last-success is now surfaced).
 3. Regression coverage phase 2: route-level tests for OAuth start/callback handlers and queue playback state transitions.
 4. Copy and mobile UX polish pass across all tabs (reduce control density, simplify labels/actions on narrow screens).
