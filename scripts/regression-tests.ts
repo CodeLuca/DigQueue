@@ -21,7 +21,7 @@ import {
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
-import { classifySourceFailure } from "../lib/source-failures";
+import { classifySourceFailure, getFailureCategoryMeta } from "../lib/source-failures";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
@@ -172,6 +172,9 @@ async function run() {
   assert.equal(classifySourceFailure("YouTube provider timeout"), "provider");
   assert.equal(classifySourceFailure("Invalid tracklist payload"), "data");
   assert.equal(classifySourceFailure("totally unknown"), "unknown");
+  assert.equal(getFailureCategoryMeta("auth").href, "/settings");
+  assert.equal(getFailureCategoryMeta("rate_limit").label, "Rate Limit");
+  assert.equal(getFailureCategoryMeta("unknown").label, "Unknown");
 
   // OAuth temp cookie parsing coverage.
   const encodedDiscogs = encodeDiscogsOAuthPending({
