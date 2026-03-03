@@ -18,10 +18,10 @@
 - [x] Beginner-friendly batch controls on Sources (queue/retry/resume/pause quick actions)
 
 ## In Progress / Partial
-- [~] Job control UX: batch controls now exist, but run visibility and error guidance still need improvement
+- [~] Job control UX: batch controls exist; grouped Failure Center + run history/throughput are shipped, but deeper remediation workflows still need improvement
 
 ## Next Iterations
-1. Failure center that groups errors by type (rate limit, provider, data, auth) with one-click suggested actions.
-2. Processing observability panel (current worker/source, throughput, recent run history, last successful sync).
-3. Regression coverage for auth redirects, playlist export flow, and mobile playback behavior (especially iOS/background cases).
+1. Failure center phase 2: one-click remediation actions per category (e.g. reconnect OAuth, clear stale locks, targeted retry).
+2. Processing observability phase 2: persistent timeline, per-source last-success timestamp, and run duration percentiles.
+3. Regression coverage phase 2: route-level tests for OAuth start/callback handlers and queue playback state transitions.
 4. Copy and mobile UX polish pass across all tabs (reduce control density, simplify labels/actions on narrow screens).
