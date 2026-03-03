@@ -9,6 +9,7 @@ import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
 import { validateDiscogsOAuthCallbackInput } from "@/lib/oauth-callback-validation";
+import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { decodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
 
 export async function GET(request: Request) {
@@ -41,10 +42,10 @@ export async function GET(request: Request) {
     requestTokenSecret,
   });
   if (!validation.ok && validation.reason === "invalid_callback") {
-    return NextResponse.redirect(new URL("/settings?discogs_error=Invalid%20Discogs%20OAuth%20callback.", appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", "Invalid Discogs OAuth callback."), appOrigin));
   }
   if (!validation.ok && validation.reason === "state_mismatch") {
-    return NextResponse.redirect(new URL("/settings?discogs_error=Discogs%20OAuth%20state%20mismatch.", appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", "Discogs OAuth state mismatch."), appOrigin));
   }
 
   try {
@@ -62,12 +63,12 @@ export async function GET(request: Request) {
     revalidatePath("/");
     revalidatePath("/settings");
     revalidatePath("/connect-discogs");
-    return NextResponse.redirect(new URL(`${nextPath}${nextPath.includes("?") ? "&" : "?"}discogs=connected`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthConnectedRedirectPath(nextPath, "discogs"), appOrigin));
   } catch (error) {
     console.error("[discogs-oauth-callback] failed to persist oauth token", error);
     const message =
       sanitizeDiscogsConnectionErrorMessage(error instanceof Error ? error.message : "Unable to finish Discogs OAuth.") ||
       "Unable to finish Discogs OAuth.";
-    return NextResponse.redirect(new URL(`/settings?discogs_error=${encodeURIComponent(message)}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", message), appOrigin));
   }
 }

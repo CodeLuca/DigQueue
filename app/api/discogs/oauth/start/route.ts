@@ -5,6 +5,7 @@ import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
+import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { encodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
 
 export async function GET(request: Request) {
@@ -41,6 +42,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start Discogs OAuth.";
-    return NextResponse.redirect(new URL(`/settings?discogs_error=${encodeURIComponent(message)}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", message), appOrigin));
   }
 }

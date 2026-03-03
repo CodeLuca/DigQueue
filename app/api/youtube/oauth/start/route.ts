@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { normalizeNextPath } from "@/lib/next-path";
+import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { encodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { buildYoutubeOAuthAuthorizeUrl } from "@/lib/youtube-oauth";
 
@@ -31,6 +32,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start YouTube OAuth.";
-    return NextResponse.redirect(new URL(`/settings?youtube_error=${encodeURIComponent(message)}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", message), appOrigin));
   }
 }

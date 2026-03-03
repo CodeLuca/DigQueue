@@ -5,6 +5,7 @@ import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { normalizeNextPath } from "@/lib/next-path";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
+import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { decodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { completeYoutubeOAuthCallback } from "@/lib/youtube-oauth";
 
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
     expectedState,
   });
   if (!validation.ok) {
-    return NextResponse.redirect(new URL(`/settings?youtube_error=${encodeURIComponent("Invalid YouTube OAuth callback.")}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", "Invalid YouTube OAuth callback."), appOrigin));
   }
 
   try {
@@ -46,10 +47,9 @@ export async function GET(request: Request) {
     revalidatePath("/");
     revalidatePath("/settings");
 
-    const separator = nextPath.includes("?") ? "&" : "?";
-    return NextResponse.redirect(new URL(`${nextPath}${separator}youtube=connected`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthConnectedRedirectPath(nextPath, "youtube"), appOrigin));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to finish YouTube OAuth.";
-    return NextResponse.redirect(new URL(`/settings?youtube_error=${encodeURIComponent(message)}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", message), appOrigin));
   }
 }

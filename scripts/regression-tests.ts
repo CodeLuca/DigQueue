@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { normalizeNextPath } from "../lib/next-path";
+import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
 import { readJsonBodyOrNull } from "../lib/request-json";
 import {
   decodeDiscogsOAuthPending,
@@ -60,6 +61,9 @@ async function run() {
     normalizeNextPath("/settings", { fallback: "/settings" }),
     "/settings",
   );
+  assert.equal(appendQueryParam("/settings", "discogs_error", "bad state"), "/settings?discogs_error=bad%20state");
+  assert.equal(buildOAuthConnectedRedirectPath("/settings?tab=library", "youtube"), "/settings?tab=library&youtube=connected");
+  assert.equal(buildOAuthErrorRedirectPath("discogs", "Invalid callback"), "/settings?discogs_error=Invalid%20callback");
   assert.equal(
     sanitizeDiscogsConnectionErrorMessage("failed query: timeout"),
     "Temporary database connectivity issue while saving Discogs connection. Please retry.",
