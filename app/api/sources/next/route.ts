@@ -168,6 +168,14 @@ export async function GET() {
       console.warn(`[sources-next] run history unavailable: ${message}`);
       return [];
     });
+    const lastSuccessBySource = (() => {
+      const bySource = new Map<number, number>();
+      for (const row of runHistory) {
+        if (row.outcome !== "ok" || typeof row.sourceId !== "number" || row.sourceId <= 0) continue;
+        if (!bySource.has(row.sourceId)) bySource.set(row.sourceId, row.createdAt);
+      }
+      return [...bySource.entries()].map(([sourceId, lastSuccessAt]) => ({ sourceId, lastSuccessAt }));
+    })();
     const throughput = buildSyncRunStats(runHistory, 10);
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
@@ -184,6 +192,7 @@ export async function GET() {
       processingSources,
       syncTelemetry,
       runHistory: runHistory.slice(0, 8),
+      lastSuccessBySource,
       throughput,
       processingAttempt,
       blocker:
@@ -212,6 +221,7 @@ export async function GET() {
       processingSources: [],
       syncTelemetry: null,
       runHistory: [],
+      lastSuccessBySource: [],
       throughput: {
         windowMinutes: 10,
         runs: 0,

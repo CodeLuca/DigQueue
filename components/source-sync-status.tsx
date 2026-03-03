@@ -28,6 +28,7 @@ type SourceNextResponse = {
   counts?: { processing?: number; queued?: number; error?: number; complete?: number };
   processingSources?: SourceRow[];
   syncTelemetry?: SyncTelemetry | null;
+  lastSuccessBySource?: Array<{ sourceId: number; lastSuccessAt: number }>;
   runHistory?: Array<{
     sourceId: number | null;
     sourceName: string;
@@ -113,14 +114,17 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
     [data.processingSources],
   );
   const recentSuccessBySource = useMemo(() => {
-    const latest = new Map<string, number>();
-    for (const entry of data.runHistory ?? []) {
-      if (entry.outcome !== "ok") continue;
-      const key = entry.sourceName || String(entry.sourceId ?? "unknown");
-      if (!latest.has(key)) latest.set(key, entry.createdAt);
+    const sourceById = new Map<number, string>();
+    for (const source of data.processingSources ?? []) {
+      sourceById.set(source.id, source.name);
     }
-    return [...latest.entries()].slice(0, 4);
-  }, [data.runHistory]);
+    return (data.lastSuccessBySource ?? [])
+      .slice(0, 4)
+      .map((item) => ({
+        sourceName: sourceById.get(item.sourceId) || `Source ${item.sourceId}`,
+        createdAt: item.lastSuccessAt,
+      }));
+  }, [data.lastSuccessBySource, data.processingSources]);
 
   return (
     <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
@@ -185,7 +189,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         <div className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
           <p className="text-[11px] font-medium text-[var(--color-text)]">Per-source recent success</p>
           <div className="mt-1 space-y-1">
-            {recentSuccessBySource.map(([sourceName, createdAt]) => (
+            {recentSuccessBySource.map(({ sourceName, createdAt }) => (
               <p key={`${sourceName}-${createdAt}`} className="text-[10px] text-[var(--color-muted)]">
                 {sourceName}: {ageLabel(createdAt)}
               </p>
