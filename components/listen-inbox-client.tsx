@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   BookmarkCheck,
@@ -225,11 +226,12 @@ function ReleaseArtwork({
   const sizeClass = compact ? "h-12 w-12 rounded-md" : "h-14 w-14 rounded-md";
   if (src) {
     return (
-      <img
+      <Image
         src={src}
         alt={`${title} artwork`}
+        width={compact ? 48 : 56}
+        height={compact ? 48 : 56}
         className={`${sizeClass} shrink-0 border border-[var(--color-border)] object-cover`}
-        loading="lazy"
       />
     );
   }

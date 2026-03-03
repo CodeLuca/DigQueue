@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import Image from "next/image";
 import { RefreshCcw } from "lucide-react";
 import { notFound } from "next/navigation";
 import { refreshLabelMetadataAction } from "@/app/actions";
@@ -83,11 +84,12 @@ export default async function LabelPage({
         <CardContent className="space-y-3">
           <div className="flex items-start gap-3">
             {data.label.imageUrl ? (
-              <img
+              <Image
                 src={data.label.imageUrl}
                 alt={`${data.label.name} label`}
+                width={80}
+                height={80}
                 className="h-20 w-20 shrink-0 rounded-md border border-[var(--color-border)] object-cover"
-                loading="lazy"
               />
             ) : (
               <div className="h-20 w-20 shrink-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]" aria-hidden />
@@ -153,11 +155,12 @@ export default async function LabelPage({
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                   {release.thumbUrl ? (
-                    <img
+                    <Image
                       src={release.thumbUrl}
                       alt={`${release.title} artwork`}
+                      width={56}
+                      height={56}
                       className="h-14 w-14 shrink-0 rounded-md border border-[var(--color-border)] object-cover"
-                      loading="lazy"
                     />
                   ) : (
                     <div className="h-14 w-14 shrink-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]" aria-hidden />

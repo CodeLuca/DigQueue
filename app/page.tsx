@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   AlertTriangle,
   Bookmark,
@@ -426,11 +427,12 @@ export default async function HomePage({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 gap-3">
             {label.imageUrl ? (
-              <img
+              <Image
                 src={label.imageUrl}
                 alt={`${label.name} source`}
+                width={56}
+                height={56}
                 className={`h-14 w-14 rounded-md border object-cover ${label.active ? "border-emerald-500/40" : "border-[var(--color-border)]"}`}
-                loading="lazy"
               />
             ) : (
               <div

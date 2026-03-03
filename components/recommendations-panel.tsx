@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -302,11 +303,12 @@ export function RecommendationsPanel({
             <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 items-start gap-2">
                 {release.thumbUrl ? (
-                  <img
+                  <Image
                     src={release.thumbUrl}
                     alt={`${release.title ?? track.title} artwork`}
+                    width={48}
+                    height={48}
                     className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] object-cover"
-                    loading="lazy"
                   />
                 ) : (
                   <div className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-surface)]" aria-hidden />
@@ -409,11 +411,12 @@ export function RecommendationsPanel({
             <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-2">
                   {item.thumbUrl ? (
-                    <img
+                    <Image
                       src={item.thumbUrl}
                       alt={`${item.title} artwork`}
+                      width={48}
+                      height={48}
                       className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] object-cover"
-                      loading="lazy"
                     />
                   ) : (
                     <div className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-surface)]" aria-hidden />

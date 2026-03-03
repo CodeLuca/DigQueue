@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   BookmarkCheck,
@@ -1736,11 +1737,12 @@ export function MiniPlayer() {
                   <div key={item.id} className="flex flex-col gap-2 rounded-md border border-[var(--color-border)] px-2 py-1.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-2">
                       {item.release?.thumbUrl ? (
-                        <img
+                        <Image
                           src={item.release.thumbUrl}
                           alt={`${item.release.title ?? item.track?.title ?? "Queue item"} artwork`}
+                          width={36}
+                          height={36}
                           className="h-9 w-9 shrink-0 rounded border border-[var(--color-border)] object-cover"
-                          loading="lazy"
                         />
                       ) : (
                         <div className="h-9 w-9 shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-surface)]" aria-hidden />
@@ -1786,11 +1788,12 @@ export function MiniPlayer() {
             <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
               <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-2.5">
                 {expandedArtworkUrl ? (
-                  <img
+                  <Image
                     src={expandedArtworkUrl}
                     alt={`${current?.release?.title || releaseDetails.title || "Release"} artwork`}
+                    width={900}
+                    height={900}
                     className="aspect-square w-full rounded-md border border-[var(--color-border)] object-cover"
-                    loading="lazy"
                   />
                 ) : (
                   <div className="aspect-square w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]" />

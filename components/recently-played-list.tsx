@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
@@ -147,11 +148,12 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-2">
                   {item.release?.thumbUrl ? (
-                    <img
+                    <Image
                       src={item.release.thumbUrl}
                       alt={`${releaseTitle} artwork`}
+                      width={40}
+                      height={40}
                       className="h-10 w-10 shrink-0 rounded border border-[var(--color-border)] object-cover"
-                      loading="lazy"
                     />
                   ) : (
                     <div className="h-10 w-10 shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-surface)]" aria-hidden />
