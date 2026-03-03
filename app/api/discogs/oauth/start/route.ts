@@ -6,15 +6,17 @@ import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
+import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "@/lib/oauth-start-routing";
 import { encodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
-  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
+  const startQuery = parseOAuthStartQuery(requestUrl);
+  const nextPath = normalizeNextPath(startQuery.nextRaw, { fallback: "/settings" });
   const userId = await getCurrentAppUserId();
   if (!userId) {
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/connect-discogs")}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthStartLoginPath("discogs"), appOrigin));
   }
 
   try {

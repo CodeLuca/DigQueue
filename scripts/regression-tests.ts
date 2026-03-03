@@ -4,6 +4,7 @@ import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "../lib/oauth-callback-query";
 import { normalizeNextPath } from "../lib/next-path";
 import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
+import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "../lib/oauth-start-routing";
 import { readJsonBodyOrNull } from "../lib/request-json";
 import {
   decodeDiscogsOAuthPending,
@@ -77,6 +78,9 @@ async function run() {
   assert.equal(youtubeQuery.returnedState, "s2");
   assert.equal(youtubeQuery.code, "c2");
   assert.equal(youtubeQuery.nextRaw, "/");
+  assert.equal(parseOAuthStartQuery(new URL("https://digqueue.local/api/discogs/oauth/start?next=%2Fsettings")).nextRaw, "/settings");
+  assert.equal(buildOAuthStartLoginPath("discogs"), "/login?next=%2Fconnect-discogs");
+  assert.equal(buildOAuthStartLoginPath("youtube"), "/login?next=%2Fsettings");
   assert.equal(appendQueryParam("/settings", "discogs_error", "bad state"), "/settings?discogs_error=bad%20state");
   assert.equal(buildOAuthConnectedRedirectPath("/settings?tab=library", "youtube"), "/settings?tab=library&youtube=connected");
   assert.equal(buildOAuthErrorRedirectPath("discogs", "Invalid callback"), "/settings?discogs_error=Invalid%20callback");

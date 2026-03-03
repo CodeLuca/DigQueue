@@ -5,6 +5,7 @@ import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { normalizeNextPath } from "@/lib/next-path";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
+import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "@/lib/oauth-start-routing";
 import { encodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { buildYoutubeOAuthAuthorizeUrl } from "@/lib/youtube-oauth";
 
@@ -12,9 +13,10 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
   const userId = await getCurrentAppUserId();
-  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
+  const startQuery = parseOAuthStartQuery(requestUrl);
+  const nextPath = normalizeNextPath(startQuery.nextRaw, { fallback: "/settings" });
   if (!userId) {
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/settings")}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthStartLoginPath("youtube"), appOrigin));
   }
 
   try {
