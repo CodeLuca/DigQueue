@@ -7,6 +7,7 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
 import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
+import { buildSyncRunStats } from "@/lib/sync-run-stats";
 import { isTransientLabelError } from "@/lib/utils";
 import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
@@ -167,15 +168,7 @@ export async function GET() {
       console.warn(`[sources-next] run history unavailable: ${message}`);
       return [];
     });
-    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-    const recentRuns = runHistory.filter((item) => item.createdAt >= tenMinutesAgo);
-    const successfulRuns = recentRuns.filter((item) => item.outcome === "ok");
-    const failedRuns = recentRuns.filter((item) => item.outcome === "error");
-    const lastSuccessAt = runHistory.find((item) => item.outcome === "ok")?.createdAt ?? null;
-    const averageDurationMs =
-      recentRuns.length > 0
-        ? Math.round(recentRuns.reduce((sum, item) => sum + Math.max(0, item.durationMs || 0), 0) / recentRuns.length)
-        : 0;
+    const throughput = buildSyncRunStats(runHistory, 10);
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
       .map((source) => ({
@@ -191,14 +184,7 @@ export async function GET() {
       processingSources,
       syncTelemetry,
       runHistory: runHistory.slice(0, 8),
-      throughput: {
-        windowMinutes: 10,
-        runs: recentRuns.length,
-        successfulRuns: successfulRuns.length,
-        failedRuns: failedRuns.length,
-        averageDurationMs,
-        lastSuccessAt,
-      },
+      throughput,
       processingAttempt,
       blocker:
         nextSourceId !== null

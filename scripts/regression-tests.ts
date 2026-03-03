@@ -18,6 +18,7 @@ import {
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { classifySourceFailure } from "../lib/source-failures";
+import { buildSyncRunStats } from "../lib/sync-run-stats";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
 function run() {
@@ -246,6 +247,25 @@ function run() {
     markTrackListened: true,
     feedbackEventType: "listened",
   });
+
+  // Sync run throughput aggregation coverage.
+  const originalNow = Date.now;
+  Date.now = () => 1_000_000;
+  const stats = buildSyncRunStats(
+    [
+      { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 1200, createdAt: 999_900 },
+      { sourceId: 2, sourceName: "B", outcome: "error", lockAcquired: true, durationMs: 800, createdAt: 999_800 },
+      { sourceId: 3, sourceName: "C", outcome: "ok", lockAcquired: true, durationMs: 500, createdAt: 300_000 },
+    ],
+    10,
+  );
+  Date.now = originalNow;
+  assert.equal(stats.windowMinutes, 10);
+  assert.equal(stats.runs, 2);
+  assert.equal(stats.successfulRuns, 1);
+  assert.equal(stats.failedRuns, 1);
+  assert.equal(stats.averageDurationMs, 1000);
+  assert.equal(stats.lastSuccessAt, 999_900);
 
   console.log("regression-tests: ok");
 }
