@@ -8,6 +8,7 @@ import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import {
+  normalizeCurrentQueueItemIdFromPost,
   resolveQueueModeFromPost,
   resolveQueueOrderFromPost,
 } from "@/lib/queue-next-actions";
@@ -47,10 +48,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const currentId = normalizeCurrentQueueItemIdFromPost(parsed.data.currentId);
   const transitionPlan = getQueueTransitionPlan(parsed.data.action);
-  if (parsed.data.currentId && transitionPlan.markQueueItemPlayed && !transitionPlan.markTrackListened) {
-    const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)) });
-    await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)));
+  if (currentId && transitionPlan.markQueueItemPlayed && !transitionPlan.markTrackListened) {
+    const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)) });
+    await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)));
     if (transitionPlan.feedbackEventType) {
       await logFeedbackEvent({
         eventType: transitionPlan.feedbackEventType,
@@ -63,8 +65,8 @@ export async function POST(request: Request) {
     }
   }
 
-  if (parsed.data.currentId && transitionPlan.markTrackListened) {
-    const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)) });
+  if (currentId && transitionPlan.markTrackListened) {
+    const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)) });
     if (item?.trackId) {
       await db.update(tracks).set({ listened: true }).where(and(eq(tracks.id, item.trackId), eq(tracks.userId, userId)));
       await db
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
         await db.update(releases).set({ listened }).where(and(eq(releases.id, item.releaseId), eq(releases.userId, userId)));
       }
     }
-    await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)));
+    await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)));
   }
 
   const mode = resolveQueueModeFromPost(parsed.data.mode);

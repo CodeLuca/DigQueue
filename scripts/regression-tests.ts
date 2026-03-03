@@ -10,6 +10,7 @@ import {
 import { validateDiscogsOAuthCallbackInput, validateYoutubeOAuthCallbackInput } from "../lib/oauth-callback-validation";
 import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "../lib/playback-mobile";
 import {
+  normalizeCurrentQueueItemIdFromPost,
   resolveQueueModeFromPost,
   resolveQueueOrderFromPost,
   shouldMarkCurrentQueueItemPlayed,
@@ -237,6 +238,11 @@ function run() {
   assert.equal(shouldMarkCurrentQueueItemPlayed("next"), false);
   assert.equal(shouldMarkCurrentTrackListened("listened"), true);
   assert.equal(shouldMarkCurrentTrackListened("played"), false);
+  assert.equal(normalizeCurrentQueueItemIdFromPost(undefined), undefined);
+  assert.equal(normalizeCurrentQueueItemIdFromPost(0), undefined);
+  assert.equal(normalizeCurrentQueueItemIdFromPost(-1), undefined);
+  assert.equal(normalizeCurrentQueueItemIdFromPost(2.5), undefined);
+  assert.equal(normalizeCurrentQueueItemIdFromPost(7), 7);
   assert.equal(resolveQueueModeFromPost(undefined), "hybrid");
   assert.equal(resolveQueueModeFromPost("release"), "release");
   assert.equal(resolveQueueOrderFromPost(undefined), "in_order");

@@ -17,3 +17,10 @@ export function resolveQueueModeFromPost(mode: QueueMode | undefined): QueueMode
 export function resolveQueueOrderFromPost(order: QueueOrder | undefined): QueueOrder {
   return order === "shuffle" ? "shuffle" : "in_order";
 }
+
+export function normalizeCurrentQueueItemIdFromPost(currentId: number | undefined) {
+  if (!Number.isFinite(currentId)) return undefined;
+  const parsed = Number(currentId);
+  if (!Number.isInteger(parsed) || parsed <= 0) return undefined;
+  return parsed;
+}
