@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
+import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
 import { parseYoutubeOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { normalizeNextPath } from "@/lib/next-path";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   const appOrigin = resolveRequestAppOrigin(request);
   const userId = await getCurrentAppUserId();
   if (!userId) {
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/settings")}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthCallbackLoginPath("youtube"), appOrigin));
   }
 
   const callbackQuery = parseYoutubeOAuthCallbackQuery(requestUrl);

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { getApiKeys, setApiKeys } from "@/lib/api-keys";
+import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
 import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
 
   const userId = await getCurrentAppUserId();
   if (!userId) {
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/connect-discogs")}`, appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthCallbackLoginPath("discogs"), appOrigin));
   }
 
   const cookieStore = await cookies();
