@@ -112,6 +112,15 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
     () => (data.processingSources ?? []).map((item) => item.name).slice(0, 3),
     [data.processingSources],
   );
+  const recentSuccessBySource = useMemo(() => {
+    const latest = new Map<string, number>();
+    for (const entry of data.runHistory ?? []) {
+      if (entry.outcome !== "ok") continue;
+      const key = entry.sourceName || String(entry.sourceId ?? "unknown");
+      if (!latest.has(key)) latest.set(key, entry.createdAt);
+    }
+    return [...latest.entries()].slice(0, 4);
+  }, [data.runHistory]);
 
   return (
     <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
@@ -171,6 +180,18 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
             ))}
           </div>
         </details>
+      ) : null}
+      {recentSuccessBySource.length > 0 ? (
+        <div className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
+          <p className="text-[11px] font-medium text-[var(--color-text)]">Per-source recent success</p>
+          <div className="mt-1 space-y-1">
+            {recentSuccessBySource.map(([sourceName, createdAt]) => (
+              <p key={`${sourceName}-${createdAt}`} className="text-[10px] text-[var(--color-muted)]">
+                {sourceName}: {ageLabel(createdAt)}
+              </p>
+            ))}
+          </div>
+        </div>
       ) : null}
     </div>
   );
