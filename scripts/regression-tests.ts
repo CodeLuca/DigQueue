@@ -44,6 +44,14 @@ function run() {
     "/?tab=step-2",
   );
   assert.equal(
+    normalizeNextPath("/auth", { fallback: "/?tab=step-2", blockAuthEntrypoints: true }),
+    "/?tab=step-2",
+  );
+  assert.equal(
+    normalizeNextPath("/register?mode=invite", { fallback: "/?tab=step-2", blockAuthEntrypoints: true }),
+    "/?tab=step-2",
+  );
+  assert.equal(
     normalizeNextPath("/settings", { fallback: "/settings" }),
     "/settings",
   );
