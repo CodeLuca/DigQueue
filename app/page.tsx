@@ -999,6 +999,20 @@ export default async function HomePage({
                                     </FormSubmitButton>
                                   </form>
                                 ) : null}
+                                {group.category === "rate_limit" ? (
+                                  <form action={pauseAllActiveSourcesAction}>
+                                    <FormSubmitButton
+                                      type="submit"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[11px]"
+                                      pendingText="Pausing..."
+                                      title="Pause all active sources to let rate limits cool down."
+                                    >
+                                      Pause all sources
+                                    </FormSubmitButton>
+                                  </form>
+                                ) : null}
                                 {group.category === "data" ? (
                                   <form action={refreshSpecificSourcesMetadataAction}>
                                     <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
