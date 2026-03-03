@@ -68,6 +68,111 @@ function getDisplaySourceName(name: string, discogsUrl: string, kind: "label" | 
   return kind === "artist" ? "Artist source" : "Label source";
 }
 
+type FailureCategory = "auth" | "rate_limit" | "provider" | "database" | "data" | "unknown";
+
+function classifySourceFailure(error: string | null | undefined): FailureCategory {
+  const value = (error || "").toLowerCase();
+  if (!value) return "unknown";
+  if (
+    value.includes("oauth") ||
+    value.includes("token") ||
+    value.includes("unauthorized") ||
+    value.includes("forbidden") ||
+    value.includes("401") ||
+    value.includes("403") ||
+    value.includes("not connected")
+  ) {
+    return "auth";
+  }
+  if (value.includes("rate limit") || value.includes("429") || value.includes("quota")) {
+    return "rate_limit";
+  }
+  if (
+    value.includes("database") ||
+    value.includes("failed query") ||
+    value.includes("maxclientsinsessionmode") ||
+    value.includes("too_many_connections") ||
+    value.includes("connection") ||
+    value.includes("deadlock")
+  ) {
+    return "database";
+  }
+  if (
+    value.includes("discogs error") ||
+    value.includes("youtube") ||
+    value.includes("provider") ||
+    value.includes("5xx") ||
+    value.includes("timeout") ||
+    value.includes("network")
+  ) {
+    return "provider";
+  }
+  if (
+    value.includes("parse") ||
+    value.includes("invalid") ||
+    value.includes("missing") ||
+    value.includes("tracklist")
+  ) {
+    return "data";
+  }
+  return "unknown";
+}
+
+function getFailureCategoryMeta(category: FailureCategory) {
+  if (category === "auth") {
+    return {
+      label: "Auth",
+      className: "border-amber-500/50 bg-amber-500/12 text-amber-200",
+      hint: "Reconnect Discogs in Settings, then retry.",
+      href: "/settings",
+      hrefLabel: "Open Settings",
+    };
+  }
+  if (category === "rate_limit") {
+    return {
+      label: "Rate Limit",
+      className: "border-sky-500/50 bg-sky-500/12 text-sky-200",
+      hint: "Pause briefly, then run Retry errors.",
+      href: "",
+      hrefLabel: "",
+    };
+  }
+  if (category === "database") {
+    return {
+      label: "Database",
+      className: "border-rose-500/50 bg-rose-500/12 text-rose-200",
+      hint: "Transient DB saturation. Retry after a short wait.",
+      href: "",
+      hrefLabel: "",
+    };
+  }
+  if (category === "provider") {
+    return {
+      label: "Provider/API",
+      className: "border-fuchsia-500/50 bg-fuchsia-500/12 text-fuchsia-200",
+      hint: "Upstream provider response failed. Retry this source.",
+      href: "",
+      hrefLabel: "",
+    };
+  }
+  if (category === "data") {
+    return {
+      label: "Data",
+      className: "border-indigo-500/50 bg-indigo-500/12 text-indigo-200",
+      hint: "Record payload looked malformed. Retry source and refresh metadata.",
+      href: "",
+      hrefLabel: "",
+    };
+  }
+  return {
+    label: "Unknown",
+    className: "border-zinc-500/50 bg-zinc-500/12 text-zinc-200",
+    hint: "Unclassified failure. Retry source and inspect the source detail page.",
+    href: "",
+    hrefLabel: "",
+  };
+}
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -274,6 +379,19 @@ export default async function HomePage({
   const reviewedCount = reviewedRows.length;
   const needsReviewCount = needsReviewRows.length;
   const totalWishlistedRecords = data.metrics.wishlistedRecords;
+  const failureGroups = (() => {
+    const grouped = new Map<FailureCategory, Array<{ label: (typeof data.erroredLabels)[number]; error: string }>>();
+    for (const label of data.erroredLabels) {
+      const visibleError = getVisibleLabelError(label.lastError) || "Unknown source failure.";
+      const category = classifySourceFailure(visibleError);
+      const current = grouped.get(category) ?? [];
+      current.push({ label, error: visibleError });
+      grouped.set(category, current);
+    }
+    return [...grouped.entries()]
+      .map(([category, items]) => ({ category, items }))
+      .sort((a, b) => b.items.length - a.items.length);
+  })();
   const renderSourceCard = (label: (typeof data.labels)[number]) => {
     const displayName = getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label");
     const visibleLastError = getVisibleLabelError(label.lastError);
@@ -909,7 +1027,7 @@ export default async function HomePage({
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
                     <p className="inline-flex items-center gap-1">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      {data.erroredLabels.length} active {data.erroredLabels.length === 1 ? "source errored" : "sources errored"}.
+                      Failure Center: {data.erroredLabels.length} active {data.erroredLabels.length === 1 ? "source errored" : "sources errored"}.
                     </p>
                     <form action={retryErroredLabelsAction}>
                       <FormSubmitButton
@@ -925,42 +1043,72 @@ export default async function HomePage({
                       </FormSubmitButton>
                     </form>
                   </div>
-                  <p className="text-[10px] text-[var(--color-muted)]">Retry runs one processing step for one source and can still fail if API/database limits are hit.</p>
-                  <div className="divide-y divide-[color-mix(in_oklab,var(--color-border)_70%,transparent)] rounded-md border border-[color-mix(in_oklab,var(--color-border)_60%,transparent)]">
-                    {data.erroredLabels.slice(0, 5).map((label) => {
-                      const visibleLastError = getVisibleLabelError(label.lastError);
+                  <p className="text-[10px] text-[var(--color-muted)]">Failures are grouped by likely root cause with a recommended action.</p>
+                  <div className="space-y-2">
+                    {failureGroups.map((group) => {
+                      const meta = getFailureCategoryMeta(group.category);
                       return (
-                        <div key={label.id} className="flex flex-wrap items-start justify-between gap-2 px-2 py-2">
-                          <div className="min-w-0">
-                            <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-medium text-[var(--color-text)] hover:text-[var(--color-accent)]">
-                              {label.name}
-                            </Link>
-                            <p className="text-[10px] text-[var(--color-muted)]">
-                              Last attempt {new Date(label.updatedAt).toLocaleString()} • Retries {label.retryCount}
-                            </p>
-                            {visibleLastError ? <p className="line-clamp-2 text-[11px] text-[var(--color-muted)]">{visibleLastError}</p> : null}
+                        <details
+                          key={group.category}
+                          open
+                          className="rounded-md border border-[color-mix(in_oklab,var(--color-border)_60%,transparent)] bg-[var(--color-surface2)]/40"
+                        >
+                          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-2 py-2">
+                            <span className="inline-flex items-center gap-2 text-xs font-medium">
+                              <Badge className={meta.className}>{meta.label}</Badge>
+                              {group.items.length} source{group.items.length === 1 ? "" : "s"}
+                            </span>
+                            <span className="text-[11px] text-[var(--color-muted)]">{meta.hint}</span>
+                          </summary>
+                          <div className="space-y-2 border-t border-[color-mix(in_oklab,var(--color-border)_55%,transparent)] px-2 py-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-[11px] text-[var(--color-muted)]">{meta.hint}</p>
+                              {meta.href ? (
+                                <Link href={meta.href} className="text-[11px] text-[var(--color-accent)] hover:underline">
+                                  {meta.hrefLabel}
+                                </Link>
+                              ) : null}
+                            </div>
+                            <div className="divide-y divide-[color-mix(in_oklab,var(--color-border)_65%,transparent)] rounded-md border border-[color-mix(in_oklab,var(--color-border)_60%,transparent)]">
+                              {group.items.slice(0, 4).map(({ label, error }) => (
+                                <div key={label.id} className="flex flex-wrap items-start justify-between gap-2 px-2 py-2">
+                                  <div className="min-w-0">
+                                    <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-medium text-[var(--color-text)] hover:text-[var(--color-accent)]">
+                                      {label.name}
+                                    </Link>
+                                    <p className="text-[10px] text-[var(--color-muted)]">
+                                      Last attempt {new Date(label.updatedAt).toLocaleString()} • Retries {label.retryCount}
+                                    </p>
+                                    <p className="line-clamp-2 text-[11px] text-[var(--color-muted)]">{error}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Link href={`/labels/${label.id}`}>
+                                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" aria-label="Open source">
+                                        <ExternalLink className="h-3 w-3" />
+                                      </Button>
+                                    </Link>
+                                    <form action={retryLabelAction}>
+                                      <input type="hidden" name="labelId" value={label.id} />
+                                      <FormSubmitButton
+                                        type="submit"
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 px-2 text-[11px]"
+                                        pendingText="Retrying now..."
+                                        title="Run one immediate processing step for this source"
+                                      >
+                                        Retry
+                                      </FormSubmitButton>
+                                    </form>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {group.items.length > 4 ? (
+                              <p className="text-[10px] text-[var(--color-muted)]">+{group.items.length - 4} more in this group.</p>
+                            ) : null}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Link href={`/labels/${label.id}`}>
-                              <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" aria-label="Open source">
-                                <ExternalLink className="h-3 w-3" />
-                              </Button>
-                            </Link>
-                            <form action={retryLabelAction}>
-                              <input type="hidden" name="labelId" value={label.id} />
-                              <FormSubmitButton
-                                type="submit"
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-[11px]"
-                                pendingText="Retrying now..."
-                                title="Run one immediate processing step for this source"
-                              >
-                                Retry
-                              </FormSubmitButton>
-                            </form>
-                          </div>
-                        </div>
+                        </details>
                       );
                     })}
                   </div>
