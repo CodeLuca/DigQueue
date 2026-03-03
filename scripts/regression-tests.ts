@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { normalizeNextPath } from "../lib/next-path";
+import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
 function run() {
   // Auth redirect safety coverage.
@@ -50,6 +51,30 @@ function run() {
     toDiscogsWebUrl("", ""),
     "https://www.discogs.com",
   );
+
+  // Playlist export normalization + dedupe coverage.
+  const exportInput = normalizePlaylistExportInput({
+    title: "  My Playlist  ",
+    visibility: "public",
+  });
+  assert.equal(exportInput.title, "My Playlist");
+  assert.equal(exportInput.visibility, "public");
+  assert.equal(
+    normalizePlaylistExportInput({ title: "", visibility: "wat" }).visibility,
+    "private",
+  );
+  const ids = collectUniquePlayableVideoIds(
+    [
+      { saved: true, youtubeVideoId: "abc" },
+      { saved: true, youtubeVideoId: "abc" },
+      { saved: false, youtubeVideoId: "zzz" },
+      { saved: true, youtubeVideoId: "def" },
+    ],
+    1,
+  );
+  assert.deepEqual(ids.all, ["abc", "def"]);
+  assert.deepEqual(ids.selected, ["abc"]);
+  assert.equal(ids.skippedByLimit, 1);
 
   console.log("regression-tests: ok");
 }

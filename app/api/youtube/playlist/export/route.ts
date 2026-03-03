@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getWishlistData } from "@/lib/queries";
+import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "@/lib/youtube-playlist-export";
 import { getYoutubeAccessTokenForPlaylistWrite, isYoutubeOAuthConfigured } from "@/lib/youtube-oauth";
 
 type ExportRequest = {
@@ -47,19 +48,10 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json().catch(() => ({}))) as ExportRequest;
-    const visibility = body.visibility === "public" || body.visibility === "unlisted" ? body.visibility : "private";
-    const title = (body.title || "DigQueue Saved Tracks").trim().slice(0, 140) || "DigQueue Saved Tracks";
+    const { title, visibility } = normalizePlaylistExportInput(body);
 
     const wishlist = await getWishlistData(undefined, false);
-    const savedRows = wishlist.rows.filter((row) => row.saved && row.youtubeVideoId);
-    const uniqueVideoIds: string[] = [];
-    const seen = new Set<string>();
-    for (const row of savedRows) {
-      const id = row.youtubeVideoId || "";
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      uniqueVideoIds.push(id);
-    }
+    const { all: uniqueVideoIds, selected, skippedByLimit } = collectUniquePlayableVideoIds(wishlist.rows, 200);
 
     if (uniqueVideoIds.length === 0) {
       return NextResponse.json({ ok: false, error: "No saved tracks with playable YouTube videos found." }, { status: 400 });
@@ -84,9 +76,6 @@ export async function POST(request: Request) {
     if (!playlistId) {
       throw new Error("Playlist was created without an id.");
     }
-
-    const maxItems = 200;
-    const selected = uniqueVideoIds.slice(0, maxItems);
 
     let added = 0;
     for (const videoId of selected) {
@@ -114,7 +103,7 @@ export async function POST(request: Request) {
       added,
       attempted: selected.length,
       totalEligible: uniqueVideoIds.length,
-      skippedByLimit: Math.max(0, uniqueVideoIds.length - selected.length),
+      skippedByLimit,
     });
   } catch (error) {
     return NextResponse.json({ ok: false, error: toErrorMessage(error) }, { status: 500 });
