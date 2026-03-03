@@ -67,7 +67,7 @@ export function getFailureCategoryMeta(category: FailureCategory) {
     return {
       label: "Rate Limit",
       className: "border-sky-500/50 bg-sky-500/12 text-sky-200",
-      hint: "Pause briefly, then run Retry errors.",
+      hint: "Pause all active sources briefly, then retry this group.",
       href: "",
       hrefLabel: "",
     };
