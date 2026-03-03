@@ -124,6 +124,10 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         createdAt: item.lastSuccessAt,
       }));
   }, [data.lastSuccessBySource]);
+  const timelineMaxRuns = useMemo(() => {
+    const runs = data.throughput?.timeline.map((bucket) => bucket.runs) ?? [];
+    return Math.max(1, ...runs);
+  }, [data.throughput?.timeline]);
 
   return (
     <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
@@ -172,9 +176,29 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
             Last successful sync: {data.throughput.lastSuccessAt ? ageLabel(data.throughput.lastSuccessAt) : "none yet"}
           </p>
           {data.throughput.timeline.length > 0 ? (
-            <p className="line-clamp-2 text-[10px] text-[var(--color-muted)]">
-              Timeline: {data.throughput.timeline.map((bucket) => bucket.runs).join(" · ")}
-            </p>
+            <div className="mt-1">
+              <p className="text-[10px] text-[var(--color-muted)]">Timeline (oldest to newest)</p>
+              <div className="mt-1 flex h-8 items-end gap-0.5 rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/40 p-1">
+                {data.throughput.timeline.map((bucket, index) => {
+                  const heightPct = Math.max(12, Math.round((bucket.runs / timelineMaxRuns) * 100));
+                  const hasErrors = bucket.failedRuns > 0;
+                  const hasRuns = bucket.runs > 0;
+                  const className = hasErrors
+                    ? "bg-rose-400/80"
+                    : hasRuns
+                      ? "bg-emerald-400/80"
+                      : "bg-zinc-500/30";
+                  return (
+                    <span
+                      key={`${bucket.minuteOffset}-${index}`}
+                      title={`${bucket.runs} runs (${bucket.successfulRuns} ok, ${bucket.failedRuns} failed)`}
+                      className={`w-2 rounded-sm ${className}`}
+                      style={{ height: `${heightPct}%` }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           ) : null}
         </div>
       ) : null}
