@@ -1,13 +1,11 @@
+import { getOAuthProviderLoginNextPath, type OAuthProvider } from "@/lib/oauth-provider";
+
 export function parseOAuthStartQuery(requestUrl: URL) {
   return {
     nextRaw: requestUrl.searchParams.get("next"),
   };
 }
 
-export function getOAuthProviderLoginNextPath(provider: "discogs" | "youtube") {
-  return provider === "discogs" ? "/connect-discogs" : "/settings";
-}
-
-export function buildOAuthStartLoginPath(provider: "discogs" | "youtube") {
+export function buildOAuthStartLoginPath(provider: OAuthProvider) {
   return `/login?next=${encodeURIComponent(getOAuthProviderLoginNextPath(provider))}`;
 }

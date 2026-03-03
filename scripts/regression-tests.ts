@@ -3,11 +3,12 @@ import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { buildOAuthCallbackLoginPath } from "../lib/oauth-callback-routing";
 import { DISCOGS_OAUTH_TMP_COOKIE, YOUTUBE_OAUTH_TMP_COOKIE } from "../lib/oauth-cookie-keys";
+import { getOAuthErrorQueryKey, getOAuthProviderLoginNextPath } from "../lib/oauth-provider";
 import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "../lib/oauth-callback-query";
 import { buildOAuthTempCookieOptions } from "../lib/oauth-cookie-options";
 import { normalizeNextPath } from "../lib/next-path";
 import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
-import { buildOAuthStartLoginPath, getOAuthProviderLoginNextPath, parseOAuthStartQuery } from "../lib/oauth-start-routing";
+import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "../lib/oauth-start-routing";
 import { readJsonBodyOrNull } from "../lib/request-json";
 import {
   decodeDiscogsOAuthPending,
@@ -91,6 +92,8 @@ async function run() {
   assert.equal(parseOAuthStartQuery(new URL("https://digqueue.local/api/discogs/oauth/start?next=%2Fsettings")).nextRaw, "/settings");
   assert.equal(getOAuthProviderLoginNextPath("discogs"), "/connect-discogs");
   assert.equal(getOAuthProviderLoginNextPath("youtube"), "/settings");
+  assert.equal(getOAuthErrorQueryKey("discogs"), "discogs_error");
+  assert.equal(getOAuthErrorQueryKey("youtube"), "youtube_error");
   assert.equal(buildOAuthStartLoginPath("discogs"), "/login?next=%2Fconnect-discogs");
   assert.equal(buildOAuthStartLoginPath("youtube"), "/login?next=%2Fsettings");
   const cookieOptions = buildOAuthTempCookieOptions();
