@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import {
   addSourceAction,
+  clearStaleWorkerLocksAction,
   pauseAllActiveSourcesAction,
   pullDiscogsWantsAction,
   refreshLabelMetadataAction,
@@ -982,6 +983,20 @@ export default async function HomePage({
                                   <Link href={meta.href} className="text-[11px] text-[var(--color-accent)] hover:underline">
                                     {meta.hrefLabel}
                                   </Link>
+                                ) : null}
+                                {group.category === "database" ? (
+                                  <form action={clearStaleWorkerLocksAction}>
+                                    <FormSubmitButton
+                                      type="submit"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[11px]"
+                                      pendingText="Clearing..."
+                                      title="Clear expired worker locks in the database."
+                                    >
+                                      Clear stale locks
+                                    </FormSubmitButton>
+                                  </form>
                                 ) : null}
                               </div>
                             </div>

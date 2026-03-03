@@ -53,9 +53,9 @@ export function getFailureCategoryMeta(category: FailureCategory) {
     return {
       label: "Auth",
       className: "border-amber-500/50 bg-amber-500/12 text-amber-200",
-      hint: "Reconnect Discogs in Settings, then retry.",
-      href: "/settings",
-      hrefLabel: "Open Settings",
+      hint: "Reconnect Discogs directly, then retry.",
+      href: "/api/discogs/oauth/start?next=/?tab=step-2",
+      hrefLabel: "Reconnect Discogs",
     };
   }
   if (category === "rate_limit") {
@@ -71,7 +71,7 @@ export function getFailureCategoryMeta(category: FailureCategory) {
     return {
       label: "Database",
       className: "border-rose-500/50 bg-rose-500/12 text-rose-200",
-      hint: "Transient DB saturation. Retry after a short wait.",
+      hint: "Transient DB saturation. Clear stale locks, then retry.",
       href: "",
       hrefLabel: "",
     };

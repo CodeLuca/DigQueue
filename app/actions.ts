@@ -15,6 +15,7 @@ import { chooseTrackMatch, processSingleReleaseForSource, toggleReleaseWishlist,
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
+import { purgeExpiredWorkerLocks } from "@/lib/worker-locks";
 
 function userScope(userId: string) {
   return {
@@ -569,6 +570,12 @@ export async function pauseAllActiveSourcesAction() {
       .where(and(eq(labels.id, source.id), scope.labels));
   }
 
+  revalidatePath("/");
+}
+
+export async function clearStaleWorkerLocksAction() {
+  await requireCurrentAppUserId();
+  await purgeExpiredWorkerLocks();
   revalidatePath("/");
 }
 

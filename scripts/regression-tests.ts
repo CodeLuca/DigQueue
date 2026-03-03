@@ -172,8 +172,9 @@ async function run() {
   assert.equal(classifySourceFailure("YouTube provider timeout"), "provider");
   assert.equal(classifySourceFailure("Invalid tracklist payload"), "data");
   assert.equal(classifySourceFailure("totally unknown"), "unknown");
-  assert.equal(getFailureCategoryMeta("auth").href, "/settings");
+  assert.equal(getFailureCategoryMeta("auth").href, "/api/discogs/oauth/start?next=/?tab=step-2");
   assert.equal(getFailureCategoryMeta("rate_limit").label, "Rate Limit");
+  assert.match(getFailureCategoryMeta("database").hint, /stale locks/i);
   assert.equal(getFailureCategoryMeta("unknown").label, "Unknown");
 
   // OAuth temp cookie parsing coverage.

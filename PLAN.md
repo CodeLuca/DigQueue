@@ -18,10 +18,10 @@
 - [x] Beginner-friendly batch controls on Sources (queue/retry/resume/pause quick actions)
 
 ## In Progress / Partial
-- [~] Job control UX: batch controls exist; grouped Failure Center + run history/throughput are shipped, but deeper remediation workflows still need improvement
+- [~] Job control UX: batch controls exist; grouped Failure Center + run history/throughput are shipped, plus direct Discogs reconnect and stale-lock cleanup actions, but deeper remediation workflows still need improvement
 
 ## Next Iterations
-1. Failure center phase 2: expand remediation actions per category beyond targeted retry (e.g. reconnect OAuth shortcut, clear stale locks).
+1. Failure center phase 2: expand remediation actions per category beyond current retry/reconnect/lock-cleanup controls.
 2. Processing observability phase 2: persistent timeline and run duration percentiles (per-source last-success is now surfaced).
 3. Regression coverage phase 2: route-level tests for OAuth start/callback handlers and queue playback state transitions.
 4. Copy and mobile UX polish pass across all tabs (reduce control density, simplify labels/actions on narrow screens).
