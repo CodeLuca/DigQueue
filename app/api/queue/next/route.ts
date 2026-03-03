@@ -8,6 +8,7 @@ import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
+import { parseQueueNextGetParams } from "@/lib/queue-next-request";
 import { logFeedbackEvent } from "@/lib/recommendations";
 
 const postSchema = z.object({
@@ -19,12 +20,7 @@ const postSchema = z.object({
 
 export async function GET(request: Request) {
   const userId = await requireCurrentAppUserId();
-  const currentIdRaw = new URL(request.url).searchParams.get("currentId");
-  const modeRaw = new URL(request.url).searchParams.get("mode");
-  const orderRaw = new URL(request.url).searchParams.get("order");
-  const currentId = currentIdRaw ? Number(currentIdRaw) : undefined;
-  const mode = modeRaw === "release" || modeRaw === "track" ? modeRaw : "hybrid";
-  const order = orderRaw === "shuffle" ? "shuffle" : "in_order";
+  const { currentId, mode, order } = parseQueueNextGetParams(new URL(request.url));
   const item = order === "shuffle"
     ? await nextQueueItemShuffled(userId, currentId, mode)
     : await nextQueueItem(userId, currentId, mode);

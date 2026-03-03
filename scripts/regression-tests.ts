@@ -8,6 +8,7 @@ import {
   encodeYoutubeOAuthPending,
 } from "../lib/oauth-temp-cookie";
 import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "../lib/playback-mobile";
+import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { classifySourceFailure } from "../lib/source-failures";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
@@ -158,6 +159,16 @@ function run() {
     nextPath: "/settings?tab=library:focus",
   });
   assert.equal(decodeYoutubeOAuthPending("bad"), null);
+
+  // Queue next request normalization coverage.
+  const queueParams = parseQueueNextGetParams(new URL("https://digqueue.local/api/queue/next?currentId=42&mode=release&order=shuffle"));
+  assert.equal(queueParams.currentId, 42);
+  assert.equal(queueParams.mode, "release");
+  assert.equal(queueParams.order, "shuffle");
+  const queueFallback = parseQueueNextGetParams(new URL("https://digqueue.local/api/queue/next?currentId=NaN&mode=bad&order=bad"));
+  assert.equal(queueFallback.currentId, undefined);
+  assert.equal(queueFallback.mode, "hybrid");
+  assert.equal(queueFallback.order, "in_order");
 
   console.log("regression-tests: ok");
 }
