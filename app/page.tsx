@@ -30,6 +30,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
 import { SyncSavedToDiscogsButton } from "@/components/sync-saved-to-discogs-button";
+import { SourceSyncStatus } from "@/components/source-sync-status";
 import { YoutubePlaylistExportButton } from "@/components/youtube-playlist-export-button";
 import { WishlistSyncStatus } from "@/components/wishlist-sync-status";
 import { Badge } from "@/components/ui/badge";
@@ -893,6 +894,7 @@ export default async function HomePage({
                     ) : null}
                   </div>
                 </details>
+                <SourceSyncStatus initialProcessingCount={activeStatusCounts.processing} />
                 {!hasDiscogs ? <p className="mt-1 text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync status.</p> : null}
               </details>
               <details className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3" open={!useSimpleSourcesView}>

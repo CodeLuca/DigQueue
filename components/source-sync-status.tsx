@@ -28,6 +28,23 @@ type SourceNextResponse = {
   counts?: { processing?: number; queued?: number; error?: number; complete?: number };
   processingSources?: SourceRow[];
   syncTelemetry?: SyncTelemetry | null;
+  runHistory?: Array<{
+    sourceId: number | null;
+    sourceName: string;
+    outcome: "ok" | "error" | "skipped";
+    message?: string;
+    error?: string;
+    lockAcquired: boolean;
+    durationMs: number;
+    createdAt: number;
+  }>;
+  throughput?: {
+    windowMinutes: number;
+    runs: number;
+    successfulRuns: number;
+    failedRuns: number;
+    averageDurationMs: number;
+  };
   blocker?: string | null;
 };
 
@@ -50,6 +67,13 @@ function ageLabel(updatedAt: number | undefined) {
   if (deltaSec < 60) return `${deltaSec}s ago`;
   const mins = Math.floor(deltaSec / 60);
   return `${mins}m ago`;
+}
+
+function formatDuration(durationMs: number | undefined) {
+  const ms = Math.max(0, Number(durationMs || 0));
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${(ms / 60_000).toFixed(1)}m`;
 }
 
 export function SourceSyncStatus({ initialProcessingCount }: { initialProcessingCount: number }) {
@@ -118,6 +142,31 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         </div>
       ) : data.blocker ? (
         <p className="mt-1 text-[var(--color-muted)]">{data.blocker}</p>
+      ) : null}
+      {data.throughput ? (
+        <div className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
+          <p className="text-[11px] font-medium text-[var(--color-text)]">
+            Last {data.throughput.windowMinutes}m: {data.throughput.runs} runs
+            {" "}({data.throughput.successfulRuns} ok, {data.throughput.failedRuns} failed)
+          </p>
+          <p className="text-[10px] text-[var(--color-muted)]">
+            Avg run duration: {formatDuration(data.throughput.averageDurationMs)}
+          </p>
+        </div>
+      ) : null}
+      {data.runHistory && data.runHistory.length > 0 ? (
+        <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
+          <summary className="cursor-pointer text-[11px] font-medium text-[var(--color-text)]">Recent run history</summary>
+          <div className="mt-2 space-y-1">
+            {data.runHistory.slice(0, 5).map((item) => (
+              <p key={`${item.createdAt}-${item.sourceId}-${item.outcome}`} className="text-[10px] text-[var(--color-muted)]">
+                {new Date(item.createdAt).toLocaleTimeString()} • {item.sourceName} • {item.outcome}
+                {" "}({formatDuration(item.durationMs)})
+                {item.error ? ` • ${item.error}` : item.message ? ` • ${item.message}` : ""}
+              </p>
+            ))}
+          </div>
+        </details>
       ) : null}
     </div>
   );

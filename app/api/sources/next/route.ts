@@ -6,7 +6,7 @@ import { labels, releases, sourceReleases } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
-import { readSyncTelemetry } from "@/lib/sync-telemetry";
+import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
 import { isTransientLabelError } from "@/lib/utils";
 import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
@@ -123,6 +123,7 @@ export async function GET() {
 
     // Safety net: keep ingestion moving even if client-side worker polling fails.
     if (nextSourceId) {
+      const startedAt = Date.now();
       processingAttempt.attempted = true;
       const lock = await acquireSourceWorkerLock(userId, nextSourceId, 120_000);
       if (lock) {
@@ -143,6 +144,17 @@ export async function GET() {
         processingAttempt.outcome = "skipped";
         processingAttempt.message = "Worker lock busy";
       }
+      const sourceName = activeSources.find((item) => item.id === nextSourceId)?.name || `Source ${nextSourceId}`;
+      await appendSyncRunEvent(userId, {
+        sourceId: nextSourceId,
+        sourceName,
+        outcome: processingAttempt.outcome,
+        message: processingAttempt.message,
+        error: processingAttempt.error,
+        lockAcquired: processingAttempt.lockAcquired,
+        durationMs: Math.max(0, Date.now() - startedAt),
+        createdAt: Date.now(),
+      });
     }
 
     const syncTelemetry = await readSyncTelemetry(userId).catch((error) => {
@@ -150,6 +162,19 @@ export async function GET() {
       console.warn(`[sources-next] telemetry unavailable: ${message}`);
       return null;
     });
+    const runHistory = await readSyncRunHistory(userId).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[sources-next] run history unavailable: ${message}`);
+      return [];
+    });
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    const recentRuns = runHistory.filter((item) => item.createdAt >= tenMinutesAgo);
+    const successfulRuns = recentRuns.filter((item) => item.outcome === "ok");
+    const failedRuns = recentRuns.filter((item) => item.outcome === "error");
+    const averageDurationMs =
+      recentRuns.length > 0
+        ? Math.round(recentRuns.reduce((sum, item) => sum + Math.max(0, item.durationMs || 0), 0) / recentRuns.length)
+        : 0;
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
       .map((source) => ({
@@ -164,6 +189,14 @@ export async function GET() {
       activeCount: activeSources.length,
       processingSources,
       syncTelemetry,
+      runHistory: runHistory.slice(0, 8),
+      throughput: {
+        windowMinutes: 10,
+        runs: recentRuns.length,
+        successfulRuns: successfulRuns.length,
+        failedRuns: failedRuns.length,
+        averageDurationMs,
+      },
       processingAttempt,
       blocker:
         nextSourceId !== null
@@ -190,6 +223,14 @@ export async function GET() {
       activeCount: 0,
       processingSources: [],
       syncTelemetry: null,
+      runHistory: [],
+      throughput: {
+        windowMinutes: 10,
+        runs: 0,
+        successfulRuns: 0,
+        failedRuns: 0,
+        averageDurationMs: 0,
+      },
       processingAttempt: {
         attempted: false,
         sourceId: null,
