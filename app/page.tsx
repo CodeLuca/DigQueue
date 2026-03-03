@@ -948,12 +948,12 @@ export default async function HomePage({
                   </div>
                   <p className="text-[10px] text-[var(--color-muted)]">Failures are grouped by likely root cause with a recommended action.</p>
                   <div className="space-y-2">
-                    {failureGroups.map((group) => {
+                    {failureGroups.map((group, index) => {
                       const meta = getFailureCategoryMeta(group.category);
                       return (
                         <details
                           key={group.category}
-                          open
+                          open={index === 0}
                           className="rounded-md border border-[color-mix(in_oklab,var(--color-border)_60%,transparent)] bg-[var(--color-surface2)]/40"
                         >
                           <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-2 py-2">
@@ -1030,7 +1030,7 @@ export default async function HomePage({
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Link href={`/labels/${label.id}`}>
-                                      <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" aria-label="Open source">
+                                      <Button type="button" size="sm" variant="ghost" className="hidden h-7 w-7 p-0 sm:inline-flex" aria-label="Open source">
                                         <ExternalLink className="h-3 w-3" />
                                       </Button>
                                     </Link>
