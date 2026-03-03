@@ -17,6 +17,7 @@ import {
 } from "../lib/queue-next-actions";
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
+import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { classifySourceFailure } from "../lib/source-failures";
 import { buildSyncRunStats } from "../lib/sync-run-stats";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
@@ -274,6 +275,11 @@ function run() {
   assert.equal(stats.failedRuns, 1);
   assert.equal(stats.averageDurationMs, 1000);
   assert.equal(stats.lastSuccessAt, 999_900);
+
+  // Release listened rollup rule coverage.
+  assert.equal(deriveReleaseListenedFromTracks([]), false);
+  assert.equal(deriveReleaseListenedFromTracks([{ listened: true }]), true);
+  assert.equal(deriveReleaseListenedFromTracks([{ listened: true }, { listened: false }]), false);
 
   console.log("regression-tests: ok");
 }

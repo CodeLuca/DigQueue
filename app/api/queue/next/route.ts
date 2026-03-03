@@ -12,6 +12,7 @@ import {
   resolveQueueOrderFromPost,
 } from "@/lib/queue-next-actions";
 import { getQueueTransitionPlan } from "@/lib/queue-transition-plan";
+import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
 import { parseQueueNextGetParams } from "@/lib/queue-next-request";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
 
       if (item.releaseId) {
         const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, item.releaseId), eq(tracks.userId, userId)) });
-        const listened = releaseTracks.length > 0 && releaseTracks.every((track) => track.listened);
+        const listened = deriveReleaseListenedFromTracks(releaseTracks);
         await db.update(releases).set({ listened }).where(and(eq(releases.id, item.releaseId), eq(releases.userId, userId)));
       }
     }

@@ -7,6 +7,7 @@ import { queueItems, releases, tracks } from "@/db/schema";
 import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
+import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { logFeedbackEvent } from "@/lib/recommendations";
 
 const schema = z.object({
@@ -18,7 +19,7 @@ const schema = z.object({
 
 async function recomputeReleaseListened(releaseId: number, userId: string) {
   const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, releaseId), eq(tracks.userId, userId)) });
-  const listened = releaseTracks.length > 0 && releaseTracks.every((item) => item.listened);
+  const listened = deriveReleaseListenedFromTracks(releaseTracks);
   await db.update(releases).set({ listened }).where(and(eq(releases.id, releaseId), eq(releases.userId, userId)));
 }
 

@@ -12,6 +12,7 @@ import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
 import { toExternalDiscogsId, toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshSourceMetadata } from "@/lib/label-metadata";
 import { chooseTrackMatch, processSingleReleaseForSource, toggleReleaseWishlist, toggleTrackTodo } from "@/lib/processing";
+import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
 
@@ -232,7 +233,7 @@ async function upsertSourceById(userId: string, kind: "label" | "artist", id: nu
 async function recomputeReleaseListened(userId: string, releaseId: number) {
   const scope = userScope(userId);
   const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, releaseId), scope.tracks) });
-  const listened = releaseTracks.length > 0 && releaseTracks.every((item) => item.listened);
+  const listened = deriveReleaseListenedFromTracks(releaseTracks);
   await db.update(releases).set({ listened }).where(and(eq(releases.id, releaseId), scope.releases));
 }
 
