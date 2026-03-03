@@ -8,6 +8,7 @@ import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
+import { parseDiscogsOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { validateDiscogsOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { decodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
@@ -15,10 +16,9 @@ import { decodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
-  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
-  const returnedState = requestUrl.searchParams.get("state") || "";
-  const oauthToken = requestUrl.searchParams.get("oauth_token") || "";
-  const verifier = requestUrl.searchParams.get("oauth_verifier") || "";
+  const callbackQuery = parseDiscogsOAuthCallbackQuery(requestUrl);
+  const nextPath = normalizeNextPath(callbackQuery.nextRaw, { fallback: "/settings" });
+  const { returnedState, oauthToken, verifier } = callbackQuery;
 
   const userId = await getCurrentAppUserId();
   if (!userId) {

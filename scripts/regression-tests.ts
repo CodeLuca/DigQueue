@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
+import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "../lib/oauth-callback-query";
 import { normalizeNextPath } from "../lib/next-path";
 import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
 import { readJsonBodyOrNull } from "../lib/request-json";
@@ -67,6 +68,15 @@ async function run() {
     normalizeNextPath("/settings", { fallback: "/settings" }),
     "/settings",
   );
+  const discogsQuery = parseDiscogsOAuthCallbackQuery(new URL("https://digqueue.local/api/discogs/oauth/callback?state=s1&oauth_token=t1&oauth_verifier=v1&next=%2Fsettings"));
+  assert.equal(discogsQuery.returnedState, "s1");
+  assert.equal(discogsQuery.oauthToken, "t1");
+  assert.equal(discogsQuery.verifier, "v1");
+  assert.equal(discogsQuery.nextRaw, "/settings");
+  const youtubeQuery = parseYoutubeOAuthCallbackQuery(new URL("https://digqueue.local/api/youtube/oauth/callback?state=s2&code=c2&next=%2F"));
+  assert.equal(youtubeQuery.returnedState, "s2");
+  assert.equal(youtubeQuery.code, "c2");
+  assert.equal(youtubeQuery.nextRaw, "/");
   assert.equal(appendQueryParam("/settings", "discogs_error", "bad state"), "/settings?discogs_error=bad%20state");
   assert.equal(buildOAuthConnectedRedirectPath("/settings?tab=library", "youtube"), "/settings?tab=library&youtube=connected");
   assert.equal(buildOAuthErrorRedirectPath("discogs", "Invalid callback"), "/settings?discogs_error=Invalid%20callback");

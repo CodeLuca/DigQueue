@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
+import { parseYoutubeOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { normalizeNextPath } from "@/lib/next-path";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
@@ -17,9 +18,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/settings")}`, appOrigin));
   }
 
-  const returnedState = requestUrl.searchParams.get("state") || "";
-  const code = requestUrl.searchParams.get("code") || "";
-  const explicitNext = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
+  const callbackQuery = parseYoutubeOAuthCallbackQuery(requestUrl);
+  const { returnedState, code } = callbackQuery;
+  const explicitNext = normalizeNextPath(callbackQuery.nextRaw, { fallback: "/settings" });
 
   const cookieStore = await cookies();
   const pending = cookieStore.get("youtube_oauth_tmp")?.value || "";
