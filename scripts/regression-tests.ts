@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { normalizeNextPath } from "../lib/next-path";
+import { readJsonBodyOrNull } from "../lib/request-json";
 import {
   decodeDiscogsOAuthPending,
   decodeYoutubeOAuthPending,
@@ -24,7 +25,7 @@ import { classifySourceFailure } from "../lib/source-failures";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
-function run() {
+async function run() {
   // Auth redirect safety coverage.
   assert.equal(
     normalizeNextPath("/?tab=step-2", { fallback: "/?tab=step-2", blockAuthEntrypoints: true }),
@@ -70,6 +71,18 @@ function run() {
     sanitizeDiscogsConnectionErrorMessage(""),
     null,
   );
+  const validJson = await readJsonBodyOrNull(new Request("https://digqueue.local", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ok: true }),
+  }));
+  assert.deepEqual(validJson, { ok: true });
+  const invalidJson = await readJsonBodyOrNull(new Request("https://digqueue.local", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{invalid",
+  }));
+  assert.equal(invalidJson, null);
 
   // Discogs URL canonicalization coverage.
   assert.equal(
@@ -313,4 +326,7 @@ function run() {
   console.log("regression-tests: ok");
 }
 
-run();
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

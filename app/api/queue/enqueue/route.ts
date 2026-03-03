@@ -8,6 +8,7 @@ import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { dedupePendingQueueItems } from "@/lib/queue-maintenance";
+import { readJsonBodyOrNull } from "@/lib/request-json";
 import { getFirstDiscogsReleaseYoutubeVideoId } from "@/lib/discogs";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { findTrackSeedVideos } from "@/lib/track-video-sources";
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   });
   if (rateLimited) return rateLimited;
 
-  const parsed = schema.safeParse(await request.json().catch(() => null));
+  const parsed = schema.safeParse(await readJsonBodyOrNull(request));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }

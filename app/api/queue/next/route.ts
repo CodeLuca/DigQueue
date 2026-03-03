@@ -7,6 +7,7 @@ import { queueItems, releases, tracks } from "@/db/schema";
 import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
+import { readJsonBodyOrNull } from "@/lib/request-json";
 import {
   normalizeCurrentQueueItemIdFromPost,
   resolveQueueModeFromPost,
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   });
   if (rateLimited) return rateLimited;
 
-  const parsed = postSchema.safeParse(await request.json().catch(() => null));
+  const parsed = postSchema.safeParse(await readJsonBodyOrNull(request));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
