@@ -21,7 +21,7 @@
 - [~] Job control UX: batch controls exist; grouped Failure Center + run history/throughput are shipped, plus direct Discogs reconnect and stale-lock cleanup actions, but deeper remediation workflows still need improvement
 
 ## Next Iterations
-1. Failure center phase 2: expand remediation actions per category beyond current retry/reconnect/lock-cleanup controls.
+1. Failure center phase 2: expand remediation actions per category beyond current retry/reconnect/lock-cleanup/metadata-refresh controls.
 2. Processing observability phase 2: richer timeline UI and longer-window trend views (run duration percentiles + 10-minute timeline are now surfaced).
 3. Regression coverage phase 2: route-level tests for OAuth start/callback handlers and queue playback state transitions.
 4. Copy and mobile UX polish pass across all tabs (reduce control density, simplify labels/actions on narrow screens).

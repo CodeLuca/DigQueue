@@ -21,6 +21,7 @@ import {
   pauseAllActiveSourcesAction,
   pullDiscogsWantsAction,
   refreshLabelMetadataAction,
+  refreshSpecificSourcesMetadataAction,
   startSyncAction,
   retryErroredLabelsAction,
   retrySpecificSourcesAction,
@@ -995,6 +996,21 @@ export default async function HomePage({
                                       title="Clear expired worker locks in the database."
                                     >
                                       Clear stale locks
+                                    </FormSubmitButton>
+                                  </form>
+                                ) : null}
+                                {group.category === "data" ? (
+                                  <form action={refreshSpecificSourcesMetadataAction}>
+                                    <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
+                                    <FormSubmitButton
+                                      type="submit"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[11px]"
+                                      pendingText="Refreshing..."
+                                      title="Refresh metadata for sources in this data-failure group."
+                                    >
+                                      Refresh metadata
                                     </FormSubmitButton>
                                   </form>
                                 ) : null}

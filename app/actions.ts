@@ -15,6 +15,7 @@ import { chooseTrackMatch, processSingleReleaseForSource, toggleReleaseWishlist,
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
+import { parsePositiveSourceIds } from "@/lib/source-id-list";
 import { purgeExpiredWorkerLocks } from "@/lib/worker-locks";
 
 function userScope(userId: string) {
@@ -527,12 +528,7 @@ export async function retrySpecificSourcesAction(formData: FormData) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
   const rawIds = String(formData.get("sourceIds") || "");
-  const ids = [...new Set(
-    rawIds
-      .split(",")
-      .map((item) => Number(item.trim()))
-      .filter((item) => Number.isFinite(item) && item > 0),
-  )].slice(0, 30);
+  const ids = parsePositiveSourceIds(rawIds, 30);
   if (ids.length === 0) return;
 
   const now = new Date();
@@ -547,6 +543,29 @@ export async function retrySpecificSourcesAction(formData: FormData) {
       .update(labels)
       .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: now })
       .where(and(eq(labels.id, source.id), scope.labels));
+  }
+
+  revalidatePath("/");
+}
+
+export async function refreshSpecificSourcesMetadataAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const rawIds = String(formData.get("sourceIds") || "");
+  const ids = parsePositiveSourceIds(rawIds, 20);
+  if (ids.length === 0) return;
+
+  const targets = await db.query.labels.findMany({
+    where: and(inArray(labels.id, ids), eq(labels.active, true), scope.labels),
+    columns: { id: true, entityKind: true },
+  });
+
+  for (const source of targets) {
+    try {
+      await refreshSourceMetadata(source.id, source.entityKind === "artist" ? "artist" : "label", userId);
+    } catch {
+      // Best-effort batch refresh; continue with the next source.
+    }
   }
 
   revalidatePath("/");

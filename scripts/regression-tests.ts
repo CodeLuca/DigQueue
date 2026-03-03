@@ -21,6 +21,7 @@ import {
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
+import { parsePositiveSourceIds } from "../lib/source-id-list";
 import { classifySourceFailure, getFailureCategoryMeta } from "../lib/source-failures";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
@@ -176,6 +177,8 @@ async function run() {
   assert.equal(getFailureCategoryMeta("rate_limit").label, "Rate Limit");
   assert.match(getFailureCategoryMeta("database").hint, /stale locks/i);
   assert.equal(getFailureCategoryMeta("unknown").label, "Unknown");
+  assert.deepEqual(parsePositiveSourceIds("1,2,2, x, -1, 4"), [1, 2, 4]);
+  assert.deepEqual(parsePositiveSourceIds("10,11,12", 2), [10, 11]);
 
   // OAuth temp cookie parsing coverage.
   const encodedDiscogs = encodeDiscogsOAuthPending({
