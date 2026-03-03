@@ -28,7 +28,7 @@ type SourceNextResponse = {
   counts?: { processing?: number; queued?: number; error?: number; complete?: number };
   processingSources?: SourceRow[];
   syncTelemetry?: SyncTelemetry | null;
-  lastSuccessBySource?: Array<{ sourceId: number; lastSuccessAt: number }>;
+  lastSuccessBySource?: Array<{ sourceId: number; sourceName: string; lastSuccessAt: number }>;
   runHistory?: Array<{
     sourceId: number | null;
     sourceName: string;
@@ -114,17 +114,13 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
     [data.processingSources],
   );
   const recentSuccessBySource = useMemo(() => {
-    const sourceById = new Map<number, string>();
-    for (const source of data.processingSources ?? []) {
-      sourceById.set(source.id, source.name);
-    }
     return (data.lastSuccessBySource ?? [])
       .slice(0, 4)
       .map((item) => ({
-        sourceName: sourceById.get(item.sourceId) || `Source ${item.sourceId}`,
+        sourceName: item.sourceName || `Source ${item.sourceId}`,
         createdAt: item.lastSuccessAt,
       }));
-  }, [data.lastSuccessBySource, data.processingSources]);
+  }, [data.lastSuccessBySource]);
 
   return (
     <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">

@@ -168,7 +168,12 @@ export async function GET() {
       console.warn(`[sources-next] run history unavailable: ${message}`);
       return [];
     });
-    const lastSuccessBySource = buildLastSuccessBySource(runHistory);
+    const sourceNameById = new Map<number, string>(activeSources.map((item) => [item.id, item.name]));
+    const lastSuccessBySource = buildLastSuccessBySource(runHistory).map((item) => ({
+      sourceId: item.sourceId,
+      sourceName: sourceNameById.get(item.sourceId) || `Source ${item.sourceId}`,
+      lastSuccessAt: item.lastSuccessAt,
+    }));
     const throughput = buildSyncRunStats(runHistory, 10);
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
