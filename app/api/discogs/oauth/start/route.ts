@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
+import { buildOAuthTempCookieOptions } from "@/lib/oauth-cookie-options";
 import { normalizeNextPath } from "@/lib/next-path";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "@/lib/oauth-start-routing";
@@ -31,13 +32,7 @@ export async function GET(request: Request) {
       state,
       requestToken: requestToken.token,
       requestTokenSecret: requestToken.tokenSecret,
-    }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 10,
-    });
+    }), buildOAuthTempCookieOptions());
 
     const authorizeUrl = new URL(discogsOAuthAuthorizeUrl);
     authorizeUrl.searchParams.set("oauth_token", requestToken.token);
