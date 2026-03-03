@@ -5,6 +5,7 @@ import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
 import { parseYoutubeOAuthCallbackQuery } from "@/lib/oauth-callback-query";
+import { YOUTUBE_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { normalizeNextPath } from "@/lib/next-path";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
@@ -24,8 +25,8 @@ export async function GET(request: Request) {
   const explicitNext = normalizeNextPath(callbackQuery.nextRaw, { fallback: "/settings" });
 
   const cookieStore = await cookies();
-  const pending = cookieStore.get("youtube_oauth_tmp")?.value || "";
-  cookieStore.delete("youtube_oauth_tmp");
+  const pending = cookieStore.get(YOUTUBE_OAUTH_TMP_COOKIE)?.value || "";
+  cookieStore.delete(YOUTUBE_OAUTH_TMP_COOKIE);
   const parsedPending = decodeYoutubeOAuthPending(pending);
   const expectedState = parsedPending?.state || "";
   const cookieNext = parsedPending?.nextPath || "";

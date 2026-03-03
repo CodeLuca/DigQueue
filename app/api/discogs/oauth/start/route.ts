@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
+import { DISCOGS_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { buildOAuthTempCookieOptions } from "@/lib/oauth-cookie-options";
 import { normalizeNextPath } from "@/lib/next-path";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
     const requestToken = await fetchDiscogsOAuthRequestToken(callbackUrl.toString());
     const cookieStore = await cookies();
-    cookieStore.set("discogs_oauth_tmp", encodeDiscogsOAuthPending({
+    cookieStore.set(DISCOGS_OAUTH_TMP_COOKIE, encodeDiscogsOAuthPending({
       state,
       requestToken: requestToken.token,
       requestTokenSecret: requestToken.tokenSecret,

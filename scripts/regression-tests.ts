@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { buildOAuthCallbackLoginPath } from "../lib/oauth-callback-routing";
+import { DISCOGS_OAUTH_TMP_COOKIE, YOUTUBE_OAUTH_TMP_COOKIE } from "../lib/oauth-cookie-keys";
 import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "../lib/oauth-callback-query";
 import { buildOAuthTempCookieOptions } from "../lib/oauth-cookie-options";
 import { normalizeNextPath } from "../lib/next-path";
@@ -81,6 +82,8 @@ async function run() {
   assert.equal(discogsQuery.nextRaw, "/settings");
   assert.equal(buildOAuthCallbackLoginPath("discogs"), "/login?next=%2Fconnect-discogs");
   assert.equal(buildOAuthCallbackLoginPath("youtube"), "/login?next=%2Fsettings");
+  assert.equal(DISCOGS_OAUTH_TMP_COOKIE, "discogs_oauth_tmp");
+  assert.equal(YOUTUBE_OAUTH_TMP_COOKIE, "youtube_oauth_tmp");
   const youtubeQuery = parseYoutubeOAuthCallbackQuery(new URL("https://digqueue.local/api/youtube/oauth/callback?state=s2&code=c2&next=%2F"));
   assert.equal(youtubeQuery.returnedState, "s2");
   assert.equal(youtubeQuery.code, "c2");

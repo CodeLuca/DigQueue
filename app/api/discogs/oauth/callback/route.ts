@@ -8,6 +8,7 @@ import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
 import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
+import { DISCOGS_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { normalizeNextPath } from "@/lib/next-path";
 import { parseDiscogsOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { validateDiscogsOAuthCallbackInput } from "@/lib/oauth-callback-validation";
@@ -27,8 +28,8 @@ export async function GET(request: Request) {
   }
 
   const cookieStore = await cookies();
-  const pending = cookieStore.get("discogs_oauth_tmp")?.value || "";
-  cookieStore.delete("discogs_oauth_tmp");
+  const pending = cookieStore.get(DISCOGS_OAUTH_TMP_COOKIE)?.value || "";
+  cookieStore.delete(DISCOGS_OAUTH_TMP_COOKIE);
 
   const parsedPending = decodeDiscogsOAuthPending(pending);
   const expectedState = parsedPending?.state || "";

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { normalizeNextPath } from "@/lib/next-path";
+import { YOUTUBE_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { buildOAuthTempCookieOptions } from "@/lib/oauth-cookie-options";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "@/lib/oauth-start-routing";
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
   try {
     const state = randomBytes(18).toString("hex");
     const cookieStore = await cookies();
-    cookieStore.set("youtube_oauth_tmp", encodeYoutubeOAuthPending({ state, nextPath }), buildOAuthTempCookieOptions());
+    cookieStore.set(YOUTUBE_OAUTH_TMP_COOKIE, encodeYoutubeOAuthPending({ state, nextPath }), buildOAuthTempCookieOptions());
 
     const authorizeUrl = buildYoutubeOAuthAuthorizeUrl({ origin: appOrigin, state });
     return NextResponse.redirect(authorizeUrl);
