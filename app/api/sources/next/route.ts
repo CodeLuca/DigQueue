@@ -171,6 +171,7 @@ export async function GET() {
     const recentRuns = runHistory.filter((item) => item.createdAt >= tenMinutesAgo);
     const successfulRuns = recentRuns.filter((item) => item.outcome === "ok");
     const failedRuns = recentRuns.filter((item) => item.outcome === "error");
+    const lastSuccessAt = runHistory.find((item) => item.outcome === "ok")?.createdAt ?? null;
     const averageDurationMs =
       recentRuns.length > 0
         ? Math.round(recentRuns.reduce((sum, item) => sum + Math.max(0, item.durationMs || 0), 0) / recentRuns.length)
@@ -196,6 +197,7 @@ export async function GET() {
         successfulRuns: successfulRuns.length,
         failedRuns: failedRuns.length,
         averageDurationMs,
+        lastSuccessAt,
       },
       processingAttempt,
       blocker:
@@ -230,6 +232,7 @@ export async function GET() {
         successfulRuns: 0,
         failedRuns: 0,
         averageDurationMs: 0,
+        lastSuccessAt: null,
       },
       processingAttempt: {
         attempted: false,

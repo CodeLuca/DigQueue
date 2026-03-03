@@ -44,6 +44,7 @@ type SourceNextResponse = {
     successfulRuns: number;
     failedRuns: number;
     averageDurationMs: number;
+    lastSuccessAt: number | null;
   };
   blocker?: string | null;
 };
@@ -151,6 +152,9 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
           </p>
           <p className="text-[10px] text-[var(--color-muted)]">
             Avg run duration: {formatDuration(data.throughput.averageDurationMs)}
+          </p>
+          <p className="text-[10px] text-[var(--color-muted)]">
+            Last successful sync: {data.throughput.lastSuccessAt ? ageLabel(data.throughput.lastSuccessAt) : "none yet"}
           </p>
         </div>
       ) : null}
