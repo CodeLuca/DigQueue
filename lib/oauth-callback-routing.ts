@@ -1,4 +1,5 @@
+import { getOAuthProviderLoginNextPath } from "@/lib/oauth-start-routing";
+
 export function buildOAuthCallbackLoginPath(provider: "discogs" | "youtube") {
-  const nextPath = provider === "discogs" ? "/connect-discogs" : "/settings";
-  return `/login?next=${encodeURIComponent(nextPath)}`;
+  return `/login?next=${encodeURIComponent(getOAuthProviderLoginNextPath(provider))}`;
 }

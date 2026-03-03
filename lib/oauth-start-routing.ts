@@ -4,7 +4,10 @@ export function parseOAuthStartQuery(requestUrl: URL) {
   };
 }
 
+export function getOAuthProviderLoginNextPath(provider: "discogs" | "youtube") {
+  return provider === "discogs" ? "/connect-discogs" : "/settings";
+}
+
 export function buildOAuthStartLoginPath(provider: "discogs" | "youtube") {
-  const nextPath = provider === "discogs" ? "/connect-discogs" : "/settings";
-  return `/login?next=${encodeURIComponent(nextPath)}`;
+  return `/login?next=${encodeURIComponent(getOAuthProviderLoginNextPath(provider))}`;
 }
