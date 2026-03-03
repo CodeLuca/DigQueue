@@ -5,6 +5,7 @@ import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
+import { encodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -23,7 +24,11 @@ export async function GET(request: Request) {
 
     const requestToken = await fetchDiscogsOAuthRequestToken(callbackUrl.toString());
     const cookieStore = await cookies();
-    cookieStore.set("discogs_oauth_tmp", `${state}:${requestToken.token}:${requestToken.tokenSecret}`, {
+    cookieStore.set("discogs_oauth_tmp", encodeDiscogsOAuthPending({
+      state,
+      requestToken: requestToken.token,
+      requestTokenSecret: requestToken.tokenSecret,
+    }), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

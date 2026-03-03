@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { normalizeNextPath } from "@/lib/next-path";
+import { decodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { completeYoutubeOAuthCallback } from "@/lib/youtube-oauth";
 
 export async function GET(request: Request) {
@@ -21,7 +22,9 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const pending = cookieStore.get("youtube_oauth_tmp")?.value || "";
   cookieStore.delete("youtube_oauth_tmp");
-  const [expectedState, cookieNext] = pending.split(":");
+  const parsedPending = decodeYoutubeOAuthPending(pending);
+  const expectedState = parsedPending?.state || "";
+  const cookieNext = parsedPending?.nextPath || "";
   const nextPath = normalizeNextPath(cookieNext || explicitNext, { fallback: "/settings" });
 
   if (!returnedState || !code || !expectedState || returnedState !== expectedState) {

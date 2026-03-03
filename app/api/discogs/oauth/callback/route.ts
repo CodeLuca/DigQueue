@@ -7,6 +7,7 @@ import { getApiKeys, setApiKeys } from "@/lib/api-keys";
 import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
+import { decodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
 
 function sanitizeDiscogsErrorMessage(message: string) {
   const lower = message.toLowerCase();
@@ -39,7 +40,10 @@ export async function GET(request: Request) {
   const pending = cookieStore.get("discogs_oauth_tmp")?.value || "";
   cookieStore.delete("discogs_oauth_tmp");
 
-  const [expectedState, requestToken, requestTokenSecret] = pending.split(":");
+  const parsedPending = decodeDiscogsOAuthPending(pending);
+  const expectedState = parsedPending?.state || "";
+  const requestToken = parsedPending?.requestToken || "";
+  const requestTokenSecret = parsedPending?.requestTokenSecret || "";
   if (!returnedState || !oauthToken || !verifier || !expectedState || !requestToken || !requestTokenSecret) {
     return NextResponse.redirect(new URL("/settings?discogs_error=Invalid%20Discogs%20OAuth%20callback.", appOrigin));
   }

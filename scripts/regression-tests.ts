@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { normalizeNextPath } from "../lib/next-path";
+import {
+  decodeDiscogsOAuthPending,
+  decodeYoutubeOAuthPending,
+  encodeDiscogsOAuthPending,
+  encodeYoutubeOAuthPending,
+} from "../lib/oauth-temp-cookie";
 import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "../lib/playback-mobile";
 import { classifySourceFailure } from "../lib/source-failures";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
@@ -120,6 +126,38 @@ function run() {
   assert.equal(classifySourceFailure("YouTube provider timeout"), "provider");
   assert.equal(classifySourceFailure("Invalid tracklist payload"), "data");
   assert.equal(classifySourceFailure("totally unknown"), "unknown");
+
+  // OAuth temp cookie parsing coverage.
+  const encodedDiscogs = encodeDiscogsOAuthPending({
+    state: "s",
+    requestToken: "t",
+    requestTokenSecret: "sec",
+  });
+  assert.deepEqual(decodeDiscogsOAuthPending(encodedDiscogs), {
+    state: "s",
+    requestToken: "t",
+    requestTokenSecret: "sec",
+  });
+  assert.deepEqual(decodeDiscogsOAuthPending("s:t:sec"), {
+    state: "s",
+    requestToken: "t",
+    requestTokenSecret: "sec",
+  });
+  assert.equal(decodeDiscogsOAuthPending("bad"), null);
+
+  const encodedYoutube = encodeYoutubeOAuthPending({
+    state: "abc",
+    nextPath: "/settings?tab=library:focus",
+  });
+  assert.deepEqual(decodeYoutubeOAuthPending(encodedYoutube), {
+    state: "abc",
+    nextPath: "/settings?tab=library:focus",
+  });
+  assert.deepEqual(decodeYoutubeOAuthPending("abc:/settings?tab=library:focus"), {
+    state: "abc",
+    nextPath: "/settings?tab=library:focus",
+  });
+  assert.equal(decodeYoutubeOAuthPending("bad"), null);
 
   console.log("regression-tests: ok");
 }

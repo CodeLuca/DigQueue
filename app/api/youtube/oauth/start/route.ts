@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { normalizeNextPath } from "@/lib/next-path";
+import { encodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { buildYoutubeOAuthAuthorizeUrl } from "@/lib/youtube-oauth";
 
 export async function GET(request: Request) {
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   try {
     const state = randomBytes(18).toString("hex");
     const cookieStore = await cookies();
-    cookieStore.set("youtube_oauth_tmp", `${state}:${nextPath}`, {
+    cookieStore.set("youtube_oauth_tmp", encodeYoutubeOAuthPending({ state, nextPath }), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
