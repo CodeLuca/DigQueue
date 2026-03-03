@@ -34,6 +34,7 @@ import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { parsePositiveSourceIds } from "../lib/source-id-list";
 import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
+import { getTimelineBarStyle, getTimelineMaxRuns } from "../lib/sync-timeline";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { createZeroSyncThroughput } from "../lib/sync-throughput";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
@@ -368,6 +369,20 @@ async function run() {
   assert.equal(zeroThroughput.windowMinutes, 10);
   assert.equal(zeroThroughput.runs, 0);
   assert.equal(zeroThroughput.timeline.length, 0);
+  const timelineMax = getTimelineMaxRuns([{ minuteOffset: 0, runs: 0, successfulRuns: 0, failedRuns: 0 }, { minuteOffset: 1, runs: 4, successfulRuns: 4, failedRuns: 0 }]);
+  assert.equal(timelineMax, 4);
+  assert.deepEqual(getTimelineBarStyle({ minuteOffset: 1, runs: 4, successfulRuns: 4, failedRuns: 0 }, timelineMax), {
+    heightPct: 100,
+    className: "bg-emerald-400/80",
+  });
+  assert.deepEqual(getTimelineBarStyle({ minuteOffset: 1, runs: 0, successfulRuns: 0, failedRuns: 0 }, timelineMax), {
+    heightPct: 12,
+    className: "bg-zinc-500/30",
+  });
+  assert.deepEqual(getTimelineBarStyle({ minuteOffset: 1, runs: 1, successfulRuns: 0, failedRuns: 1 }, timelineMax), {
+    heightPct: 25,
+    className: "bg-rose-400/80",
+  });
 
   // Sync run throughput aggregation coverage.
   const originalNow = Date.now;

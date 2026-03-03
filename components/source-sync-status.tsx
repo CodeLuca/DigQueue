@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { getTimelineBarStyle, getTimelineMaxRuns } from "@/lib/sync-timeline";
 import type { SyncThroughput } from "@/lib/sync-throughput";
 
 type SyncTelemetry = {
@@ -117,8 +118,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
       }));
   }, [data.lastSuccessBySource]);
   const timelineMaxRuns = useMemo(() => {
-    const runs = data.throughput?.timeline.map((bucket) => bucket.runs) ?? [];
-    return Math.max(1, ...runs);
+    return getTimelineMaxRuns(data.throughput?.timeline ?? []);
   }, [data.throughput?.timeline]);
 
   return (
@@ -172,14 +172,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               <p className="text-[10px] text-[var(--color-muted)]">Timeline (oldest to newest)</p>
               <div className="mt-1 flex h-8 items-end gap-0.5 rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/40 p-1">
                 {data.throughput.timeline.map((bucket, index) => {
-                  const heightPct = Math.max(12, Math.round((bucket.runs / timelineMaxRuns) * 100));
-                  const hasErrors = bucket.failedRuns > 0;
-                  const hasRuns = bucket.runs > 0;
-                  const className = hasErrors
-                    ? "bg-rose-400/80"
-                    : hasRuns
-                      ? "bg-emerald-400/80"
-                      : "bg-zinc-500/30";
+                  const { heightPct, className } = getTimelineBarStyle(bucket, timelineMaxRuns);
                   return (
                     <span
                       key={`${bucket.minuteOffset}-${index}`}
