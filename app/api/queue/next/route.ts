@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   });
   if (rateLimited) return rateLimited;
 
-  const parsed = postSchema.safeParse(await request.json());
+  const parsed = postSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
