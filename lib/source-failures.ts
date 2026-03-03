@@ -1,4 +1,11 @@
 export type FailureCategory = "auth" | "rate_limit" | "provider" | "database" | "data" | "unknown";
+export type FailureCategoryMeta = {
+  label: string;
+  className: string;
+  hint: string;
+  href: string | null;
+  hrefLabel: string | null;
+};
 
 export type GroupedSourceFailures<T> = Array<{
   category: FailureCategory;
@@ -53,7 +60,7 @@ export function classifySourceFailure(error: string | null | undefined): Failure
   return "unknown";
 }
 
-export function getFailureCategoryMeta(category: FailureCategory) {
+export function getFailureCategoryMeta(category: FailureCategory): FailureCategoryMeta {
   if (category === "auth") {
     return {
       label: "Auth",
@@ -68,8 +75,8 @@ export function getFailureCategoryMeta(category: FailureCategory) {
       label: "Rate Limit",
       className: "border-sky-500/50 bg-sky-500/12 text-sky-200",
       hint: "Pause all active sources briefly, then retry this group.",
-      href: "",
-      hrefLabel: "",
+      href: null,
+      hrefLabel: null,
     };
   }
   if (category === "database") {
@@ -77,8 +84,8 @@ export function getFailureCategoryMeta(category: FailureCategory) {
       label: "Database",
       className: "border-rose-500/50 bg-rose-500/12 text-rose-200",
       hint: "Transient DB saturation. Clear stale locks, then retry.",
-      href: "",
-      hrefLabel: "",
+      href: null,
+      hrefLabel: null,
     };
   }
   if (category === "provider") {
@@ -86,8 +93,8 @@ export function getFailureCategoryMeta(category: FailureCategory) {
       label: "Provider/API",
       className: "border-fuchsia-500/50 bg-fuchsia-500/12 text-fuchsia-200",
       hint: "Upstream provider response failed. Retry this source.",
-      href: "",
-      hrefLabel: "",
+      href: null,
+      hrefLabel: null,
     };
   }
   if (category === "data") {
@@ -95,16 +102,16 @@ export function getFailureCategoryMeta(category: FailureCategory) {
       label: "Data",
       className: "border-indigo-500/50 bg-indigo-500/12 text-indigo-200",
       hint: "Record payload looked malformed. Retry source and refresh metadata.",
-      href: "",
-      hrefLabel: "",
+      href: null,
+      hrefLabel: null,
     };
   }
   return {
     label: "Unknown",
     className: "border-zinc-500/50 bg-zinc-500/12 text-zinc-200",
     hint: "Unclassified failure. Retry source and inspect the source detail page.",
-    href: "",
-    hrefLabel: "",
+    href: null,
+    hrefLabel: null,
   };
 }
 

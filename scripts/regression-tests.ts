@@ -224,6 +224,7 @@ async function run() {
   assert.equal(getFailureCategoryMeta("auth").href, "/api/discogs/oauth/start?next=/?tab=step-2");
   assert.equal(getFailureCategoryMeta("rate_limit").label, "Rate Limit");
   assert.match(getFailureCategoryMeta("rate_limit").hint, /pause all active sources/i);
+  assert.equal(getFailureCategoryMeta("rate_limit").href, null);
   assert.match(getFailureCategoryMeta("database").hint, /stale locks/i);
   assert.equal(getFailureCategoryMeta("unknown").label, "Unknown");
   assert.deepEqual(parsePositiveSourceIds("1,2,2, x, -1, 4"), [1, 2, 4]);
