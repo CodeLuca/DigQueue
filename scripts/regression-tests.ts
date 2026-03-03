@@ -19,6 +19,12 @@ import {
   shouldMarkCurrentQueueItemPlayed,
   shouldMarkCurrentTrackListened,
 } from "../lib/queue-next-actions";
+import {
+  buildQueueFeedbackPayload,
+  parseQueueNextMutationInput,
+  shouldApplyListenedMutation,
+  shouldApplyPlayedOnlyMutation,
+} from "../lib/queue-next-mutation";
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
@@ -299,6 +305,27 @@ async function run() {
     markTrackListened: true,
     feedbackEventType: "listened",
   });
+  const mutation = parseQueueNextMutationInput({ currentId: 7, action: "played", mode: undefined, order: undefined });
+  assert.equal(mutation.currentId, 7);
+  assert.equal(mutation.mode, "hybrid");
+  assert.equal(mutation.order, "in_order");
+  assert.equal(shouldApplyPlayedOnlyMutation(mutation), true);
+  assert.equal(shouldApplyListenedMutation(mutation), false);
+  const listenedMutation = parseQueueNextMutationInput({ currentId: 9, action: "listened", mode: "track", order: "shuffle" });
+  assert.equal(shouldApplyPlayedOnlyMutation(listenedMutation), false);
+  assert.equal(shouldApplyListenedMutation(listenedMutation), true);
+  assert.deepEqual(
+    buildQueueFeedbackPayload("played", { trackId: 11, releaseId: 22, labelId: 33 }, "user-1"),
+    {
+      eventType: "played",
+      source: "api_queue_next",
+      trackId: 11,
+      releaseId: 22,
+      labelId: 33,
+      userId: "user-1",
+    },
+  );
+  assert.equal(buildQueueFeedbackPayload(null, { trackId: 1 }, "user-1"), null);
 
   // Sync run throughput aggregation coverage.
   const originalNow = Date.now;

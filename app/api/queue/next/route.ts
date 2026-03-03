@@ -9,11 +9,11 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { readJsonBodyOrNull } from "@/lib/request-json";
 import {
-  normalizeCurrentQueueItemIdFromPost,
-  resolveQueueModeFromPost,
-  resolveQueueOrderFromPost,
-} from "@/lib/queue-next-actions";
-import { getQueueTransitionPlan } from "@/lib/queue-transition-plan";
+  buildQueueFeedbackPayload,
+  parseQueueNextMutationInput,
+  shouldApplyListenedMutation,
+  shouldApplyPlayedOnlyMutation,
+} from "@/lib/queue-next-mutation";
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
 import { parseQueueNextGetParams } from "@/lib/queue-next-request";
@@ -49,24 +49,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const currentId = normalizeCurrentQueueItemIdFromPost(parsed.data.currentId);
-  const transitionPlan = getQueueTransitionPlan(parsed.data.action);
-  if (currentId && transitionPlan.markQueueItemPlayed && !transitionPlan.markTrackListened) {
+  const mutation = parseQueueNextMutationInput(parsed.data);
+  if (shouldApplyPlayedOnlyMutation(mutation)) {
+    const currentId = mutation.currentId as number;
     const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)) });
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)));
-    if (transitionPlan.feedbackEventType) {
-      await logFeedbackEvent({
-        eventType: transitionPlan.feedbackEventType,
-        source: "api_queue_next",
-        trackId: item?.trackId ?? null,
-        releaseId: item?.releaseId ?? null,
-        labelId: item?.labelId ?? null,
-        userId,
-      });
-    }
+    const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
+    if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
   }
 
-  if (currentId && transitionPlan.markTrackListened) {
+  if (shouldApplyListenedMutation(mutation)) {
+    const currentId = mutation.currentId as number;
     const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)) });
     if (item?.trackId) {
       await db.update(tracks).set({ listened: true }).where(and(eq(tracks.id, item.trackId), eq(tracks.userId, userId)));
@@ -74,16 +67,8 @@ export async function POST(request: Request) {
         .update(queueItems)
         .set({ status: "played" })
         .where(and(eq(queueItems.trackId, item.trackId), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)));
-      if (transitionPlan.feedbackEventType) {
-        await logFeedbackEvent({
-          eventType: transitionPlan.feedbackEventType,
-          source: "api_queue_next",
-          trackId: item.trackId,
-          releaseId: item.releaseId ?? null,
-          labelId: item.labelId ?? null,
-          userId,
-        });
-      }
+      const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
+      if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
 
       if (item.releaseId) {
         const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, item.releaseId), eq(tracks.userId, userId)) });
@@ -94,10 +79,8 @@ export async function POST(request: Request) {
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)));
   }
 
-  const mode = resolveQueueModeFromPost(parsed.data.mode);
-  const order = resolveQueueOrderFromPost(parsed.data.order);
-  const next = order === "shuffle"
-    ? await nextQueueItemShuffled(userId, undefined, mode)
-    : await nextQueueItem(userId, undefined, mode);
+  const next = mutation.order === "shuffle"
+    ? await nextQueueItemShuffled(userId, undefined, mutation.mode)
+    : await nextQueueItem(userId, undefined, mutation.mode);
   return NextResponse.json(next || null);
 }
