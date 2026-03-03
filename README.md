@@ -127,6 +127,7 @@ API:
 
 Pause/resume is available per label.
 You can also run the whole label queue from the dashboard.
+Failure Center groups source errors by root cause and provides targeted remediation actions (retry by category, Discogs reconnect, stale lock cleanup, metadata refresh).
 
 ## Seed Data
 
