@@ -7,6 +7,12 @@ import { queueItems, releases, tracks } from "@/db/schema";
 import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
+import {
+  resolveQueueModeFromPost,
+  resolveQueueOrderFromPost,
+  shouldMarkCurrentQueueItemPlayed,
+  shouldMarkCurrentTrackListened,
+} from "@/lib/queue-next-actions";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
 import { parseQueueNextGetParams } from "@/lib/queue-next-request";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -41,7 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (parsed.data.currentId && parsed.data.action === "played") {
+  if (parsed.data.currentId && shouldMarkCurrentQueueItemPlayed(parsed.data.action) && !shouldMarkCurrentTrackListened(parsed.data.action)) {
     const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)) });
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)));
     await logFeedbackEvent({
@@ -54,7 +60,7 @@ export async function POST(request: Request) {
     });
   }
 
-  if (parsed.data.currentId && parsed.data.action === "listened") {
+  if (parsed.data.currentId && shouldMarkCurrentTrackListened(parsed.data.action)) {
     const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)) });
     if (item?.trackId) {
       await db.update(tracks).set({ listened: true }).where(and(eq(tracks.id, item.trackId), eq(tracks.userId, userId)));
@@ -80,8 +86,10 @@ export async function POST(request: Request) {
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)));
   }
 
-  const next = parsed.data.order === "shuffle"
-    ? await nextQueueItemShuffled(userId, undefined, parsed.data.mode ?? "hybrid")
-    : await nextQueueItem(userId, undefined, parsed.data.mode ?? "hybrid");
+  const mode = resolveQueueModeFromPost(parsed.data.mode);
+  const order = resolveQueueOrderFromPost(parsed.data.order);
+  const next = order === "shuffle"
+    ? await nextQueueItemShuffled(userId, undefined, mode)
+    : await nextQueueItem(userId, undefined, mode);
   return NextResponse.json(next || null);
 }

@@ -9,6 +9,12 @@ import {
 } from "../lib/oauth-temp-cookie";
 import { validateDiscogsOAuthCallbackInput, validateYoutubeOAuthCallbackInput } from "../lib/oauth-callback-validation";
 import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "../lib/playback-mobile";
+import {
+  resolveQueueModeFromPost,
+  resolveQueueOrderFromPost,
+  shouldMarkCurrentQueueItemPlayed,
+  shouldMarkCurrentTrackListened,
+} from "../lib/queue-next-actions";
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { classifySourceFailure } from "../lib/source-failures";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
@@ -213,6 +219,17 @@ function run() {
     validateYoutubeOAuthCallbackInput({ returnedState: "a", code: "", expectedState: "a" }),
     { ok: false, reason: "invalid_callback" },
   );
+
+  // Queue transition action semantics coverage.
+  assert.equal(shouldMarkCurrentQueueItemPlayed("played"), true);
+  assert.equal(shouldMarkCurrentQueueItemPlayed("listened"), true);
+  assert.equal(shouldMarkCurrentQueueItemPlayed("next"), false);
+  assert.equal(shouldMarkCurrentTrackListened("listened"), true);
+  assert.equal(shouldMarkCurrentTrackListened("played"), false);
+  assert.equal(resolveQueueModeFromPost(undefined), "hybrid");
+  assert.equal(resolveQueueModeFromPost("release"), "release");
+  assert.equal(resolveQueueOrderFromPost(undefined), "in_order");
+  assert.equal(resolveQueueOrderFromPost("shuffle"), "shuffle");
 
   console.log("regression-tests: ok");
 }
