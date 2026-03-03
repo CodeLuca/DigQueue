@@ -16,6 +16,7 @@ import {
   shouldMarkCurrentTrackListened,
 } from "../lib/queue-next-actions";
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
+import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { classifySourceFailure } from "../lib/source-failures";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
@@ -230,6 +231,21 @@ function run() {
   assert.equal(resolveQueueModeFromPost("release"), "release");
   assert.equal(resolveQueueOrderFromPost(undefined), "in_order");
   assert.equal(resolveQueueOrderFromPost("shuffle"), "shuffle");
+  assert.deepEqual(getQueueTransitionPlan("next"), {
+    markQueueItemPlayed: false,
+    markTrackListened: false,
+    feedbackEventType: null,
+  });
+  assert.deepEqual(getQueueTransitionPlan("played"), {
+    markQueueItemPlayed: true,
+    markTrackListened: false,
+    feedbackEventType: "played",
+  });
+  assert.deepEqual(getQueueTransitionPlan("listened"), {
+    markQueueItemPlayed: true,
+    markTrackListened: true,
+    feedbackEventType: "listened",
+  });
 
   console.log("regression-tests: ok");
 }

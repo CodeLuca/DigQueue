@@ -10,9 +10,8 @@ import { db } from "@/lib/db";
 import {
   resolveQueueModeFromPost,
   resolveQueueOrderFromPost,
-  shouldMarkCurrentQueueItemPlayed,
-  shouldMarkCurrentTrackListened,
 } from "@/lib/queue-next-actions";
+import { getQueueTransitionPlan } from "@/lib/queue-transition-plan";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
 import { parseQueueNextGetParams } from "@/lib/queue-next-request";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -47,20 +46,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  if (parsed.data.currentId && shouldMarkCurrentQueueItemPlayed(parsed.data.action) && !shouldMarkCurrentTrackListened(parsed.data.action)) {
+  const transitionPlan = getQueueTransitionPlan(parsed.data.action);
+  if (parsed.data.currentId && transitionPlan.markQueueItemPlayed && !transitionPlan.markTrackListened) {
     const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)) });
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)));
-    await logFeedbackEvent({
-      eventType: "played",
-      source: "api_queue_next",
-      trackId: item?.trackId ?? null,
-      releaseId: item?.releaseId ?? null,
-      labelId: item?.labelId ?? null,
-      userId,
-    });
+    if (transitionPlan.feedbackEventType) {
+      await logFeedbackEvent({
+        eventType: transitionPlan.feedbackEventType,
+        source: "api_queue_next",
+        trackId: item?.trackId ?? null,
+        releaseId: item?.releaseId ?? null,
+        labelId: item?.labelId ?? null,
+        userId,
+      });
+    }
   }
 
-  if (parsed.data.currentId && shouldMarkCurrentTrackListened(parsed.data.action)) {
+  if (parsed.data.currentId && transitionPlan.markTrackListened) {
     const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, parsed.data.currentId), eq(queueItems.userId, userId)) });
     if (item?.trackId) {
       await db.update(tracks).set({ listened: true }).where(and(eq(tracks.id, item.trackId), eq(tracks.userId, userId)));
@@ -68,14 +70,16 @@ export async function POST(request: Request) {
         .update(queueItems)
         .set({ status: "played" })
         .where(and(eq(queueItems.trackId, item.trackId), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)));
-      await logFeedbackEvent({
-        eventType: "listened",
-        source: "api_queue_next",
-        trackId: item.trackId,
-        releaseId: item.releaseId ?? null,
-        labelId: item.labelId ?? null,
-        userId,
-      });
+      if (transitionPlan.feedbackEventType) {
+        await logFeedbackEvent({
+          eventType: transitionPlan.feedbackEventType,
+          source: "api_queue_next",
+          trackId: item.trackId,
+          releaseId: item.releaseId ?? null,
+          labelId: item.labelId ?? null,
+          userId,
+        });
+      }
 
       if (item.releaseId) {
         const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, item.releaseId), eq(tracks.userId, userId)) });
