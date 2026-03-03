@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { normalizeNextPath } from "../lib/next-path";
 import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "../lib/playback-mobile";
+import { classifySourceFailure } from "../lib/source-failures";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
 function run() {
@@ -111,6 +112,14 @@ function run() {
   assert.equal(webHandoff?.fallbackUrl, null);
   assert.equal(webHandoff?.needsDeepLinkFallback, false);
   assert.equal(buildYouTubeHandoffTargets("", true), null);
+
+  // Failure center grouping coverage.
+  assert.equal(classifySourceFailure("OAuth token expired"), "auth");
+  assert.equal(classifySourceFailure("Discogs error 429"), "rate_limit");
+  assert.equal(classifySourceFailure("failed query: relation missing"), "database");
+  assert.equal(classifySourceFailure("YouTube provider timeout"), "provider");
+  assert.equal(classifySourceFailure("Invalid tracklist payload"), "data");
+  assert.equal(classifySourceFailure("totally unknown"), "unknown");
 
   console.log("regression-tests: ok");
 }
