@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
+import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "@/lib/playback-mobile";
 
 declare global {
   interface Window {
@@ -259,9 +260,11 @@ export function MiniPlayer() {
   }, [liveBpmStatus]);
   const isIOS = useMemo(() => {
     if (typeof navigator === "undefined") return false;
-    const ua = navigator.userAgent || "";
-    const platform = navigator.platform || "";
-    return /iPad|iPhone|iPod/.test(ua) || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    return isIOSLikeDevice({
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      maxTouchPoints: navigator.maxTouchPoints,
+    });
   }, []);
 
   const syncQueueToListeningScope = useCallback(async (options?: { force?: boolean }) => {
@@ -1492,16 +1495,17 @@ export function MiniPlayer() {
   };
 
   const openCurrentInYouTubeApp = useCallback(() => {
-    if (!current?.youtubeVideoId) return;
-    const watchUrl = `https://www.youtube.com/watch?v=${current.youtubeVideoId}`;
-    if (!isIOS) {
-      window.open(watchUrl, "_blank", "noopener,noreferrer");
+    const targets = buildYouTubeHandoffTargets(current?.youtubeVideoId || "", isIOS);
+    if (!targets) return;
+    if (!targets.needsDeepLinkFallback) {
+      window.open(targets.primaryUrl, "_blank", "noopener,noreferrer");
       return;
     }
     // iOS cannot keep iframe playback alive after Safari closes, so hand off to YouTube.
-    window.location.href = `youtube://www.youtube.com/watch?v=${current.youtubeVideoId}`;
+    window.location.href = targets.primaryUrl;
     window.setTimeout(() => {
-      window.open(watchUrl, "_blank", "noopener,noreferrer");
+      if (!targets.fallbackUrl) return;
+      window.open(targets.fallbackUrl, "_blank", "noopener,noreferrer");
     }, 700);
   }, [current?.youtubeVideoId, isIOS]);
 

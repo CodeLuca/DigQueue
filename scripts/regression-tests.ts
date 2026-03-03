@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { normalizeNextPath } from "../lib/next-path";
+import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "../lib/playback-mobile";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
 function run() {
@@ -75,6 +76,41 @@ function run() {
   assert.deepEqual(ids.all, ["abc", "def"]);
   assert.deepEqual(ids.selected, ["abc"]);
   assert.equal(ids.skippedByLimit, 1);
+
+  // Mobile playback behavior coverage.
+  assert.equal(
+    isIOSLikeDevice({
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+      platform: "iPhone",
+      maxTouchPoints: 5,
+    }),
+    true,
+  );
+  assert.equal(
+    isIOSLikeDevice({
+      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      platform: "MacIntel",
+      maxTouchPoints: 2,
+    }),
+    true,
+  );
+  assert.equal(
+    isIOSLikeDevice({
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64)",
+      platform: "Linux x86_64",
+      maxTouchPoints: 0,
+    }),
+    false,
+  );
+  const iosHandoff = buildYouTubeHandoffTargets("abc123", true);
+  assert.equal(iosHandoff?.primaryUrl, "youtube://www.youtube.com/watch?v=abc123");
+  assert.equal(iosHandoff?.fallbackUrl, "https://www.youtube.com/watch?v=abc123");
+  assert.equal(iosHandoff?.needsDeepLinkFallback, true);
+  const webHandoff = buildYouTubeHandoffTargets("abc123", false);
+  assert.equal(webHandoff?.primaryUrl, "https://www.youtube.com/watch?v=abc123");
+  assert.equal(webHandoff?.fallbackUrl, null);
+  assert.equal(webHandoff?.needsDeepLinkFallback, false);
+  assert.equal(buildYouTubeHandoffTargets("", true), null);
 
   console.log("regression-tests: ok");
 }
