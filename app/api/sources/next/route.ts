@@ -7,7 +7,7 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
 import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
-import { buildSyncRunStats } from "@/lib/sync-run-stats";
+import { buildLastSuccessBySource, buildSyncRunStats } from "@/lib/sync-run-stats";
 import { isTransientLabelError } from "@/lib/utils";
 import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
@@ -168,14 +168,7 @@ export async function GET() {
       console.warn(`[sources-next] run history unavailable: ${message}`);
       return [];
     });
-    const lastSuccessBySource = (() => {
-      const bySource = new Map<number, number>();
-      for (const row of runHistory) {
-        if (row.outcome !== "ok" || typeof row.sourceId !== "number" || row.sourceId <= 0) continue;
-        if (!bySource.has(row.sourceId)) bySource.set(row.sourceId, row.createdAt);
-      }
-      return [...bySource.entries()].map(([sourceId, lastSuccessAt]) => ({ sourceId, lastSuccessAt }));
-    })();
+    const lastSuccessBySource = buildLastSuccessBySource(runHistory);
     const throughput = buildSyncRunStats(runHistory, 10);
     const processingSources = activeSources
       .filter((source) => source.status === "processing")

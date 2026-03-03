@@ -20,7 +20,7 @@ import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { classifySourceFailure } from "../lib/source-failures";
-import { buildSyncRunStats } from "../lib/sync-run-stats";
+import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
 function run() {
@@ -281,6 +281,16 @@ function run() {
   assert.equal(stats.failedRuns, 1);
   assert.equal(stats.averageDurationMs, 1000);
   assert.equal(stats.lastSuccessAt, 999_900);
+  const sourceSuccess = buildLastSuccessBySource([
+    { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 300, createdAt: 999_950 },
+    { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 200, createdAt: 999_940 },
+    { sourceId: 2, sourceName: "B", outcome: "error", lockAcquired: true, durationMs: 500, createdAt: 999_930 },
+    { sourceId: 3, sourceName: "C", outcome: "ok", lockAcquired: true, durationMs: 250, createdAt: 999_920 },
+  ]);
+  assert.deepEqual(sourceSuccess, [
+    { sourceId: 1, lastSuccessAt: 999_950 },
+    { sourceId: 3, lastSuccessAt: 999_920 },
+  ]);
 
   // Release listened rollup rule coverage.
   assert.equal(deriveReleaseListenedFromTracks([]), false);

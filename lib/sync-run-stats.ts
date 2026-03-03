@@ -1,5 +1,14 @@
 import type { SyncRunEvent } from "@/lib/sync-telemetry";
 
+export function buildLastSuccessBySource(runHistory: SyncRunEvent[]) {
+  const bySource = new Map<number, number>();
+  for (const row of runHistory) {
+    if (row.outcome !== "ok" || typeof row.sourceId !== "number" || row.sourceId <= 0) continue;
+    if (!bySource.has(row.sourceId)) bySource.set(row.sourceId, row.createdAt);
+  }
+  return [...bySource.entries()].map(([sourceId, lastSuccessAt]) => ({ sourceId, lastSuccessAt }));
+}
+
 export function buildSyncRunStats(runHistory: SyncRunEvent[], windowMinutes = 10) {
   const now = Date.now();
   const threshold = now - Math.max(1, windowMinutes) * 60 * 1000;
