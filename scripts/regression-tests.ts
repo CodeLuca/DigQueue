@@ -7,6 +7,7 @@ import {
   encodeDiscogsOAuthPending,
   encodeYoutubeOAuthPending,
 } from "../lib/oauth-temp-cookie";
+import { validateDiscogsOAuthCallbackInput, validateYoutubeOAuthCallbackInput } from "../lib/oauth-callback-validation";
 import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "../lib/playback-mobile";
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { classifySourceFailure } from "../lib/source-failures";
@@ -169,6 +170,49 @@ function run() {
   assert.equal(queueFallback.currentId, undefined);
   assert.equal(queueFallback.mode, "hybrid");
   assert.equal(queueFallback.order, "in_order");
+
+  // OAuth callback validation branch coverage.
+  assert.deepEqual(
+    validateDiscogsOAuthCallbackInput({
+      returnedState: "a",
+      oauthToken: "t",
+      verifier: "v",
+      expectedState: "a",
+      requestToken: "t",
+      requestTokenSecret: "s",
+    }),
+    { ok: true },
+  );
+  assert.deepEqual(
+    validateDiscogsOAuthCallbackInput({
+      returnedState: "",
+      oauthToken: "t",
+      verifier: "v",
+      expectedState: "a",
+      requestToken: "t",
+      requestTokenSecret: "s",
+    }),
+    { ok: false, reason: "invalid_callback" },
+  );
+  assert.deepEqual(
+    validateDiscogsOAuthCallbackInput({
+      returnedState: "a",
+      oauthToken: "x",
+      verifier: "v",
+      expectedState: "a",
+      requestToken: "t",
+      requestTokenSecret: "s",
+    }),
+    { ok: false, reason: "state_mismatch" },
+  );
+  assert.deepEqual(
+    validateYoutubeOAuthCallbackInput({ returnedState: "a", code: "c", expectedState: "a" }),
+    { ok: true },
+  );
+  assert.deepEqual(
+    validateYoutubeOAuthCallbackInput({ returnedState: "a", code: "", expectedState: "a" }),
+    { ok: false, reason: "invalid_callback" },
+  );
 
   console.log("regression-tests: ok");
 }

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { normalizeNextPath } from "@/lib/next-path";
+import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { decodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { completeYoutubeOAuthCallback } from "@/lib/youtube-oauth";
 
@@ -27,7 +28,12 @@ export async function GET(request: Request) {
   const cookieNext = parsedPending?.nextPath || "";
   const nextPath = normalizeNextPath(cookieNext || explicitNext, { fallback: "/settings" });
 
-  if (!returnedState || !code || !expectedState || returnedState !== expectedState) {
+  const validation = validateYoutubeOAuthCallbackInput({
+    returnedState,
+    code,
+    expectedState,
+  });
+  if (!validation.ok) {
     return NextResponse.redirect(new URL(`/settings?youtube_error=${encodeURIComponent("Invalid YouTube OAuth callback.")}`, appOrigin));
   }
 

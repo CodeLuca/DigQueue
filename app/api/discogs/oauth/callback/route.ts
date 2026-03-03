@@ -7,6 +7,7 @@ import { getApiKeys, setApiKeys } from "@/lib/api-keys";
 import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
 import { normalizeNextPath } from "@/lib/next-path";
+import { validateDiscogsOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { decodeDiscogsOAuthPending } from "@/lib/oauth-temp-cookie";
 
 function sanitizeDiscogsErrorMessage(message: string) {
@@ -44,10 +45,18 @@ export async function GET(request: Request) {
   const expectedState = parsedPending?.state || "";
   const requestToken = parsedPending?.requestToken || "";
   const requestTokenSecret = parsedPending?.requestTokenSecret || "";
-  if (!returnedState || !oauthToken || !verifier || !expectedState || !requestToken || !requestTokenSecret) {
+  const validation = validateDiscogsOAuthCallbackInput({
+    returnedState,
+    oauthToken,
+    verifier,
+    expectedState,
+    requestToken,
+    requestTokenSecret,
+  });
+  if (!validation.ok && validation.reason === "invalid_callback") {
     return NextResponse.redirect(new URL("/settings?discogs_error=Invalid%20Discogs%20OAuth%20callback.", appOrigin));
   }
-  if (returnedState !== expectedState || oauthToken !== requestToken) {
+  if (!validation.ok && validation.reason === "state_mismatch") {
     return NextResponse.redirect(new URL("/settings?discogs_error=Discogs%20OAuth%20state%20mismatch.", appOrigin));
   }
 
