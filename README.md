@@ -72,7 +72,7 @@ yarn dev
 ## Git Workflow
 
 After every major change or feature is finished:
-1. Run checks (`yarn lint` and, when relevant, `yarn build`).
+1. Run checks (`yarn check` and, when relevant, `yarn build`).
 2. Commit the completed work with a clear message.
 3. Push immediately to the remote branch.
 

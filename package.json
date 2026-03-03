@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:regression": "node --import tsx ./scripts/regression-tests.ts",
+    "check": "yarn test:regression && yarn exec tsc --noEmit && yarn lint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "supabase db push --dns-resolver https",
     "db:studio": "drizzle-kit studio",
