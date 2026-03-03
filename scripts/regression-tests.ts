@@ -352,6 +352,19 @@ async function run() {
   assert.equal(latestBucket?.runs, 2);
   assert.equal(latestBucket?.successfulRuns, 1);
   assert.equal(latestBucket?.failedRuns, 1);
+  Date.now = () => 1_000_000;
+  const longStats = buildSyncRunStats(
+    [
+      { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 1000, createdAt: 999_900 },
+      { sourceId: 2, sourceName: "B", outcome: "ok", lockAcquired: true, durationMs: 500, createdAt: 970_000 },
+      { sourceId: 3, sourceName: "C", outcome: "error", lockAcquired: true, durationMs: 400, createdAt: 960_000 },
+    ],
+    60,
+  );
+  assert.equal(longStats.windowMinutes, 60);
+  assert.equal(longStats.runs, 3);
+  assert.equal(longStats.timeline.length, 60);
+  Date.now = originalNow;
   const sourceSuccess = buildLastSuccessBySource([
     { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 300, createdAt: 999_950 },
     { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 200, createdAt: 999_940 },

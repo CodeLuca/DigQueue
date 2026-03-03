@@ -50,6 +50,17 @@ type SourceNextResponse = {
     lastSuccessAt: number | null;
     timeline: Array<{ minuteOffset: number; runs: number; successfulRuns: number; failedRuns: number }>;
   };
+  throughputLong?: {
+    windowMinutes: number;
+    runs: number;
+    successfulRuns: number;
+    failedRuns: number;
+    averageDurationMs: number;
+    durationP50Ms: number;
+    durationP90Ms: number;
+    lastSuccessAt: number | null;
+    timeline: Array<{ minuteOffset: number; runs: number; successfulRuns: number; failedRuns: number }>;
+  };
   blocker?: string | null;
 };
 
@@ -200,6 +211,17 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               </div>
             </div>
           ) : null}
+        </div>
+      ) : null}
+      {data.throughputLong ? (
+        <div className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
+          <p className="text-[11px] font-medium text-[var(--color-text)]">
+            Last {data.throughputLong.windowMinutes}m: {data.throughputLong.runs} runs
+            {" "}({data.throughputLong.successfulRuns} ok, {data.throughputLong.failedRuns} failed)
+          </p>
+          <p className="text-[10px] text-[var(--color-muted)]">
+            Duration p50/p90: {formatDuration(data.throughputLong.durationP50Ms)} / {formatDuration(data.throughputLong.durationP90Ms)}
+          </p>
         </div>
       ) : null}
       {data.runHistory && data.runHistory.length > 0 ? (

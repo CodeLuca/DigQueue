@@ -175,6 +175,7 @@ export async function GET() {
       lastSuccessAt: item.lastSuccessAt,
     }));
     const throughput = buildSyncRunStats(runHistory, 10);
+    const throughputLong = buildSyncRunStats(runHistory, 60);
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
       .map((source) => ({
@@ -192,6 +193,7 @@ export async function GET() {
       runHistory: runHistory.slice(0, 8),
       lastSuccessBySource,
       throughput,
+      throughputLong,
       processingAttempt,
       blocker:
         nextSourceId !== null
@@ -222,6 +224,17 @@ export async function GET() {
       lastSuccessBySource: [],
       throughput: {
         windowMinutes: 10,
+        runs: 0,
+        successfulRuns: 0,
+        failedRuns: 0,
+        averageDurationMs: 0,
+        durationP50Ms: 0,
+        durationP90Ms: 0,
+        lastSuccessAt: null,
+        timeline: [],
+      },
+      throughputLong: {
+        windowMinutes: 60,
         runs: 0,
         successfulRuns: 0,
         failedRuns: 0,
