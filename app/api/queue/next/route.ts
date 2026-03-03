@@ -14,6 +14,7 @@ import {
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
 } from "@/lib/queue-next-mutation";
+import { selectNextQueueItem } from "@/lib/queue-next-selection";
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
 import { parseQueueNextGetParams } from "@/lib/queue-next-request";
@@ -29,9 +30,14 @@ const postSchema = z.object({
 export async function GET(request: Request) {
   const userId = await requireCurrentAppUserId();
   const { currentId, mode, order } = parseQueueNextGetParams(new URL(request.url));
-  const item = order === "shuffle"
-    ? await nextQueueItemShuffled(userId, currentId, mode)
-    : await nextQueueItem(userId, currentId, mode);
+  const item = await selectNextQueueItem({
+    userId,
+    currentId,
+    mode,
+    order,
+    fetchInOrder: nextQueueItem,
+    fetchShuffled: nextQueueItemShuffled,
+  });
   return NextResponse.json(item || null);
 }
 
@@ -79,8 +85,13 @@ export async function POST(request: Request) {
     await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)));
   }
 
-  const next = mutation.order === "shuffle"
-    ? await nextQueueItemShuffled(userId, undefined, mutation.mode)
-    : await nextQueueItem(userId, undefined, mutation.mode);
+  const next = await selectNextQueueItem({
+    userId,
+    currentId: undefined,
+    mode: mutation.mode,
+    order: mutation.order,
+    fetchInOrder: nextQueueItem,
+    fetchShuffled: nextQueueItemShuffled,
+  });
   return NextResponse.json(next || null);
 }

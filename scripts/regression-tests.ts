@@ -29,6 +29,7 @@ import {
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
 } from "../lib/queue-next-mutation";
+import { isShuffleQueueOrder, selectNextQueueItem } from "../lib/queue-next-selection";
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
@@ -353,6 +354,40 @@ async function run() {
   const listenedMutation = parseQueueNextMutationInput({ currentId: 9, action: "listened", mode: "track", order: "shuffle" });
   assert.equal(shouldApplyPlayedOnlyMutation(listenedMutation), false);
   assert.equal(shouldApplyListenedMutation(listenedMutation), true);
+  assert.equal(isShuffleQueueOrder("shuffle"), true);
+  assert.equal(isShuffleQueueOrder("in_order"), false);
+  const selected: string[] = [];
+  const pickedInOrder = await selectNextQueueItem({
+    userId: "user-1",
+    currentId: 7,
+    mode: "release",
+    order: "in_order",
+    fetchInOrder: async () => {
+      selected.push("in_order");
+      return "A";
+    },
+    fetchShuffled: async () => {
+      selected.push("shuffle");
+      return "B";
+    },
+  });
+  assert.equal(pickedInOrder, "A");
+  const pickedShuffle = await selectNextQueueItem({
+    userId: "user-1",
+    currentId: 7,
+    mode: "release",
+    order: "shuffle",
+    fetchInOrder: async () => {
+      selected.push("in_order");
+      return "A";
+    },
+    fetchShuffled: async () => {
+      selected.push("shuffle");
+      return "B";
+    },
+  });
+  assert.equal(pickedShuffle, "B");
+  assert.deepEqual(selected, ["in_order", "shuffle"]);
   assert.deepEqual(
     buildQueueFeedbackPayload("played", { trackId: 11, releaseId: 22, labelId: 33 }, "user-1"),
     {
