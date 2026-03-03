@@ -22,6 +22,7 @@ import {
   refreshLabelMetadataAction,
   startSyncAction,
   retryErroredLabelsAction,
+  retrySpecificSourcesAction,
   retryLabelAction,
 } from "@/app/actions";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
@@ -963,11 +964,26 @@ export default async function HomePage({
                           <div className="space-y-2 border-t border-[color-mix(in_oklab,var(--color-border)_55%,transparent)] px-2 py-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="text-[11px] text-[var(--color-muted)]">{meta.hint}</p>
-                              {meta.href ? (
-                                <Link href={meta.href} className="text-[11px] text-[var(--color-accent)] hover:underline">
-                                  {meta.hrefLabel}
-                                </Link>
-                              ) : null}
+                              <div className="flex items-center gap-2">
+                                <form action={retrySpecificSourcesAction}>
+                                  <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
+                                  <FormSubmitButton
+                                    type="submit"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    pendingText="Retrying..."
+                                    title="Queue all sources in this failure category for retry."
+                                  >
+                                    Retry group
+                                  </FormSubmitButton>
+                                </form>
+                                {meta.href ? (
+                                  <Link href={meta.href} className="text-[11px] text-[var(--color-accent)] hover:underline">
+                                    {meta.hrefLabel}
+                                  </Link>
+                                ) : null}
+                              </div>
                             </div>
                             <div className="divide-y divide-[color-mix(in_oklab,var(--color-border)_65%,transparent)] rounded-md border border-[color-mix(in_oklab,var(--color-border)_60%,transparent)]">
                               {group.items.slice(0, 4).map(({ label, error }) => (

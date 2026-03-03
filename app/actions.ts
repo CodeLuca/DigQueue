@@ -521,6 +521,35 @@ export async function retryErroredSourcesBatchAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function retrySpecificSourcesAction(formData: FormData) {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const rawIds = String(formData.get("sourceIds") || "");
+  const ids = [...new Set(
+    rawIds
+      .split(",")
+      .map((item) => Number(item.trim()))
+      .filter((item) => Number.isFinite(item) && item > 0),
+  )].slice(0, 30);
+  if (ids.length === 0) return;
+
+  const now = new Date();
+  const targets = await db.query.labels.findMany({
+    where: and(inArray(labels.id, ids), eq(labels.active, true), scope.labels),
+    columns: { id: true, status: true },
+  });
+
+  for (const source of targets) {
+    if (source.status !== "error") continue;
+    await db
+      .update(labels)
+      .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: now })
+      .where(and(eq(labels.id, source.id), scope.labels));
+  }
+
+  revalidatePath("/");
+}
+
 export async function pauseAllActiveSourcesAction() {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
