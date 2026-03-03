@@ -45,7 +45,10 @@ type SourceNextResponse = {
     successfulRuns: number;
     failedRuns: number;
     averageDurationMs: number;
+    durationP50Ms: number;
+    durationP90Ms: number;
     lastSuccessAt: number | null;
+    timeline: Array<{ minuteOffset: number; runs: number; successfulRuns: number; failedRuns: number }>;
   };
   blocker?: string | null;
 };
@@ -163,8 +166,16 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
             Avg run duration: {formatDuration(data.throughput.averageDurationMs)}
           </p>
           <p className="text-[10px] text-[var(--color-muted)]">
+            Duration p50/p90: {formatDuration(data.throughput.durationP50Ms)} / {formatDuration(data.throughput.durationP90Ms)}
+          </p>
+          <p className="text-[10px] text-[var(--color-muted)]">
             Last successful sync: {data.throughput.lastSuccessAt ? ageLabel(data.throughput.lastSuccessAt) : "none yet"}
           </p>
+          {data.throughput.timeline.length > 0 ? (
+            <p className="line-clamp-2 text-[10px] text-[var(--color-muted)]">
+              Timeline: {data.throughput.timeline.map((bucket) => bucket.runs).join(" · ")}
+            </p>
+          ) : null}
         </div>
       ) : null}
       {data.runHistory && data.runHistory.length > 0 ? (

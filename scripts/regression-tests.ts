@@ -310,7 +310,14 @@ async function run() {
   assert.equal(stats.successfulRuns, 1);
   assert.equal(stats.failedRuns, 1);
   assert.equal(stats.averageDurationMs, 1000);
+  assert.equal(stats.durationP50Ms, 800);
+  assert.equal(stats.durationP90Ms, 1200);
   assert.equal(stats.lastSuccessAt, 999_900);
+  assert.equal(stats.timeline.length, 10);
+  const latestBucket = stats.timeline[stats.timeline.length - 1];
+  assert.equal(latestBucket?.runs, 2);
+  assert.equal(latestBucket?.successfulRuns, 1);
+  assert.equal(latestBucket?.failedRuns, 1);
   const sourceSuccess = buildLastSuccessBySource([
     { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 300, createdAt: 999_950 },
     { sourceId: 1, sourceName: "A", outcome: "ok", lockAcquired: true, durationMs: 200, createdAt: 999_940 },

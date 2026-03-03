@@ -22,6 +22,6 @@
 
 ## Next Iterations
 1. Failure center phase 2: expand remediation actions per category beyond current retry/reconnect/lock-cleanup controls.
-2. Processing observability phase 2: persistent timeline and run duration percentiles (per-source last-success is now surfaced).
+2. Processing observability phase 2: richer timeline UI and longer-window trend views (run duration percentiles + 10-minute timeline are now surfaced).
 3. Regression coverage phase 2: route-level tests for OAuth start/callback handlers and queue playback state transitions.
 4. Copy and mobile UX polish pass across all tabs (reduce control density, simplify labels/actions on narrow screens).

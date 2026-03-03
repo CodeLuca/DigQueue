@@ -226,7 +226,10 @@ export async function GET() {
         successfulRuns: 0,
         failedRuns: 0,
         averageDurationMs: 0,
+        durationP50Ms: 0,
+        durationP90Ms: 0,
         lastSuccessAt: null,
+        timeline: [],
       },
       processingAttempt: {
         attempted: false,
