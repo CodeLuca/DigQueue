@@ -214,15 +214,17 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         </div>
       ) : null}
       {data.throughputLong ? (
-        <div className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
-          <p className="text-[11px] font-medium text-[var(--color-text)]">
-            Last {data.throughputLong.windowMinutes}m: {data.throughputLong.runs} runs
-            {" "}({data.throughputLong.successfulRuns} ok, {data.throughputLong.failedRuns} failed)
+        <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
+          <summary className="cursor-pointer text-[11px] font-medium text-[var(--color-text)]">
+            {data.throughputLong.windowMinutes}m trend: {data.throughputLong.runs} runs
+          </summary>
+          <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+            Success/failed: {data.throughputLong.successfulRuns}/{data.throughputLong.failedRuns}
           </p>
           <p className="text-[10px] text-[var(--color-muted)]">
             Duration p50/p90: {formatDuration(data.throughputLong.durationP50Ms)} / {formatDuration(data.throughputLong.durationP90Ms)}
           </p>
-        </div>
+        </details>
       ) : null}
       {data.runHistory && data.runHistory.length > 0 ? (
         <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
