@@ -4,18 +4,12 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
-
-function safeNext(value: string | null) {
-  if (!value) return "/settings";
-  if (!value.startsWith("/")) return "/settings";
-  if (value.startsWith("//")) return "/settings";
-  return value;
-}
+import { normalizeNextPath } from "@/lib/next-path";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
-  const nextPath = safeNext(requestUrl.searchParams.get("next"));
+  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
   const userId = await getCurrentAppUserId();
   if (!userId) {
     return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/connect-discogs")}`, appOrigin));

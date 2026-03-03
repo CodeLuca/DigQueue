@@ -1,24 +1,18 @@
 import { NextResponse } from "next/server";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
+import { normalizeNextPath } from "@/lib/next-path";
 import { resolvePostAuthRedirect } from "@/lib/post-auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-
-function safeNext(value: string | null) {
-  if (!value) return "/?tab=step-2";
-  if (!value.startsWith("/")) return "/?tab=step-2";
-  if (value.startsWith("//")) return "/?tab=step-2";
-  if (value.startsWith("/auth/")) return "/?tab=step-2";
-  if (value.startsWith("/login")) return "/?tab=step-2";
-  if (value.startsWith("/register")) return "/?tab=step-2";
-  return value;
-}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
   const code = requestUrl.searchParams.get("code");
-  const nextPath = safeNext(requestUrl.searchParams.get("next"));
+  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), {
+    fallback: "/?tab=step-2",
+    blockAuthEntrypoints: true,
+  });
 
   if (!code) {
     return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent("Missing OAuth callback code.")}`, appOrigin));

@@ -3,14 +3,8 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
+import { normalizeNextPath } from "@/lib/next-path";
 import { completeYoutubeOAuthCallback } from "@/lib/youtube-oauth";
-
-function safeNext(value: string | null) {
-  if (!value) return "/settings";
-  if (!value.startsWith("/")) return "/settings";
-  if (value.startsWith("//")) return "/settings";
-  return value;
-}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -22,13 +16,13 @@ export async function GET(request: Request) {
 
   const returnedState = requestUrl.searchParams.get("state") || "";
   const code = requestUrl.searchParams.get("code") || "";
-  const explicitNext = safeNext(requestUrl.searchParams.get("next"));
+  const explicitNext = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
 
   const cookieStore = await cookies();
   const pending = cookieStore.get("youtube_oauth_tmp")?.value || "";
   cookieStore.delete("youtube_oauth_tmp");
   const [expectedState, cookieNext] = pending.split(":");
-  const nextPath = safeNext(cookieNext || explicitNext);
+  const nextPath = normalizeNextPath(cookieNext || explicitNext, { fallback: "/settings" });
 
   if (!returnedState || !code || !expectedState || returnedState !== expectedState) {
     return NextResponse.redirect(new URL(`/settings?youtube_error=${encodeURIComponent("Invalid YouTube OAuth callback.")}`, appOrigin));

@@ -4,19 +4,10 @@ import { redirect } from "next/navigation";
 import { resolveHeaderAppOrigin } from "@/lib/app-origin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { ensureDefaultSourcesForUser } from "@/lib/default-sources";
+import { normalizeNextPath } from "@/lib/next-path";
 import { resolvePostAuthRedirect } from "@/lib/post-auth";
 
 const MIN_PASSWORD_LENGTH = 6;
-
-function safeNext(value: unknown) {
-  const raw = typeof value === "string" ? value : "";
-  if (!raw.startsWith("/")) return "/?tab=step-2";
-  if (raw.startsWith("//")) return "/?tab=step-2";
-  if (raw.startsWith("/auth/")) return "/?tab=step-2";
-  if (raw.startsWith("/login")) return "/?tab=step-2";
-  if (raw.startsWith("/register")) return "/?tab=step-2";
-  return raw;
-}
 
 function withAuthQuery(path: string, params: Record<string, string | null | undefined>) {
   const search = new URLSearchParams();
@@ -39,7 +30,10 @@ function friendlyAuthError(message: string, fallback: string) {
 }
 
 export async function loginWithPasswordAction(formData: FormData) {
-  const nextPath = safeNext(formData.get("next"));
+  const nextPath = normalizeNextPath(formData.get("next"), {
+    fallback: "/?tab=step-2",
+    blockAuthEntrypoints: true,
+  });
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
 
@@ -62,7 +56,10 @@ export async function loginWithPasswordAction(formData: FormData) {
 }
 
 export async function registerWithPasswordAction(formData: FormData) {
-  const nextPath = safeNext(formData.get("next"));
+  const nextPath = normalizeNextPath(formData.get("next"), {
+    fallback: "/?tab=step-2",
+    blockAuthEntrypoints: true,
+  });
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
   const confirmPassword = String(formData.get("confirmPassword") || "");
@@ -130,7 +127,10 @@ export async function registerWithPasswordAction(formData: FormData) {
 }
 
 export async function loginWithGoogleAction(formData: FormData) {
-  const nextPath = safeNext(formData.get("next"));
+  const nextPath = normalizeNextPath(formData.get("next"), {
+    fallback: "/?tab=step-2",
+    blockAuthEntrypoints: true,
+  });
 
   const supabase = await getSupabaseServerClient();
   const redirectTo = new URL("/auth/callback", await resolveHeaderAppOrigin());

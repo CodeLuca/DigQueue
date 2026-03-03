@@ -3,20 +3,14 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
+import { normalizeNextPath } from "@/lib/next-path";
 import { buildYoutubeOAuthAuthorizeUrl } from "@/lib/youtube-oauth";
-
-function safeNext(value: string | null) {
-  if (!value) return "/settings";
-  if (!value.startsWith("/")) return "/settings";
-  if (value.startsWith("//")) return "/settings";
-  return value;
-}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
   const userId = await getCurrentAppUserId();
-  const nextPath = safeNext(requestUrl.searchParams.get("next"));
+  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
   if (!userId) {
     return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/settings")}`, appOrigin));
   }

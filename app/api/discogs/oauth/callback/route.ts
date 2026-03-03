@@ -6,13 +6,7 @@ import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { getApiKeys, setApiKeys } from "@/lib/api-keys";
 import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
-
-function safeNext(value: string | null) {
-  if (!value) return "/settings";
-  if (!value.startsWith("/")) return "/settings";
-  if (value.startsWith("//")) return "/settings";
-  return value;
-}
+import { normalizeNextPath } from "@/lib/next-path";
 
 function sanitizeDiscogsErrorMessage(message: string) {
   const lower = message.toLowerCase();
@@ -31,7 +25,7 @@ function sanitizeDiscogsErrorMessage(message: string) {
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
-  const nextPath = safeNext(requestUrl.searchParams.get("next"));
+  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/settings" });
   const returnedState = requestUrl.searchParams.get("state") || "";
   const oauthToken = requestUrl.searchParams.get("oauth_token") || "";
   const verifier = requestUrl.searchParams.get("oauth_verifier") || "";

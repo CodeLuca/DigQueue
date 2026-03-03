@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
+import { normalizeNextPath } from "@/lib/next-path";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-
-function safeNext(value: string | null) {
-  if (!value) return "/";
-  if (!value.startsWith("/")) return "/";
-  if (value.startsWith("//")) return "/";
-  return value;
-}
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -15,7 +9,7 @@ export async function GET(request: Request) {
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");
   const code = requestUrl.searchParams.get("code");
-  const nextPath = safeNext(requestUrl.searchParams.get("next"));
+  const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), { fallback: "/" });
 
   const supabase = await getSupabaseServerClient();
 
