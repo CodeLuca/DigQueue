@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
 import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
 import { buildLastSuccessBySource, buildSyncRunStats } from "@/lib/sync-run-stats";
+import { createZeroSyncThroughput } from "@/lib/sync-throughput";
 import { isTransientLabelError } from "@/lib/utils";
 import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
@@ -222,28 +223,8 @@ export async function GET() {
       syncTelemetry: null,
       runHistory: [],
       lastSuccessBySource: [],
-      throughput: {
-        windowMinutes: 10,
-        runs: 0,
-        successfulRuns: 0,
-        failedRuns: 0,
-        averageDurationMs: 0,
-        durationP50Ms: 0,
-        durationP90Ms: 0,
-        lastSuccessAt: null,
-        timeline: [],
-      },
-      throughputLong: {
-        windowMinutes: 60,
-        runs: 0,
-        successfulRuns: 0,
-        failedRuns: 0,
-        averageDurationMs: 0,
-        durationP50Ms: 0,
-        durationP90Ms: 0,
-        lastSuccessAt: null,
-        timeline: [],
-      },
+      throughput: createZeroSyncThroughput(10),
+      throughputLong: createZeroSyncThroughput(60),
       processingAttempt: {
         attempted: false,
         sourceId: null,

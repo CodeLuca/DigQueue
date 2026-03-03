@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import type { SyncThroughput } from "@/lib/sync-throughput";
 
 type SyncTelemetry = {
   sourceId: number;
@@ -39,28 +40,8 @@ type SourceNextResponse = {
     durationMs: number;
     createdAt: number;
   }>;
-  throughput?: {
-    windowMinutes: number;
-    runs: number;
-    successfulRuns: number;
-    failedRuns: number;
-    averageDurationMs: number;
-    durationP50Ms: number;
-    durationP90Ms: number;
-    lastSuccessAt: number | null;
-    timeline: Array<{ minuteOffset: number; runs: number; successfulRuns: number; failedRuns: number }>;
-  };
-  throughputLong?: {
-    windowMinutes: number;
-    runs: number;
-    successfulRuns: number;
-    failedRuns: number;
-    averageDurationMs: number;
-    durationP50Ms: number;
-    durationP90Ms: number;
-    lastSuccessAt: number | null;
-    timeline: Array<{ minuteOffset: number; runs: number; successfulRuns: number; failedRuns: number }>;
-  };
+  throughput?: SyncThroughput;
+  throughputLong?: SyncThroughput;
   blocker?: string | null;
 };
 

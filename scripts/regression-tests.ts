@@ -35,6 +35,7 @@ import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { parsePositiveSourceIds } from "../lib/source-id-list";
 import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
+import { createZeroSyncThroughput } from "../lib/sync-throughput";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
 
 async function run() {
@@ -363,6 +364,10 @@ async function run() {
     },
   );
   assert.equal(buildQueueFeedbackPayload(null, { trackId: 1 }, "user-1"), null);
+  const zeroThroughput = createZeroSyncThroughput(10);
+  assert.equal(zeroThroughput.windowMinutes, 10);
+  assert.equal(zeroThroughput.runs, 0);
+  assert.equal(zeroThroughput.timeline.length, 0);
 
   // Sync run throughput aggregation coverage.
   const originalNow = Date.now;
