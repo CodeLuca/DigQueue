@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { enqueueTrackForClient } from "@/lib/client-queue";
 import { PLAY_ITEM_EVENT } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { QUEUE_ERROR_NO_MATCH, QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED } from "@/lib/queue-errors";
@@ -40,21 +41,6 @@ type QueueApiItem = {
   release?: { title: string } | null;
   label?: { name: string } | null;
 };
-
-async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "normal") {
-  const response = await fetch("/api/queue/enqueue", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ trackId, queueMode }),
-  });
-  const body = (await response.json().catch(() => null)) as
-    | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
-    | null;
-  if (body?.reason === "no_match") throw new Error(QUEUE_ERROR_NO_MATCH);
-  if (body?.reason === "youtube_quota_exceeded") throw new Error(QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED);
-  if (!response.ok || !body?.ok || !body.item) throw new Error(body?.error || "Unable to queue track.");
-  return body.item;
-}
 
 async function markReviewed(trackId: number) {
   const response = await fetch("/api/tracks/todo", {
@@ -143,7 +129,7 @@ export function RecommendationsPanel({
     setLoadingTrackId(trackId);
     setFeedback(null);
     try {
-      const queued = await enqueueTrack(trackId, "next");
+      const queued = await enqueueTrackForClient<QueueApiItem>({ trackId, queueMode: "next" });
       if (playNow) {
         // Always route through bottom mini-player and replace current playback.
         window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: queued }));
