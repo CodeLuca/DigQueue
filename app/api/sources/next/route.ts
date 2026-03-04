@@ -7,6 +7,7 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
 import { resolveSourceNextBlocker } from "@/lib/source-next-blocker";
+import { toSourceKind } from "@/lib/source-kind";
 import { createEmptySourceNextResponse, type SourceNextResponse } from "@/lib/source-next-response";
 import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
 import { buildLastSuccessBySource, buildSyncRunStats } from "@/lib/sync-run-stats";
@@ -183,7 +184,7 @@ export async function GET() {
       .map((source) => ({
         id: source.id,
         name: source.name,
-        kind: (source.entityKind === "artist" ? "artist" : "label") as "artist" | "label",
+        kind: toSourceKind(source.entityKind),
       }));
 
     const response: SourceNextResponse = {

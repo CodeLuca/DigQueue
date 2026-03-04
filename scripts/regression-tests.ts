@@ -42,6 +42,7 @@ import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { parsePositiveSourceIds } from "../lib/source-id-list";
 import { resolveSourceNextBlocker } from "../lib/source-next-blocker";
+import { toSourceKind } from "../lib/source-kind";
 import { createEmptySourceNextResponse } from "../lib/source-next-response";
 import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
 import { getTimelineBarStyle, getTimelineMaxRuns } from "../lib/sync-timeline";
@@ -268,6 +269,9 @@ async function run() {
   );
   assert.equal(resolveSourceNextBlocker({ nextSourceId: null, errorCount: 0, activeCount: 0 }), "No active sources.");
   assert.equal(resolveSourceNextBlocker({ nextSourceId: null, errorCount: 0, activeCount: 2 }), "No queued/processing sources.");
+  assert.equal(toSourceKind("artist"), "artist");
+  assert.equal(toSourceKind("label"), "label");
+  assert.equal(toSourceKind("anything"), "label");
   const groupedFailures = groupSourceFailuresByCategory(
     [
       { id: 1, lastError: "OAuth token expired" },
