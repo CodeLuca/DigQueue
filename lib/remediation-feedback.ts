@@ -2,6 +2,7 @@ export type RemediationFeedbackPayload = {
   action: string;
   scope: string;
   affected: number;
+  failed?: number;
 };
 
 export function resolveActionNextPath(rawNext: string | null | undefined, fallback = "/") {
@@ -15,5 +16,10 @@ export function appendRemediationResult(nextPath: string, payload: RemediationFe
   url.searchParams.set("remAction", payload.action);
   url.searchParams.set("remScope", payload.scope);
   url.searchParams.set("remAffected", String(Math.max(0, payload.affected)));
+  if (typeof payload.failed === "number" && Number.isFinite(payload.failed) && payload.failed > 0) {
+    url.searchParams.set("remFailed", String(Math.max(0, payload.failed)));
+  } else {
+    url.searchParams.delete("remFailed");
+  }
   return `${url.pathname}${url.search}`;
 }

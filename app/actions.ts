@@ -580,11 +580,15 @@ export async function refreshSpecificSourcesMetadataAction(formData: FormData) {
     columns: { id: true, entityKind: true },
   });
 
+  let refreshedCount = 0;
+  let failedCount = 0;
   for (const source of targets) {
     try {
       await refreshSourceMetadata(source.id, source.entityKind === "artist" ? "artist" : "label", userId);
+      refreshedCount += 1;
     } catch {
       // Best-effort batch refresh; continue with the next source.
+      failedCount += 1;
     }
   }
 
@@ -593,7 +597,8 @@ export async function refreshSpecificSourcesMetadataAction(formData: FormData) {
     redirect(appendRemediationResult(nextPath, {
       action: "refresh metadata",
       scope: "selected data-failure group",
-      affected: targets.length,
+      affected: refreshedCount,
+      failed: failedCount,
     }));
   }
   revalidatePath(nextPath.split("?")[0] || "/");

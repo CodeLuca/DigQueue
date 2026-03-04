@@ -170,6 +170,10 @@ async function run() {
     appendRemediationResult("/?tab=step-2", { action: "retry", scope: "group", affected: 4 }),
     "/?tab=step-2&remAction=retry&remScope=group&remAffected=4",
   );
+  assert.equal(
+    appendRemediationResult("/?tab=step-2", { action: "refresh metadata", scope: "group", affected: 2, failed: 1 }),
+    "/?tab=step-2&remAction=refresh+metadata&remScope=group&remAffected=2&remFailed=1",
+  );
   const validJson = await readJsonBodyOrNull(new Request("https://digqueue.local", {
     method: "POST",
     headers: { "content-type": "application/json" },

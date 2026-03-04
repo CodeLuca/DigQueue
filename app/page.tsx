@@ -90,10 +90,11 @@ export default async function HomePage({
     remAction?: string;
     remScope?: string;
     remAffected?: string;
+    remFailed?: string;
   }>;
 }) {
   const userId = await requireCurrentAppUserId();
-  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView, notice, source, remAction, remScope, remAffected } = await searchParams;
+  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView, notice, source, remAction, remScope, remAffected, remFailed } = await searchParams;
   const tabIds = ["step-1", "step-2", "library", "recommendations"] as const;
   type TabId = (typeof tabIds)[number];
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
@@ -277,6 +278,8 @@ export default async function HomePage({
     return `/?${params.toString()}`;
   })();
   const remediationAffectedCount = Number(remAffected);
+  const remediationFailedCount = Number(remFailed);
+  const remediationHasFailures = Number.isFinite(remediationFailedCount) && remediationFailedCount > 0;
   const showRemediationSummary =
     activeTab === "step-2" &&
     Boolean(remAction) &&
@@ -968,7 +971,9 @@ export default async function HomePage({
                   {showRemediationSummary ? (
                     <p
                       className={`rounded-md border px-2 py-1.5 text-[11px] ${
-                        remediationChanged
+                        remediationHasFailures
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-100"
+                          : remediationChanged
                           ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
                           : "border-amber-500/40 bg-amber-500/10 text-amber-100"
                       }`}
@@ -982,10 +987,25 @@ export default async function HomePage({
                         {remScope}
                       </span>{" "}
                       {remediationChanged ? "affected" : "did not change"}{" "}
-                      <span className={remediationChanged ? "font-medium text-emerald-50" : "font-medium text-amber-50"}>
+                      <span
+                        className={
+                          remediationHasFailures
+                            ? "font-medium text-amber-50"
+                            : remediationChanged
+                              ? "font-medium text-emerald-50"
+                              : "font-medium text-amber-50"
+                        }
+                      >
                         {remediationAffectedCount}
                       </span>{" "}
-                      item{remediationAffectedCount === 1 ? "" : "s"}.
+                      item{remediationAffectedCount === 1 ? "" : "s"}
+                      {remediationHasFailures ? (
+                        <>
+                          {" "}with{" "}
+                          <span className="font-medium text-amber-50">{remediationFailedCount}</span> failure
+                          {remediationFailedCount === 1 ? "" : "s"}.
+                        </>
+                      ) : "."}
                     </p>
                   ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
