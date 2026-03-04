@@ -19,11 +19,51 @@
 - [x] Discogs link reliability hardening (slug/plural/query path normalization + UI/ingest canonicalization)
 - [x] Client playback/queue reliability pass (shared event channels + enqueue/quota helpers)
 
-## In Progress / Partial
-- [~] Job control UX: batch controls exist; grouped Failure Center + run history/throughput are shipped, plus direct Discogs reconnect and stale-lock cleanup actions, but deeper remediation workflows still need improvement
+## Current Focus (P0)
+- [~] Failure Center phase 2
+  - Goal: reduce manual intervention and speed up recovery from blocked sources.
+  - Remaining work:
+    - Add category-specific one-click remediations not yet covered.
+    - Add scoped bulk actions with clearer confirmation/copy for destructive or broad actions.
+    - Improve operator clarity on what action ran, against which sources, and what changed.
+  - Done when:
+    - Top recurring failure categories each have a direct remediation path.
+    - Remediation actions are auditable in UI feedback (success/failure + affected count).
 
-## Next Iterations
-1. Failure center phase 2: expand remediation actions per category beyond current retry/reconnect/lock-cleanup/metadata-refresh/rate-limit-pause/provider-group-cooldown controls (grouping and pause/cooldown transition logic are now centralized in shared helpers).
-2. Processing observability phase 2: longer-window trend views (run duration percentiles + 10-minute timeline with bar visualization + 60-minute summary are now surfaced; throughput/timeline primitives, sync event types, and sources-next response/blocker defaults are centralized; 60-minute grouped bars now shown).
-3. Regression coverage phase 2: route-level tests for OAuth start/callback handlers and queue playback state transitions (OAuth provider/start/redirect/callback query/messages/url/next-resolution + temp-cookie options/keys mapping + state helper + callback-error/success mapping + queue mutation/selection/POST-parse/DB helpers are now extracted and covered).
-4. Copy and mobile UX polish pass across all tabs (Failure Center + sync status density reduced, including duplicate hint suppression, hidden verbose timestamps, and collapsed per-source success on small screens; continue simplifying labels/actions on narrow screens).
+## Near-Term (P1)
+- [ ] Observability phase 2 completion
+  - Extend trend views beyond current 10m/60m bars into operator-useful diagnostics:
+    - breakdown by failure category/source kind/provider
+    - clearer latency/throughput trend context per window
+    - simple anomaly highlighting (spike/drop badges)
+  - Done when:
+    - A user can identify "what changed" in the last hour without opening logs.
+
+- [ ] Regression coverage phase 2 completion
+  - Focus on route-level and behavior-level coverage for:
+    - sources-next/failure remediation decision paths
+    - queue playback transition edge cases
+    - OAuth callback happy/error path parity across providers
+  - Done when:
+    - Critical ingest/playback/auth regressions are caught by the regression suite before deploy.
+
+- [ ] Copy and mobile polish pass
+  - Continue simplifying dense controls and labels on narrow screens.
+  - Ensure action feedback text is short, explicit, and non-ambiguous.
+  - Done when:
+    - Primary flows (add source, recover source, play/review/save) are comfortably usable on mobile.
+
+## Later (P2)
+- [ ] Reliability guardrails
+  - Add lightweight deploy-time smoke checks for auth, queue enqueue, and source-next endpoints.
+  - Add alert thresholds for repeated failure categories and stalled processing.
+
+- [ ] Product quality upgrades
+  - Introduce clearer onboarding health states (connected, partially configured, blocked).
+  - Add user-facing "what to do next" hints tied to current system state.
+
+## Next Execution Order
+1. Finish Failure Center phase 2 (highest leverage for operational stability).
+2. Close Observability phase 2 with category/source breakdown views.
+3. Land remaining regression coverage for remediation + playback transitions.
+4. Run copy/mobile pass to tighten usability after behavior stabilizes.
