@@ -5,11 +5,12 @@ import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
 import { resolveOAuthCallbackNextPath } from "@/lib/oauth-callback-next";
+import { buildOAuthCallbackSuccessPath } from "@/lib/oauth-callback-success";
 import { parseYoutubeOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { YOUTUBE_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { getOAuthCallbackErrorMessage } from "@/lib/oauth-messages";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
-import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
+import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { decodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { completeYoutubeOAuthCallback } from "@/lib/youtube-oauth";
 
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
     revalidatePath("/");
     revalidatePath("/settings");
 
-    return NextResponse.redirect(new URL(buildOAuthConnectedRedirectPath(nextPath, "youtube"), appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthCallbackSuccessPath(nextPath, "youtube"), appOrigin));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to finish YouTube OAuth.";
     return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", message), appOrigin));

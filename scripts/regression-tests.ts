@@ -4,6 +4,7 @@ import { buildDiscogsOAuthCallbackUrl } from "../lib/discogs-oauth-callback-url"
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { buildOAuthCallbackLoginPath } from "../lib/oauth-callback-routing";
 import { resolveOAuthCallbackNextPath } from "../lib/oauth-callback-next";
+import { buildOAuthCallbackSuccessPath } from "../lib/oauth-callback-success";
 import { DISCOGS_OAUTH_TMP_COOKIE, YOUTUBE_OAUTH_TMP_COOKIE } from "../lib/oauth-cookie-keys";
 import { getInvalidOAuthCallbackMessage, getOAuthCallbackErrorMessage, getOAuthStateMismatchMessage } from "../lib/oauth-messages";
 import { getOAuthErrorQueryKey, getOAuthProviderLoginNextPath, getOAuthTempCookieKey } from "../lib/oauth-provider";
@@ -123,6 +124,7 @@ async function run() {
   assert.equal(getInvalidOAuthCallbackMessage("discogs"), "Invalid Discogs OAuth callback.");
   assert.equal(getInvalidOAuthCallbackMessage("youtube"), "Invalid YouTube OAuth callback.");
   assert.equal(getOAuthStateMismatchMessage("discogs"), "Discogs OAuth state mismatch.");
+  assert.equal(buildOAuthCallbackSuccessPath("/settings?tab=library", "youtube"), "/settings?tab=library&youtube=connected");
   assert.equal(getOAuthCallbackErrorMessage("discogs", "invalid_callback"), "Invalid Discogs OAuth callback.");
   assert.equal(getOAuthCallbackErrorMessage("discogs", "state_mismatch"), "Discogs OAuth state mismatch.");
   assert.equal(
