@@ -16,6 +16,7 @@
 - [x] Mobile/iOS playback hardening + single-tab playback ownership guard
 - [x] Production rollout on Railway with current feature set
 - [x] Beginner-friendly batch controls on Sources (queue/retry/resume/pause quick actions)
+- [x] Discogs link reliability hardening (slug/plural/query path normalization + UI/ingest canonicalization)
 
 ## In Progress / Partial
 - [~] Job control UX: batch controls exist; grouped Failure Center + run history/throughput are shipped, plus direct Discogs reconnect and stale-lock cleanup actions, but deeper remediation workflows still need improvement
