@@ -78,10 +78,22 @@ function getDisplaySourceName(name: string, discogsUrl: string, kind: "label" | 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ listenLabel?: string; tab?: string; labelState?: string; sourceKind?: string; labelQuery?: string; libraryView?: string; notice?: string; source?: string }>;
+  searchParams: Promise<{
+    listenLabel?: string;
+    tab?: string;
+    labelState?: string;
+    sourceKind?: string;
+    labelQuery?: string;
+    libraryView?: string;
+    notice?: string;
+    source?: string;
+    remAction?: string;
+    remScope?: string;
+    remAffected?: string;
+  }>;
 }) {
   const userId = await requireCurrentAppUserId();
-  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView, notice, source } = await searchParams;
+  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView, notice, source, remAction, remScope, remAffected } = await searchParams;
   const tabIds = ["step-1", "step-2", "library", "recommendations"] as const;
   type TabId = (typeof tabIds)[number];
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
@@ -258,6 +270,19 @@ export default async function HomePage({
     params.set("libraryView", nextView);
     return `/?${params.toString()}`;
   };
+  const failureCenterNextHref = (() => {
+    const params = new URLSearchParams();
+    params.set("tab", "step-2");
+    if (listenLabel) params.set("listenLabel", listenLabel);
+    return `/?${params.toString()}`;
+  })();
+  const remediationAffectedCount = Number(remAffected);
+  const showRemediationSummary =
+    activeTab === "step-2" &&
+    Boolean(remAction) &&
+    Boolean(remScope) &&
+    Number.isFinite(remediationAffectedCount) &&
+    remediationAffectedCount >= 0;
   const libraryRows = wishlistData?.rows ?? [];
   const historyRows = [...(playedReviewedData?.rows ?? [])]
     .filter((row) => (row.playedCount ?? 0) > 0 || Boolean(row.wasPlayed))
@@ -916,12 +941,21 @@ export default async function HomePage({
 
               {data.erroredLabels.length > 0 ? (
                 <div className="space-y-1.5">
+                  {showRemediationSummary ? (
+                    <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 text-[11px] text-emerald-100">
+                      Action <span className="font-medium text-emerald-50">{remAction}</span> on{" "}
+                      <span className="font-medium text-emerald-50">{remScope}</span> affected{" "}
+                      <span className="font-medium text-emerald-50">{remediationAffectedCount}</span> item
+                      {remediationAffectedCount === 1 ? "" : "s"}.
+                    </p>
+                  ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
                     <p className="inline-flex items-center gap-1">
                       <AlertTriangle className="h-3.5 w-3.5" />
                       Failure Center: {data.erroredLabels.length} active {data.erroredLabels.length === 1 ? "source errored" : "sources errored"}.
                     </p>
                     <form action={retryErroredLabelsAction}>
+                      <input type="hidden" name="next" value={failureCenterNextHref} />
                       <FormSubmitButton
                         type="submit"
                         variant="ghost"
@@ -957,6 +991,7 @@ export default async function HomePage({
                               <p className="hidden text-[11px] text-[var(--color-muted)] sm:block">{meta.hint}</p>
                               <div className="flex flex-wrap items-center gap-2">
                                 <form action={retrySpecificSourcesAction}>
+                                  <input type="hidden" name="next" value={failureCenterNextHref} />
                                   <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
                                   <FormSubmitButton
                                     type="submit"
@@ -976,6 +1011,7 @@ export default async function HomePage({
                                 ) : null}
                                 {group.category === "database" ? (
                                   <form action={clearStaleWorkerLocksAction}>
+                                    <input type="hidden" name="next" value={failureCenterNextHref} />
                                     <FormSubmitButton
                                       type="submit"
                                       size="sm"
@@ -990,6 +1026,7 @@ export default async function HomePage({
                                 ) : null}
                                 {group.category === "rate_limit" ? (
                                   <form action={pauseAllActiveSourcesAction}>
+                                    <input type="hidden" name="next" value={failureCenterNextHref} />
                                     <FormSubmitButton
                                       type="submit"
                                       size="sm"
@@ -1004,6 +1041,7 @@ export default async function HomePage({
                                 ) : null}
                                 {group.category === "provider" ? (
                                   <form action={pauseAndClearSpecificSourcesAction}>
+                                    <input type="hidden" name="next" value={failureCenterNextHref} />
                                     <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
                                     <FormSubmitButton
                                       type="submit"
@@ -1019,6 +1057,7 @@ export default async function HomePage({
                                 ) : null}
                                 {group.category === "data" ? (
                                   <form action={refreshSpecificSourcesMetadataAction}>
+                                    <input type="hidden" name="next" value={failureCenterNextHref} />
                                     <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
                                     <FormSubmitButton
                                       type="submit"
@@ -1053,6 +1092,7 @@ export default async function HomePage({
                                       </Button>
                                     </Link>
                                     <form action={retryLabelAction}>
+                                      <input type="hidden" name="next" value={failureCenterNextHref} />
                                       <input type="hidden" name="labelId" value={label.id} />
                                       <FormSubmitButton
                                         type="submit"

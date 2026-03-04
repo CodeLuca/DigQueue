@@ -401,17 +401,28 @@ export async function setLabelStatusAction(formData: FormData) {
   revalidatePath(`/labels/${labelId}`);
 }
 
-export async function retryErroredLabelsAction() {
+export async function retryErroredLabelsAction(formData: FormData) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
   const erroredLabels = await db.query.labels.findMany({ where: and(eq(labels.status, "error"), eq(labels.active, true), scope.labels) });
   const now = new Date();
+  let affected = 0;
   for (const label of erroredLabels) {
     await db
       .update(labels)
       .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: now })
       .where(and(eq(labels.id, label.id), scope.labels));
+    affected += 1;
   }
+  const nextPath = resolveActionNextPath(formData, "/?tab=step-2");
+  if (nextPath.includes("tab=step-2")) {
+    redirect(appendRemediationResult(nextPath, {
+      action: "clear error flags",
+      scope: "all active errored sources",
+      affected,
+    }));
+  }
+  revalidatePath(nextPath.split("?")[0] || "/");
   revalidatePath("/");
 }
 
@@ -419,6 +430,21 @@ function parseBatchLimit(formData: FormData, fallback = 5) {
   const raw = Number(formData.get("limit") ?? fallback);
   if (!Number.isFinite(raw)) return fallback;
   return Math.max(1, Math.min(25, Math.floor(raw)));
+}
+
+function resolveActionNextPath(formData: FormData | null | undefined, fallback = "/") {
+  if (!formData) return fallback;
+  const raw = String(formData.get("next") || "").trim();
+  if (!raw || !raw.startsWith("/")) return fallback;
+  return raw;
+}
+
+function appendRemediationResult(nextPath: string, payload: { action: string; scope: string; affected: number }) {
+  const url = new URL(nextPath, "http://localhost");
+  url.searchParams.set("remAction", payload.action);
+  url.searchParams.set("remScope", payload.scope);
+  url.searchParams.set("remAffected", String(Math.max(0, payload.affected)));
+  return `${url.pathname}${url.search}`;
 }
 
 export async function queueActiveSourcesBatchAction(formData: FormData) {
@@ -534,14 +560,25 @@ export async function retrySpecificSourcesAction(formData: FormData) {
     columns: { id: true, status: true },
   });
 
+  let affected = 0;
   for (const source of targets) {
     if (source.status !== "error") continue;
     await db
       .update(labels)
       .set({ status: "queued", lastError: null, retryCount: 0, updatedAt: now })
       .where(and(eq(labels.id, source.id), scope.labels));
+    affected += 1;
   }
 
+  const nextPath = resolveActionNextPath(formData, "/");
+  if (nextPath.includes("tab=step-2")) {
+    redirect(appendRemediationResult(nextPath, {
+      action: "retry",
+      scope: "selected failure group",
+      affected,
+    }));
+  }
+  revalidatePath(nextPath.split("?")[0] || "/");
   revalidatePath("/");
 }
 
@@ -565,10 +602,19 @@ export async function refreshSpecificSourcesMetadataAction(formData: FormData) {
     }
   }
 
+  const nextPath = resolveActionNextPath(formData, "/");
+  if (nextPath.includes("tab=step-2")) {
+    redirect(appendRemediationResult(nextPath, {
+      action: "refresh metadata",
+      scope: "selected data-failure group",
+      affected: targets.length,
+    }));
+  }
+  revalidatePath(nextPath.split("?")[0] || "/");
   revalidatePath("/");
 }
 
-export async function pauseAllActiveSourcesAction() {
+export async function pauseAllActiveSourcesAction(formData?: FormData) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
   const now = new Date();
@@ -585,6 +631,15 @@ export async function pauseAllActiveSourcesAction() {
       .where(and(eq(labels.id, source.id), scope.labels));
   }
 
+  const nextPath = resolveActionNextPath(formData, "/");
+  if (nextPath.includes("tab=step-2")) {
+    redirect(appendRemediationResult(nextPath, {
+      action: "pause sources",
+      scope: "all active sources",
+      affected: activeSources.length,
+    }));
+  }
+  revalidatePath(nextPath.split("?")[0] || "/");
   revalidatePath("/");
 }
 
@@ -608,12 +663,30 @@ export async function pauseAndClearSpecificSourcesAction(formData: FormData) {
       .where(and(eq(labels.id, source.id), scope.labels));
   }
 
+  const nextPath = resolveActionNextPath(formData, "/");
+  if (nextPath.includes("tab=step-2")) {
+    redirect(appendRemediationResult(nextPath, {
+      action: "cool down + clear errors",
+      scope: "selected provider-failure group",
+      affected: activeSources.length,
+    }));
+  }
+  revalidatePath(nextPath.split("?")[0] || "/");
   revalidatePath("/");
 }
 
-export async function clearStaleWorkerLocksAction() {
+export async function clearStaleWorkerLocksAction(formData?: FormData) {
   await requireCurrentAppUserId();
-  await purgeExpiredWorkerLocks();
+  const affected = await purgeExpiredWorkerLocks();
+  const nextPath = resolveActionNextPath(formData, "/");
+  if (nextPath.includes("tab=step-2")) {
+    redirect(appendRemediationResult(nextPath, {
+      action: "clear stale locks",
+      scope: "expired worker locks",
+      affected,
+    }));
+  }
+  revalidatePath(nextPath.split("?")[0] || "/");
   revalidatePath("/");
 }
 
@@ -656,6 +729,15 @@ export async function retryLabelAction(formData: FormData) {
   // Kick one processing step immediately so "Reload tracks" has visible progress without requiring queue runner.
   await processSingleReleaseForSource(labelId, userId);
 
+  const nextPath = resolveActionNextPath(formData, "");
+  if (nextPath.includes("tab=step-2")) {
+    redirect(appendRemediationResult(nextPath, {
+      action: "retry source",
+      scope: "single source",
+      affected: 1,
+    }));
+  }
+  revalidatePath(nextPath.split("?")[0] || "/");
   revalidatePath("/");
   revalidatePath(`/labels/${labelId}`);
 }

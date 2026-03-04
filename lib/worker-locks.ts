@@ -65,8 +65,10 @@ export async function releaseSourceWorkerLock(lock: SourceLock) {
 export async function purgeExpiredWorkerLocks() {
   const now = Date.now();
   try {
-    await db.execute(sql`delete from worker_locks where locked_until < ${now}`);
+    const rows = await db.execute(sql`delete from worker_locks where locked_until < ${now} returning lock_key`);
+    return rows.length;
   } catch (error) {
     if (!isWorkerLockStorageUnavailable(error)) throw error;
+    return 0;
   }
 }
