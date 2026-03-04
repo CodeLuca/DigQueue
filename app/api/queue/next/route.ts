@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { queueItems, releases, tracks } from "@/db/schema";
+import { releases, tracks } from "@/db/schema";
 import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
@@ -14,7 +14,7 @@ import {
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
 } from "@/lib/queue-next-mutation";
-import { markQueueItemPlayed } from "@/lib/queue-next-db";
+import { findQueueItemForUser, markPendingTrackQueueItemsPlayed, markQueueItemPlayed } from "@/lib/queue-next-db";
 import { selectNextQueueItem } from "@/lib/queue-next-selection";
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const mutation = parseQueueNextMutationInput(parsed.data);
   if (shouldApplyPlayedOnlyMutation(mutation)) {
     const currentId = mutation.currentId as number;
-    const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)) });
+    const item = await findQueueItemForUser(userId, currentId);
     await markQueueItemPlayed(userId, currentId);
     const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
     if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
@@ -67,13 +67,10 @@ export async function POST(request: Request) {
 
   if (shouldApplyListenedMutation(mutation)) {
     const currentId = mutation.currentId as number;
-    const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)) });
+    const item = await findQueueItemForUser(userId, currentId);
     if (item?.trackId) {
       await db.update(tracks).set({ listened: true }).where(and(eq(tracks.id, item.trackId), eq(tracks.userId, userId)));
-      await db
-        .update(queueItems)
-        .set({ status: "played" })
-        .where(and(eq(queueItems.trackId, item.trackId), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)));
+      await markPendingTrackQueueItemsPlayed(userId, item.trackId);
       const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
       if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
 
