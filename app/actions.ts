@@ -14,9 +14,9 @@ import { refreshSourceMetadata } from "@/lib/label-metadata";
 import { chooseTrackMatch, processSingleReleaseForSource, toggleReleaseWishlist, toggleTrackTodo } from "@/lib/processing";
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { logFeedbackEvent } from "@/lib/recommendations";
+import { buildPauseAndCooldownSourceUpdate, buildPauseSourceUpdate } from "@/lib/source-remediation";
 import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
 import { parsePositiveSourceIds } from "@/lib/source-id-list";
-import { getPausedStatusFromCurrent } from "@/lib/source-status-transitions";
 import { purgeExpiredWorkerLocks } from "@/lib/worker-locks";
 
 function userScope(userId: string) {
@@ -583,10 +583,9 @@ export async function pauseAllActiveSourcesAction() {
   });
 
   for (const source of activeSources) {
-    const nextStatus = getPausedStatusFromCurrent(source.status);
     await db
       .update(labels)
-      .set({ active: false, status: nextStatus, updatedAt: now })
+      .set(buildPauseSourceUpdate(source.status, now))
       .where(and(eq(labels.id, source.id), scope.labels));
   }
 
@@ -607,29 +606,10 @@ export async function pauseAndClearSpecificSourcesAction(formData: FormData) {
   });
 
   for (const source of activeSources) {
-    const isErrored = source.status === "error";
-    const nextStatus = getPausedStatusFromCurrent(source.status);
-    if (isErrored) {
-      await db
-        .update(labels)
-        .set({
-          active: false,
-          status: nextStatus,
-          lastError: null,
-          retryCount: 0,
-          updatedAt: now,
-        })
-        .where(and(eq(labels.id, source.id), scope.labels));
-    } else {
-      await db
-        .update(labels)
-        .set({
-          active: false,
-          status: nextStatus,
-          updatedAt: now,
-        })
-        .where(and(eq(labels.id, source.id), scope.labels));
-    }
+    await db
+      .update(labels)
+      .set(buildPauseAndCooldownSourceUpdate(source.status, now))
+      .where(and(eq(labels.id, source.id), scope.labels));
   }
 
   revalidatePath("/");

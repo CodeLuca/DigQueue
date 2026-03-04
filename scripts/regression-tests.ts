@@ -44,6 +44,7 @@ import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { parsePositiveSourceIds } from "../lib/source-id-list";
 import { resolveSourceNextBlocker } from "../lib/source-next-blocker";
 import { toSourceKind } from "../lib/source-kind";
+import { buildPauseAndCooldownSourceUpdate, buildPauseSourceUpdate, shouldClearErrorOnCooldown } from "../lib/source-remediation";
 import { getPausedStatusFromCurrent } from "../lib/source-status-transitions";
 import { createEmptySourceNextResponse } from "../lib/source-next-response";
 import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
@@ -279,6 +280,26 @@ async function run() {
   assert.equal(getPausedStatusFromCurrent("complete"), "complete");
   assert.equal(getPausedStatusFromCurrent("processing"), "paused");
   assert.equal(getPausedStatusFromCurrent("error"), "paused");
+  assert.equal(shouldClearErrorOnCooldown("error"), true);
+  assert.equal(shouldClearErrorOnCooldown("processing"), false);
+  const fixedNow = new Date("2026-03-04T00:00:00.000Z");
+  assert.deepEqual(buildPauseSourceUpdate("processing", fixedNow), {
+    active: false,
+    status: "paused",
+    updatedAt: fixedNow,
+  });
+  assert.deepEqual(buildPauseAndCooldownSourceUpdate("error", fixedNow), {
+    active: false,
+    status: "paused",
+    updatedAt: fixedNow,
+    lastError: null,
+    retryCount: 0,
+  });
+  assert.deepEqual(buildPauseAndCooldownSourceUpdate("complete", fixedNow), {
+    active: false,
+    status: "complete",
+    updatedAt: fixedNow,
+  });
   const groupedFailures = groupSourceFailuresByCategory(
     [
       { id: 1, lastError: "OAuth token expired" },
