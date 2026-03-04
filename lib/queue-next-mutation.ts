@@ -37,6 +37,10 @@ export function shouldApplyListenedMutation(input: {
   return Boolean(input.currentId && input.transitionPlan.markTrackListened);
 }
 
+export function shouldRefreshReleaseListened(releaseId: number | null | undefined): releaseId is number {
+  return typeof releaseId === "number" && releaseId > 0;
+}
+
 export function buildQueueFeedbackPayload(
   eventType: "played" | "listened" | null,
   item: { trackId?: number | null; releaseId?: number | null; labelId?: number | null } | null | undefined,

@@ -9,6 +9,7 @@ import {
   parseQueueNextMutationInput,
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
+  shouldRefreshReleaseListened,
 } from "@/lib/queue-next-mutation";
 import {
   findQueueItemForUser,
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
       const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
       if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
 
-      if (item.releaseId) {
+      if (shouldRefreshReleaseListened(item.releaseId)) {
         await refreshReleaseListenedFromTracks(userId, item.releaseId);
       }
     }
