@@ -18,6 +18,7 @@
 - [x] Beginner-friendly batch controls on Sources (queue/retry/resume/pause quick actions)
 - [x] Discogs link reliability hardening (slug/plural/query path normalization + UI/ingest canonicalization)
 - [x] Client playback/queue reliability pass (shared event channels + enqueue/quota helpers)
+- [x] Failure Center remediation audit feedback (action/scope/affected summaries + quick triage chips)
 
 ## Current Focus (P0)
 - [~] Failure Center phase 2
