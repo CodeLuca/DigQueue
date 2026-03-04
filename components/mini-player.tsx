@@ -224,6 +224,9 @@ export function MiniPlayer() {
   const listeningScopeTrackIdsRef = useRef<number[]>([]);
   const listeningScopeEnabledRef = useRef(false);
   const syncedScopeKeyRef = useRef<string>("");
+  const lastScopeSyncAtRef = useRef(0);
+  const lastAdvanceMutationRef = useRef<{ id: number; action: "played" | "listened"; at: number } | null>(null);
+  const lastManualPlayAdvanceAtRef = useRef(0);
   const lastQueueDedupeAtRef = useRef(0);
   const releaseDetailsCacheRef = useRef(new Map<number, ReleaseDetailsApiResponse>());
   const releaseLinksCacheRef = useRef(new Map<number, FinderLinksApiResponse>());
@@ -282,8 +285,11 @@ export function MiniPlayer() {
     const trackIds = listeningScopeTrackIdsRef.current;
     if (trackIds.length === 0) return;
     const scopeKey = `${trackIds.join(",")}`;
+    const now = Date.now();
     if (!options?.force && scopeKey === syncedScopeKeyRef.current) return;
+    if (!options?.force && now - lastScopeSyncAtRef.current < 3_000) return;
     syncedScopeKeyRef.current = scopeKey;
+    lastScopeSyncAtRef.current = now;
     try {
       await fetch("/api/queue/scope", {
         method: "POST",
@@ -470,15 +476,29 @@ export function MiniPlayer() {
     const request = (async () => {
       const activeMode = "hybrid";
       const activeOrder = playbackMode;
-      void syncQueueToListeningScope().catch(() => null);
       const activeCurrentId = currentId ?? currentRef.current?.id;
-      const response = action && activeCurrentId && activeCurrentId > 0
-        ? await fetch("/api/queue/next", {
+      let response: Response | null = null;
+      const hasMutationTarget = Boolean(action && activeCurrentId && activeCurrentId > 0);
+      if (hasMutationTarget) {
+        const now = Date.now();
+        const previous = lastAdvanceMutationRef.current;
+        const isDuplicateAdvance =
+          previous &&
+          previous.id === activeCurrentId &&
+          previous.action === action &&
+          now - previous.at < 1_200;
+        if (!isDuplicateAdvance) {
+          lastAdvanceMutationRef.current = { id: activeCurrentId as number, action: action as "played" | "listened", at: now };
+          response = await fetch("/api/queue/next", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ currentId: activeCurrentId, action, mode: activeMode, order: activeOrder }),
-          })
-        : await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
+          });
+        }
+      }
+      if (!response) {
+        response = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
+      }
       if (!response.ok) return false;
       let item = (await response.json()) as QueueApiItem | null;
       if (!item && isListeningStationTab && listeningScopeEnabledRef.current) {
@@ -486,12 +506,6 @@ export function MiniPlayer() {
         const scopedRetry = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
         if (scopedRetry.ok) {
           item = (await scopedRetry.json()) as QueueApiItem | null;
-        }
-      }
-      if (!item && action) {
-        const fallback = await fetch(`/api/queue/next?mode=${activeMode}&order=${activeOrder}`);
-        if (fallback.ok) {
-          item = (await fallback.json()) as QueueApiItem | null;
         }
       }
       if (!item) {
@@ -691,11 +705,15 @@ export function MiniPlayer() {
 
     if (switchingToDifferentItem && previousCurrent && previousCurrent.id > 0) {
       // Manual "play now" should advance queue state for the item being replaced.
-      void fetch("/api/queue/next", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentId: previousCurrent.id, action: "played", mode: "hybrid", order: playbackMode }),
-      }).catch(() => null);
+      const now = Date.now();
+      if (now - lastManualPlayAdvanceAtRef.current > 1_200) {
+        lastManualPlayAdvanceAtRef.current = now;
+        void fetch("/api/queue/next", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentId: previousCurrent.id, action: "played", mode: "hybrid", order: playbackMode }),
+        }).catch(() => null);
+      }
     }
 
     if (!playerRef.current || !ready) {
