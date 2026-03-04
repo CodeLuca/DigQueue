@@ -19,7 +19,7 @@
 - [x] Discogs link reliability hardening (slug/plural/query path normalization + UI/ingest canonicalization)
 - [x] Client playback/queue reliability pass (shared event channels + enqueue/quota helpers)
 - [x] Failure Center remediation audit feedback (action/scope/affected summaries + quick triage chips)
-- [x] Mobile commute UX pass in Listening Station (sticky quick rail, commute preset, focused row navigation, auto-next playback toggle)
+- [x] Mobile commute UX pass in Listening Station (sticky quick rail, commute preset, focused row navigation, auto-next playback toggle, skip+play action)
 
 ## Current Focus (P0)
 - [~] Failure Center phase 2

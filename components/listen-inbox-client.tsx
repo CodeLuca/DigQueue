@@ -620,6 +620,18 @@ export function ListenInboxClient({
     clearYouTubeQuotaExceededInSession();
   }, []);
 
+  const skipAndPlayNext = useCallback(() => {
+    const nextTrackId = visibleRows[activeCursor + 1]?.trackId ?? null;
+    if (!nextTrackId) {
+      setFeedback("End of queue reached.");
+      return;
+    }
+    setCursor(activeCursor + 1);
+    if (currentCanPlay) {
+      void playRow(nextTrackId);
+    }
+  }, [activeCursor, currentCanPlay, playRow, visibleRows]);
+
   const markCurrentListened = useCallback(async () => {
     if (!current) return;
     const wasPlaying = current.trackId === playingTrackId;
@@ -1644,6 +1656,19 @@ export function ListenInboxClient({
             >
               <CheckCheck className="h-3.5 w-3.5" />
               Next needs review
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-10 w-full justify-center"
+              onClick={skipAndPlayNext}
+              disabled={!canGoNextVisibleRow || !currentCanPlay}
+              title="Skip current track and play the next one"
+              aria-label="Skip current track and play next"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+              Skip + play
             </Button>
             <a
               href={toDiscogsWebUrl(current.releaseDiscogsUrl, "")}
