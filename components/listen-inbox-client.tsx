@@ -274,6 +274,7 @@ export function ListenInboxClient({
   const [loadingTrackId, setLoadingTrackId] = useState<number | null>(null);
   const [mobileQuickRailCollapsed, setMobileQuickRailCollapsed] = useState(false);
   const [compactMobileRows, setCompactMobileRows] = useState(true);
+  const [mobileAutoAdvancePlay, setMobileAutoAdvancePlay] = useState(true);
   const router = useRouter();
   const refreshTimerRef = useRef<number | null>(null);
   const queueSyncInFlightRef = useRef(false);
@@ -477,6 +478,7 @@ export function ListenInboxClient({
     setYoutubeQuotaExceeded(isYouTubeQuotaExceededInSession());
     setMobileQuickRailCollapsed(window.sessionStorage.getItem("digqueue:mobile-quick-rail-collapsed") === "1");
     setCompactMobileRows(window.sessionStorage.getItem("digqueue:mobile-compact-rows") !== "0");
+    setMobileAutoAdvancePlay(window.sessionStorage.getItem("digqueue:mobile-auto-advance-play") !== "0");
   }, []);
 
   useEffect(() => {
@@ -496,6 +498,15 @@ export function ListenInboxClient({
       window.sessionStorage.setItem("digqueue:mobile-compact-rows", "0");
     }
   }, [compactMobileRows]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (mobileAutoAdvancePlay) {
+      window.sessionStorage.setItem("digqueue:mobile-auto-advance-play", "1");
+    } else {
+      window.sessionStorage.setItem("digqueue:mobile-auto-advance-play", "0");
+    }
+  }, [mobileAutoAdvancePlay]);
 
   useEffect(() => {
     if (!showMobileQuickRail || !current) return;
@@ -612,6 +623,7 @@ export function ListenInboxClient({
   const markCurrentListened = useCallback(async () => {
     if (!current) return;
     const wasPlaying = current.trackId === playingTrackId;
+    const shouldAutoAdvancePlay = wasPlaying || (showMobileQuickRail && mobileAutoAdvancePlay);
     const nextTrackId = visibleRows[activeCursor + 1]?.trackId ?? visibleRows[activeCursor - 1]?.trackId ?? null;
     await updateTracks({ trackIds: [current.trackId], field: "listened", mode: "set", value: true });
     setRows((prev) => {
@@ -624,13 +636,13 @@ export function ListenInboxClient({
       return next;
     });
     setPendingFocusTrackId(nextTrackId);
-    if (wasPlaying && nextTrackId) {
+    if (shouldAutoAdvancePlay && nextTrackId) {
       void playRow(nextTrackId);
     } else if (wasPlaying) {
       window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
     }
     requestRefresh();
-  }, [activeCursor, current, playRow, playingTrackId, requestRefresh, visibleRows]);
+  }, [activeCursor, current, mobileAutoAdvancePlay, playRow, playingTrackId, requestRefresh, showMobileQuickRail, visibleRows]);
 
   const toggleCurrentSaved = useCallback(async () => {
     if (!current) return;
@@ -679,6 +691,7 @@ export function ListenInboxClient({
     const targetTrackIds = [...new Set((releaseGroupRows.length > 0 ? releaseGroupRows : [{ trackId }]).map((row) => row.trackId))];
     const targetTrackIdSet = new Set(targetTrackIds);
     const wasPlayingRelease = playingTrackId !== null && targetTrackIdSet.has(playingTrackId);
+    const shouldAutoAdvancePlay = wasPlayingRelease || (showMobileQuickRail && mobileAutoAdvancePlay);
     const rowIndex = visibleRows.findIndex((row) => row.trackId === trackId);
     let nextTrackId: number | null = null;
     if (rowIndex >= 0) {
@@ -700,7 +713,7 @@ export function ListenInboxClient({
       if (!nextTrackId) {
         setFeedback("Release marked reviewed. End of queue reached.");
       }
-      if (wasPlayingRelease && nextTrackId) {
+      if (shouldAutoAdvancePlay && nextTrackId) {
         void playRow(nextTrackId);
       } else if (wasPlayingRelease) {
         window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
@@ -711,7 +724,7 @@ export function ListenInboxClient({
     } finally {
       setReviewingReleaseId(null);
     }
-  }, [playRow, playingTrackId, requestRefresh, reviewingReleaseId, showQueueFilters, visibleRows]);
+  }, [mobileAutoAdvancePlay, playRow, playingTrackId, requestRefresh, reviewingReleaseId, showMobileQuickRail, showQueueFilters, visibleRows]);
 
   const toggleRowSaved = useCallback(async (trackId: number) => {
     const updated = await updateTracks({ trackIds: [trackId], field: "saved", mode: "toggle" });
@@ -1202,6 +1215,16 @@ export function ListenInboxClient({
                     >
                       {compactMobileRows ? "Compact rows: on" : "Compact rows: off"}
                     </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={mobileAutoAdvancePlay ? "secondary" : "outline"}
+                      className="col-span-2 h-9 w-full justify-center"
+                      onClick={() => setMobileAutoAdvancePlay((prev) => !prev)}
+                      title="When on, reviewed actions automatically play the next track on mobile"
+                    >
+                      {mobileAutoAdvancePlay ? "Auto-play next: on" : "Auto-play next: off"}
+                    </Button>
                   </div>
                   <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <button type="button" onClick={() => { setStateView("all"); setCursor(0); }} className={filterButtonClass(stateView === "all")} aria-pressed={stateView === "all"}>All ({queueFilterCounts.all})</button>
@@ -1583,17 +1606,30 @@ export function ListenInboxClient({
             </Button>
           </div>
           <div className="mt-1 flex justify-end">
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-[10px] text-[var(--color-muted)]"
-              onClick={() => setMobileQuickRailCollapsed(true)}
-              aria-label="Collapse quick actions"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-              Collapse
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={mobileAutoAdvancePlay ? "secondary" : "outline"}
+                className="h-7 px-2 text-[10px]"
+                onClick={() => setMobileAutoAdvancePlay((prev) => !prev)}
+                title="Automatically play next track after reviewed actions"
+                aria-label="Toggle auto-play next"
+              >
+                {mobileAutoAdvancePlay ? "Auto-next on" : "Auto-next off"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-[10px] text-[var(--color-muted)]"
+                onClick={() => setMobileQuickRailCollapsed(true)}
+                aria-label="Collapse quick actions"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+                Collapse
+              </Button>
+            </div>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             <Button
