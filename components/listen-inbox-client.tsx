@@ -1050,7 +1050,7 @@ export function ListenInboxClient({
   }, []);
 
   return (
-    <div className="space-y-3 pb-36 sm:pb-0">
+    <div className={`space-y-3 ${showMobileQuickRail ? (mobileQuickRailCollapsed ? "pb-24" : "pb-36") : "pb-0"} sm:pb-0`}>
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-2.5">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-[color-mix(in_oklab,var(--color-accent)_35%,var(--color-border))] bg-[color-mix(in_oklab,var(--color-surface)_70%,var(--color-surface2)_30%)] p-1.5">
