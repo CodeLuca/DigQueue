@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLAY_ITEM_EVENT, YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT } from "@/lib/client-events";
+import { enqueueTrackForClient } from "@/lib/client-queue";
+import { QUEUE_ERROR_NO_MATCH, QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED } from "@/lib/queue-errors";
 import { isYouTubeQuotaExceededInSession, setYouTubeQuotaExceededInSession } from "@/lib/youtube-quota-client";
 
 type QueueApiItem = {
@@ -44,35 +46,22 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
     setLoading(playNow ? "play" : "queue");
     setError(null);
     try {
-      const response = await fetch("/api/queue/enqueue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trackId, queueMode: playNow ? "next" : "normal" }),
-      });
-      const body = (await response.json().catch(() => null)) as
-        | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
-        | null;
-
-      if (body?.reason === "no_match") {
+      const item = await enqueueTrackForClient<QueueApiItem>({ trackId, queueMode: playNow ? "next" : "normal" });
+      if (playNow) {
+        window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: item }));
+      }
+      router.refresh();
+    } catch (err) {
+      if (err instanceof Error && err.message === QUEUE_ERROR_NO_MATCH) {
         router.refresh();
         return;
       }
-      if (body?.reason === "youtube_quota_exceeded") {
+      if (err instanceof Error && err.message === QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED) {
         setYoutubeQuotaExceeded(true);
         setError("YouTube quota reached. Queue/play disabled.");
         setYouTubeQuotaExceededInSession();
         return;
       }
-
-      if (!response.ok || !body?.ok || !body.item) {
-        throw new Error(body?.error || "Unable to queue this track.");
-      }
-
-      if (playNow) {
-        window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: body.item }));
-      }
-      router.refresh();
-    } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to queue this track.";
       setError(message);
     } finally {

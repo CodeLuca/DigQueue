@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLAY_ITEM_EVENT, YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT } from "@/lib/client-events";
+import { enqueueTrackForClient } from "@/lib/client-queue";
+import { QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED } from "@/lib/queue-errors";
 import { isYouTubeQuotaExceededInSession, setYouTubeQuotaExceededInSession } from "@/lib/youtube-quota-client";
 
 type QueueApiItem = {
@@ -32,25 +34,15 @@ export function PlayMatchButton({ trackId, matchId }: { trackId: number; matchId
     if (youtubeQuotaExceeded || loading) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/queue/enqueue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trackId, matchId, queueMode: "next" }),
-      });
-      const body = (await response.json().catch(() => null)) as
-        | { ok?: boolean; item?: QueueApiItem | null; reason?: string; error?: string }
-        | null;
-
-      if (body?.reason === "youtube_quota_exceeded") {
+      const item = await enqueueTrackForClient<QueueApiItem>({ trackId, matchId, queueMode: "next" });
+      window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: item }));
+      router.refresh();
+    } catch (error) {
+      if (error instanceof Error && error.message === QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED) {
         setYouTubeQuotaExceededInSession();
         return;
       }
-      if (!response.ok || !body?.ok || !body.item) {
-        return;
-      }
-
-      window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: body.item }));
-      router.refresh();
+      // Keep existing behavior: silently ignore non-quota enqueue failures in this compact control.
     } finally {
       setLoading(false);
     }
