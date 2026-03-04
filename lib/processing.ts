@@ -604,7 +604,12 @@ export async function chooseTrackMatch(trackId: number, youtubeMatchId: number, 
   }
 }
 
-export async function nextQueueItem(userId: string, currentId?: number, mode: "track" | "release" | "hybrid" = "track") {
+export async function nextQueueItem(
+  userId: string,
+  currentId?: number,
+  mode: "track" | "release" | "hybrid" = "track",
+  primeOnMiss = true,
+) {
   const scope = userScope(userId);
   if (currentId) {
     const currentItem = await db.query.queueItems.findFirst({
@@ -623,10 +628,16 @@ export async function nextQueueItem(userId: string, currentId?: number, mode: "t
 
   const existing = await getNextPendingQueueItem(userId, mode, NEXT_QUEUE_CANDIDATE_LIMIT, false);
   if (existing) return existing;
+  if (!primeOnMiss) return null;
   return primeQueueForPlayback(userId, mode, false);
 }
 
-export async function nextQueueItemShuffled(userId: string, currentId?: number, mode: "track" | "release" | "hybrid" = "track") {
+export async function nextQueueItemShuffled(
+  userId: string,
+  currentId?: number,
+  mode: "track" | "release" | "hybrid" = "track",
+  primeOnMiss = true,
+) {
   const scope = userScope(userId);
   if (currentId) {
     const currentItem = await db.query.queueItems.findFirst({
@@ -645,6 +656,7 @@ export async function nextQueueItemShuffled(userId: string, currentId?: number, 
 
   const existing = await getNextPendingQueueItem(userId, mode, SHUFFLE_QUEUE_CANDIDATE_LIMIT, true);
   if (existing) return existing;
+  if (!primeOnMiss) return null;
   return primeQueueForPlayback(userId, mode, true);
 }
 

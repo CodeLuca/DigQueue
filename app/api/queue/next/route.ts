@@ -32,8 +32,8 @@ export async function GET(request: Request) {
     currentId,
     mode,
     order,
-    fetchInOrder: nextQueueItem,
-    fetchShuffled: nextQueueItemShuffled,
+    fetchInOrder: (uid, cid, queueMode) => nextQueueItem(uid, cid, queueMode, false),
+    fetchShuffled: (uid, cid, queueMode) => nextQueueItemShuffled(uid, cid, queueMode, false),
   });
   return NextResponse.json(item || null);
 }
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       queueItem: item,
       userId,
     });
-    if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
+    if (feedbackPayload) void logFeedbackEvent(feedbackPayload).catch(() => null);
   }
 
   if (shouldApplyListenedMutation(mutation)) {
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         queueItem: item,
         userId,
       });
-      if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
+      if (feedbackPayload) void logFeedbackEvent(feedbackPayload).catch(() => null);
 
       if (shouldRefreshReleaseListened(item.releaseId)) {
         await refreshReleaseListenedFromTracks(userId, item.releaseId);
@@ -90,8 +90,8 @@ export async function POST(request: Request) {
     currentId: undefined,
     mode: mutation.mode,
     order: mutation.order,
-    fetchInOrder: nextQueueItem,
-    fetchShuffled: nextQueueItemShuffled,
+    fetchInOrder: (uid, cid, queueMode) => nextQueueItem(uid, cid, queueMode, false),
+    fetchShuffled: (uid, cid, queueMode) => nextQueueItemShuffled(uid, cid, queueMode, false),
   });
   return NextResponse.json(next || null);
 }
