@@ -307,6 +307,19 @@ export default async function HomePage({
   const needsReviewCount = needsReviewRows.length;
   const totalWishlistedRecords = data.metrics.wishlistedRecords;
   const failureGroups = groupSourceFailuresByCategory(data.erroredLabels, (label) => getVisibleLabelError(label.lastError) || "Unknown source failure.");
+  const failureCategorySummary = failureGroups.map((group) => ({
+    category: group.category,
+    count: group.items.length,
+    meta: getFailureCategoryMeta(group.category),
+  }));
+  const failureKindSummary = data.erroredLabels.reduce(
+    (acc, label) => {
+      if (label.entityKind === "artist") acc.artist += 1;
+      else acc.label += 1;
+      return acc;
+    },
+    { label: 0, artist: 0 },
+  );
   const renderSourceCard = (label: (typeof data.labels)[number]) => {
     const displayName = getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label");
     const visibleLastError = getVisibleLabelError(label.lastError);
@@ -968,6 +981,19 @@ export default async function HomePage({
                         Clear all flags
                       </FormSubmitButton>
                     </form>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
+                      Labels {failureKindSummary.label}
+                    </Badge>
+                    <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
+                      Artists {failureKindSummary.artist}
+                    </Badge>
+                    {failureCategorySummary.map((item) => (
+                      <Badge key={item.category} className={item.meta.className}>
+                        {item.meta.label} {item.count}
+                      </Badge>
+                    ))}
                   </div>
                   <p className="text-[10px] text-[var(--color-muted)]">Failures are grouped by likely root cause with a recommended action.</p>
                   <div className="space-y-2">
