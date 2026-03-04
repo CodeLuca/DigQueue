@@ -5,6 +5,7 @@ import { getApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
 import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
 import { toExternalDiscogsId } from "@/lib/discogs-id";
+import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { env } from "@/lib/env";
 import { buildDiscogsOAuthApiAuthorizationHeader, discogsUserAgent } from "@/lib/discogs-oauth";
 
@@ -233,9 +234,7 @@ export async function fetchDiscogsWantItems() {
         const artist = firstArtist || (titleParts.length > 1 ? titleParts[0] : "Unknown Artist");
         const title = titleParts.length > 1 ? titleParts.slice(1).join(" - ") : rawTitle;
         const resourceUrl = item.basic_information?.resource_url?.trim();
-        const discogsUrl = resourceUrl && /\/releases\/\d+/i.test(resourceUrl)
-          ? resourceUrl.replace("api.discogs.com", "www.discogs.com")
-          : `https://www.discogs.com/release/${id}`;
+        const discogsUrl = toDiscogsWebUrl(resourceUrl || "", `/release/${id}`);
 
         items.set(id, {
           releaseId: id,
@@ -554,9 +553,7 @@ export async function searchDiscogsReleases(query: string, page = 1, perPage = 2
     const titleParts = rawTitle.split(" - ");
     const artist = titleParts.length > 1 ? titleParts[0].trim() : "Unknown Artist";
     const title = titleParts.length > 1 ? titleParts.slice(1).join(" - ").trim() : rawTitle;
-    const discogsUrl = result.uri?.trim()
-      ? `https://www.discogs.com${result.uri.trim()}`
-      : `https://www.discogs.com/release/${releaseId}`;
+    const discogsUrl = toDiscogsWebUrl(result.uri?.trim() || "", `/release/${releaseId}`);
 
     items.push({
       releaseId,
