@@ -32,7 +32,13 @@ export function toDiscogsWebUrl(url: string, fallbackPath = "") {
 
   const absolute = /^www\.discogs\.com\//i.test(trimmed) ? `https://${trimmed}` : trimmed;
   if (absolute.startsWith("/")) {
-    return `${DISCOGS_WEB_ORIGIN}${normalizeDiscogsPath(absolute)}`;
+    try {
+      const parsed = new URL(absolute, DISCOGS_WEB_ORIGIN);
+      const normalizedPath = normalizeDiscogsPath(parsed.pathname);
+      return `${DISCOGS_WEB_ORIGIN}${normalizedPath}${parsed.search}${parsed.hash}`;
+    } catch {
+      return `${DISCOGS_WEB_ORIGIN}${normalizeDiscogsPath(absolute)}`;
+    }
   }
 
   try {

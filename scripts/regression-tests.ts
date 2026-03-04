@@ -202,6 +202,10 @@ async function run() {
     "https://www.discogs.com/release/11100295",
   );
   assert.equal(
+    toDiscogsWebUrl("/releases/11100295-Special-Release?ev=rb#tracklist", ""),
+    "https://www.discogs.com/release/11100295-Special-Release?ev=rb#tracklist",
+  );
+  assert.equal(
     toDiscogsWebUrl("", ""),
     "https://www.discogs.com",
   );
