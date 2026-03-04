@@ -48,7 +48,12 @@ import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { getDiscogsWantsSyncStatus } from "@/lib/discogs-wants-sync";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
-import { getFailureCategoryMeta, groupSourceFailuresByCategory, inferFailureProvider } from "@/lib/source-failures";
+import {
+  getFailureCategoryMeta,
+  groupSourceFailuresByCategory,
+  summarizeFailureProviders,
+  summarizeFailureSourceKinds,
+} from "@/lib/source-failures";
 import { readSyncTelemetry } from "@/lib/sync-telemetry";
 import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
 import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
@@ -316,23 +321,13 @@ export default async function HomePage({
     count: group.items.length,
     meta: getFailureCategoryMeta(group.category),
   }));
-  const failureKindSummary = data.erroredLabels.reduce(
-    (acc, label) => {
-      if (label.entityKind === "artist") acc.artist += 1;
-      else acc.label += 1;
-      return acc;
-    },
-    { label: 0, artist: 0 },
+  const failureKindSummary = summarizeFailureSourceKinds(
+    data.erroredLabels,
+    (label) => (label.entityKind === "artist" ? "artist" : "label"),
   );
-  const failureProviderSummary = data.erroredLabels.reduce(
-    (acc, label) => {
-      const provider = inferFailureProvider(getVisibleLabelError(label.lastError) || "");
-      if (provider === "discogs") acc.discogs += 1;
-      else if (provider === "youtube") acc.youtube += 1;
-      else acc.unknown += 1;
-      return acc;
-    },
-    { discogs: 0, youtube: 0, unknown: 0 },
+  const failureProviderSummary = summarizeFailureProviders(
+    data.erroredLabels,
+    (label) => getVisibleLabelError(label.lastError) || "",
   );
   const renderSourceCard = (label: (typeof data.labels)[number]) => {
     const displayName = getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label");

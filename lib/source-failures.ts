@@ -1,5 +1,6 @@
 export type FailureCategory = "auth" | "rate_limit" | "provider" | "database" | "data" | "unknown";
 export type FailureProvider = "discogs" | "youtube" | "unknown";
+export type FailureSourceKind = "label" | "artist";
 export type FailureCategoryMeta = {
   label: string;
   className: string;
@@ -67,6 +68,36 @@ export function inferFailureProvider(error: string | null | undefined): FailureP
   if (value.includes("youtube") || value.includes("yt")) return "youtube";
   if (value.includes("discogs")) return "discogs";
   return "unknown";
+}
+
+export function summarizeFailureProviders<T>(
+  items: T[],
+  resolveVisibleError: (item: T) => string,
+): Record<FailureProvider, number> {
+  const summary: Record<FailureProvider, number> = {
+    discogs: 0,
+    youtube: 0,
+    unknown: 0,
+  };
+  for (const item of items) {
+    const provider = inferFailureProvider(resolveVisibleError(item));
+    summary[provider] += 1;
+  }
+  return summary;
+}
+
+export function summarizeFailureSourceKinds<T>(
+  items: T[],
+  resolveKind: (item: T) => FailureSourceKind,
+): Record<FailureSourceKind, number> {
+  const summary: Record<FailureSourceKind, number> = {
+    label: 0,
+    artist: 0,
+  };
+  for (const item of items) {
+    summary[resolveKind(item)] += 1;
+  }
+  return summary;
 }
 
 export function getFailureCategoryMeta(category: FailureCategory): FailureCategoryMeta {

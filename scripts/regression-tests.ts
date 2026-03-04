@@ -51,7 +51,14 @@ import { toSourceKind } from "../lib/source-kind";
 import { buildPauseAndCooldownSourceUpdate, buildPauseSourceUpdate, shouldClearErrorOnCooldown } from "../lib/source-remediation";
 import { getPausedStatusFromCurrent } from "../lib/source-status-transitions";
 import { createEmptySourceNextResponse } from "../lib/source-next-response";
-import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory, inferFailureProvider } from "../lib/source-failures";
+import {
+  classifySourceFailure,
+  getFailureCategoryMeta,
+  groupSourceFailuresByCategory,
+  inferFailureProvider,
+  summarizeFailureProviders,
+  summarizeFailureSourceKinds,
+} from "../lib/source-failures";
 import { getTimelineBarStyle, getTimelineMaxRuns, groupTimelineBuckets } from "../lib/sync-timeline";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { createZeroSyncThroughput } from "../lib/sync-throughput";
@@ -291,6 +298,20 @@ async function run() {
   assert.equal(inferFailureProvider("Discogs error 500"), "discogs");
   assert.equal(inferFailureProvider("YouTube quota exceeded"), "youtube");
   assert.equal(inferFailureProvider("unknown failure"), "unknown");
+  assert.deepEqual(
+    summarizeFailureProviders(
+      [{ error: "Discogs error 500" }, { error: "YouTube timeout" }, { error: "" }],
+      (row) => row.error,
+    ),
+    { discogs: 1, youtube: 1, unknown: 1 },
+  );
+  assert.deepEqual(
+    summarizeFailureSourceKinds(
+      [{ kind: "label" }, { kind: "artist" }, { kind: "label" }],
+      (row) => row.kind as "label" | "artist",
+    ),
+    { label: 2, artist: 1 },
+  );
   assert.equal(classifySourceFailure("failed query: relation missing"), "database");
   assert.equal(classifySourceFailure("YouTube provider timeout"), "provider");
   assert.equal(classifySourceFailure("Invalid tracklist payload"), "data");
