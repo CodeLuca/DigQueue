@@ -283,6 +283,7 @@ export default async function HomePage({
     Boolean(remScope) &&
     Number.isFinite(remediationAffectedCount) &&
     remediationAffectedCount >= 0;
+  const remediationChanged = remediationAffectedCount > 0;
   const libraryRows = wishlistData?.rows ?? [];
   const historyRows = [...(playedReviewedData?.rows ?? [])]
     .filter((row) => (row.playedCount ?? 0) > 0 || Boolean(row.wasPlayed))
@@ -955,11 +956,26 @@ export default async function HomePage({
               {data.erroredLabels.length > 0 ? (
                 <div className="space-y-1.5">
                   {showRemediationSummary ? (
-                    <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 text-[11px] text-emerald-100">
-                      Action <span className="font-medium text-emerald-50">{remAction}</span> on{" "}
-                      <span className="font-medium text-emerald-50">{remScope}</span> affected{" "}
-                      <span className="font-medium text-emerald-50">{remediationAffectedCount}</span> item
-                      {remediationAffectedCount === 1 ? "" : "s"}.
+                    <p
+                      className={`rounded-md border px-2 py-1.5 text-[11px] ${
+                        remediationChanged
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+                          : "border-amber-500/40 bg-amber-500/10 text-amber-100"
+                      }`}
+                    >
+                      Action{" "}
+                      <span className={remediationChanged ? "font-medium text-emerald-50" : "font-medium text-amber-50"}>
+                        {remAction}
+                      </span>{" "}
+                      on{" "}
+                      <span className={remediationChanged ? "font-medium text-emerald-50" : "font-medium text-amber-50"}>
+                        {remScope}
+                      </span>{" "}
+                      {remediationChanged ? "affected" : "did not change"}{" "}
+                      <span className={remediationChanged ? "font-medium text-emerald-50" : "font-medium text-amber-50"}>
+                        {remediationAffectedCount}
+                      </span>{" "}
+                      item{remediationAffectedCount === 1 ? "" : "s"}.
                     </p>
                   ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
