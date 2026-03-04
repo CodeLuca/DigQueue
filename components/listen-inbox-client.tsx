@@ -257,6 +257,7 @@ export function ListenInboxClient({
   const [pendingFocusTrackId, setPendingFocusTrackId] = useState<number | null>(null);
   const lastScopeDispatchKeyRef = useRef<string>("");
   const scopeDispatchTimerRef = useRef<number | null>(null);
+  const rowRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [wishlistSourceFilter, setWishlistSourceFilter] = useState<"all" | "saved_tracks" | "wishlisted_records">("all");
   const [hideReviewed, setHideReviewed] = useState(defaultHideReviewed);
   const [hideAlreadyPlayed, setHideAlreadyPlayed] = useState(defaultHideAlreadyPlayed);
@@ -484,6 +485,13 @@ export function ListenInboxClient({
       window.sessionStorage.removeItem("digqueue:mobile-quick-rail-collapsed");
     }
   }, [mobileQuickRailCollapsed]);
+
+  useEffect(() => {
+    if (!showMobileQuickRail || !current) return;
+    const rowEl = rowRefs.current[current.trackId];
+    if (!rowEl) return;
+    rowEl.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeCursor, current, showMobileQuickRail]);
 
   const moveLabel = useCallback((direction: -1 | 1) => {
     if (effectiveLabelOptions.length === 0) {
@@ -1671,6 +1679,9 @@ export function ListenInboxClient({
           return (
             <div
               key={item.trackId}
+              ref={(node) => {
+                rowRefs.current[item.trackId] = node;
+              }}
               className={`rounded-lg border p-3 ${
                 isPlaying
                   ? "border-emerald-500/70 bg-emerald-500/10"
