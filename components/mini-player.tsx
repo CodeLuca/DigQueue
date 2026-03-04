@@ -24,6 +24,12 @@ import {
   Youtube,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  LISTENING_SCOPE_EVENT,
+  PLAYBACK_MODE_EVENT,
+  RELEASE_WISHLIST_UPDATED_EVENT,
+  TRACK_TODO_UPDATED_EVENT,
+} from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { buildYouTubeHandoffTargets, isIOSLikeDevice } from "@/lib/playback-mobile";
 
@@ -115,10 +121,6 @@ type FinderLinksApiResponse = {
   fallback?: FinderCandidate[];
 };
 
-const TRACK_TODO_UPDATED_EVENT = "digqueue:track-todo-updated";
-const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
-const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
-const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
 const PLAYBACK_OWNER_STORAGE_KEY = "digqueue:playback-owner";
 const PLAYBACK_OWNER_TTL_MS = 12000;

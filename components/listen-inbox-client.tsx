@@ -24,6 +24,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  LISTENING_SCOPE_EVENT,
+  PLAYBACK_MODE_EVENT,
+  RELEASE_WISHLIST_UPDATED_EVENT,
+  TRACK_TODO_UPDATED_EVENT,
+} from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 type ListenRow = {
@@ -81,10 +87,6 @@ type QueueApiItem = {
 const YOUTUBE_QUOTA_EVENT = "digqueue:youtube-quota-exceeded";
 const YOUTUBE_QUOTA_CLEAR_EVENT = "digqueue:youtube-quota-cleared";
 const YOUTUBE_QUOTA_STORAGE_KEY = "digqueue:youtube-quota-exceeded";
-const TRACK_TODO_UPDATED_EVENT = "digqueue:track-todo-updated";
-const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
-const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
-const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
 const ENQUEUE_TIMEOUT_MS = 6000;
 type PlaybackMode = "in_order" | "shuffle";
