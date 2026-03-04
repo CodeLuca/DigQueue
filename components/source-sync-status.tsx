@@ -215,8 +215,8 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         </details>
       ) : null}
       {recentSuccessBySource.length > 0 ? (
-        <div className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
-          <p className="text-[11px] font-medium text-[var(--color-text)]">Per-source recent success</p>
+        <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
+          <summary className="cursor-pointer text-[11px] font-medium text-[var(--color-text)]">Per-source recent success</summary>
           <div className="mt-1 space-y-1">
             {recentSuccessBySource.map(({ sourceName, createdAt }) => (
               <p key={`${sourceName}-${createdAt}`} className="text-[10px] text-[var(--color-muted)]">
@@ -224,7 +224,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               </p>
             ))}
           </div>
-        </div>
+        </details>
       ) : null}
     </div>
   );
