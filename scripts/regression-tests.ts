@@ -51,7 +51,7 @@ import { toSourceKind } from "../lib/source-kind";
 import { buildPauseAndCooldownSourceUpdate, buildPauseSourceUpdate, shouldClearErrorOnCooldown } from "../lib/source-remediation";
 import { getPausedStatusFromCurrent } from "../lib/source-status-transitions";
 import { createEmptySourceNextResponse } from "../lib/source-next-response";
-import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
+import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory, inferFailureProvider } from "../lib/source-failures";
 import { getTimelineBarStyle, getTimelineMaxRuns, groupTimelineBuckets } from "../lib/sync-timeline";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { createZeroSyncThroughput } from "../lib/sync-throughput";
@@ -284,6 +284,9 @@ async function run() {
   // Failure center grouping coverage.
   assert.equal(classifySourceFailure("OAuth token expired"), "auth");
   assert.equal(classifySourceFailure("Discogs error 429"), "rate_limit");
+  assert.equal(inferFailureProvider("Discogs error 500"), "discogs");
+  assert.equal(inferFailureProvider("YouTube quota exceeded"), "youtube");
+  assert.equal(inferFailureProvider("unknown failure"), "unknown");
   assert.equal(classifySourceFailure("failed query: relation missing"), "database");
   assert.equal(classifySourceFailure("YouTube provider timeout"), "provider");
   assert.equal(classifySourceFailure("Invalid tracklist payload"), "data");

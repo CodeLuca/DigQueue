@@ -48,7 +48,7 @@ import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { getDiscogsWantsSyncStatus } from "@/lib/discogs-wants-sync";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
-import { getFailureCategoryMeta, groupSourceFailuresByCategory } from "@/lib/source-failures";
+import { getFailureCategoryMeta, groupSourceFailuresByCategory, inferFailureProvider } from "@/lib/source-failures";
 import { readSyncTelemetry } from "@/lib/sync-telemetry";
 import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
 import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
@@ -320,6 +320,16 @@ export default async function HomePage({
       return acc;
     },
     { label: 0, artist: 0 },
+  );
+  const failureProviderSummary = data.erroredLabels.reduce(
+    (acc, label) => {
+      const provider = inferFailureProvider(getVisibleLabelError(label.lastError) || "");
+      if (provider === "discogs") acc.discogs += 1;
+      else if (provider === "youtube") acc.youtube += 1;
+      else acc.unknown += 1;
+      return acc;
+    },
+    { discogs: 0, youtube: 0, unknown: 0 },
   );
   const renderSourceCard = (label: (typeof data.labels)[number]) => {
     const displayName = getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label");
@@ -1005,6 +1015,17 @@ export default async function HomePage({
                     <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
                       Artists {failureKindSummary.artist}
                     </Badge>
+                    <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
+                      Discogs {failureProviderSummary.discogs}
+                    </Badge>
+                    <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
+                      YouTube {failureProviderSummary.youtube}
+                    </Badge>
+                    {failureProviderSummary.unknown > 0 ? (
+                      <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
+                        Unknown {failureProviderSummary.unknown}
+                      </Badge>
+                    ) : null}
                     {failureCategorySummary.map((item) => (
                       <Badge key={item.category} className={item.meta.className}>
                         {item.meta.label} {item.count}

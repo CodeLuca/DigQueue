@@ -1,4 +1,5 @@
 export type FailureCategory = "auth" | "rate_limit" | "provider" | "database" | "data" | "unknown";
+export type FailureProvider = "discogs" | "youtube" | "unknown";
 export type FailureCategoryMeta = {
   label: string;
   className: string;
@@ -57,6 +58,14 @@ export function classifySourceFailure(error: string | null | undefined): Failure
   ) {
     return "data";
   }
+  return "unknown";
+}
+
+export function inferFailureProvider(error: string | null | undefined): FailureProvider {
+  const value = (error || "").toLowerCase();
+  if (!value) return "unknown";
+  if (value.includes("youtube") || value.includes("yt")) return "youtube";
+  if (value.includes("discogs")) return "discogs";
   return "unknown";
 }
 
