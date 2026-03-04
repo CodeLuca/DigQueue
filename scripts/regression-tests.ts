@@ -13,6 +13,7 @@ import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "
 import { buildOAuthTempCookieOptions } from "../lib/oauth-cookie-options";
 import { normalizeNextPath } from "../lib/next-path";
 import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
+import { appendRemediationResult, resolveActionNextPath } from "../lib/remediation-feedback";
 import { createOAuthState, getOAuthStateByteLength } from "../lib/oauth-state";
 import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "../lib/oauth-start-routing";
 import { readJsonBodyOrNull } from "../lib/request-json";
@@ -162,6 +163,12 @@ async function run() {
   assert.equal(
     sanitizeDiscogsConnectionErrorMessage(""),
     null,
+  );
+  assert.equal(resolveActionNextPath("/?tab=step-2", "/"), "/?tab=step-2");
+  assert.equal(resolveActionNextPath("https://evil.example/path", "/?tab=step-2"), "/?tab=step-2");
+  assert.equal(
+    appendRemediationResult("/?tab=step-2", { action: "retry", scope: "group", affected: 4 }),
+    "/?tab=step-2&remAction=retry&remScope=group&remAffected=4",
   );
   const validJson = await readJsonBodyOrNull(new Request("https://digqueue.local", {
     method: "POST",

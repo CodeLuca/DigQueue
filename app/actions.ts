@@ -13,6 +13,7 @@ import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
 import { toExternalDiscogsId, toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshSourceMetadata } from "@/lib/label-metadata";
 import { chooseTrackMatch, processSingleReleaseForSource, toggleReleaseWishlist, toggleTrackTodo } from "@/lib/processing";
+import { appendRemediationResult, resolveActionNextPath } from "@/lib/remediation-feedback";
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { buildPauseAndCooldownSourceUpdate, buildPauseSourceUpdate } from "@/lib/source-remediation";
@@ -414,7 +415,7 @@ export async function retryErroredLabelsAction(formData: FormData) {
       .where(and(eq(labels.id, label.id), scope.labels));
     affected += 1;
   }
-  const nextPath = resolveActionNextPath(formData, "/?tab=step-2");
+  const nextPath = resolveActionNextPath(formData.get("next")?.toString(), "/?tab=step-2");
   if (nextPath.includes("tab=step-2")) {
     redirect(appendRemediationResult(nextPath, {
       action: "clear error flags",
@@ -430,21 +431,6 @@ function parseBatchLimit(formData: FormData, fallback = 5) {
   const raw = Number(formData.get("limit") ?? fallback);
   if (!Number.isFinite(raw)) return fallback;
   return Math.max(1, Math.min(25, Math.floor(raw)));
-}
-
-function resolveActionNextPath(formData: FormData | null | undefined, fallback = "/") {
-  if (!formData) return fallback;
-  const raw = String(formData.get("next") || "").trim();
-  if (!raw || !raw.startsWith("/")) return fallback;
-  return raw;
-}
-
-function appendRemediationResult(nextPath: string, payload: { action: string; scope: string; affected: number }) {
-  const url = new URL(nextPath, "http://localhost");
-  url.searchParams.set("remAction", payload.action);
-  url.searchParams.set("remScope", payload.scope);
-  url.searchParams.set("remAffected", String(Math.max(0, payload.affected)));
-  return `${url.pathname}${url.search}`;
 }
 
 export async function queueActiveSourcesBatchAction(formData: FormData) {
@@ -570,7 +556,7 @@ export async function retrySpecificSourcesAction(formData: FormData) {
     affected += 1;
   }
 
-  const nextPath = resolveActionNextPath(formData, "/");
+  const nextPath = resolveActionNextPath(formData.get("next")?.toString(), "/");
   if (nextPath.includes("tab=step-2")) {
     redirect(appendRemediationResult(nextPath, {
       action: "retry",
@@ -602,7 +588,7 @@ export async function refreshSpecificSourcesMetadataAction(formData: FormData) {
     }
   }
 
-  const nextPath = resolveActionNextPath(formData, "/");
+  const nextPath = resolveActionNextPath(formData.get("next")?.toString(), "/");
   if (nextPath.includes("tab=step-2")) {
     redirect(appendRemediationResult(nextPath, {
       action: "refresh metadata",
@@ -631,7 +617,7 @@ export async function pauseAllActiveSourcesAction(formData?: FormData) {
       .where(and(eq(labels.id, source.id), scope.labels));
   }
 
-  const nextPath = resolveActionNextPath(formData, "/");
+  const nextPath = resolveActionNextPath(formData?.get("next")?.toString(), "/");
   if (nextPath.includes("tab=step-2")) {
     redirect(appendRemediationResult(nextPath, {
       action: "pause sources",
@@ -663,7 +649,7 @@ export async function pauseAndClearSpecificSourcesAction(formData: FormData) {
       .where(and(eq(labels.id, source.id), scope.labels));
   }
 
-  const nextPath = resolveActionNextPath(formData, "/");
+  const nextPath = resolveActionNextPath(formData.get("next")?.toString(), "/");
   if (nextPath.includes("tab=step-2")) {
     redirect(appendRemediationResult(nextPath, {
       action: "cool down + clear errors",
@@ -678,7 +664,7 @@ export async function pauseAndClearSpecificSourcesAction(formData: FormData) {
 export async function clearStaleWorkerLocksAction(formData?: FormData) {
   await requireCurrentAppUserId();
   const affected = await purgeExpiredWorkerLocks();
-  const nextPath = resolveActionNextPath(formData, "/");
+  const nextPath = resolveActionNextPath(formData?.get("next")?.toString(), "/");
   if (nextPath.includes("tab=step-2")) {
     redirect(appendRemediationResult(nextPath, {
       action: "clear stale locks",
@@ -729,7 +715,7 @@ export async function retryLabelAction(formData: FormData) {
   // Kick one processing step immediately so "Reload tracks" has visible progress without requiring queue runner.
   await processSingleReleaseForSource(labelId, userId);
 
-  const nextPath = resolveActionNextPath(formData, "");
+  const nextPath = resolveActionNextPath(formData.get("next")?.toString(), "");
   if (nextPath.includes("tab=step-2")) {
     redirect(appendRemediationResult(nextPath, {
       action: "retry source",
