@@ -270,6 +270,19 @@ export function ListenInboxClient({
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
   const [loadingTrackId, setLoadingTrackId] = useState<number | null>(null);
   const router = useRouter();
+  const refreshTimerRef = useRef<number | null>(null);
+  const queueSyncInFlightRef = useRef(false);
+  const lastQueueSyncAtRef = useRef(0);
+
+  const requestRefresh = useCallback((delayMs = 180) => {
+    if (refreshTimerRef.current !== null) {
+      window.clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = window.setTimeout(() => {
+      router.refresh();
+      refreshTimerRef.current = null;
+    }, delayMs);
+  }, [router]);
 
   const sourceFilteredRows = useMemo(
     () =>
@@ -439,6 +452,11 @@ export function ListenInboxClient({
   }, [effectiveLabelOptions]);
 
   const syncUpNextFromQueue = useCallback(async () => {
+    const now = Date.now();
+    if (queueSyncInFlightRef.current) return;
+    if (now - lastQueueSyncAtRef.current < 1200) return;
+    queueSyncInFlightRef.current = true;
+    lastQueueSyncAtRef.current = now;
     try {
       const response = await fetch("/api/queue/list?limit=40");
       if (!response.ok) return;
@@ -460,6 +478,8 @@ export function ListenInboxClient({
       });
     } catch {
       // Non-blocking: keep current UI state if queue endpoint is temporarily unavailable.
+    } finally {
+      queueSyncInFlightRef.current = false;
     }
   }, []);
 
@@ -541,8 +561,8 @@ export function ListenInboxClient({
     } else if (wasPlaying) {
       window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
     }
-    router.refresh();
-  }, [activeCursor, current, playRow, playingTrackId, router, visibleRows]);
+    requestRefresh();
+  }, [activeCursor, current, playRow, playingTrackId, requestRefresh, visibleRows]);
 
   const toggleCurrentSaved = useCallback(async () => {
     if (!current) return;
@@ -556,8 +576,8 @@ export function ListenInboxClient({
       );
       return showQueueFilters ? next : next.filter((item) => item.saved);
     });
-    router.refresh();
-  }, [current, router, showQueueFilters]);
+    requestRefresh();
+  }, [current, requestRefresh, showQueueFilters]);
 
   const markRowListened = useCallback(async (trackId: number) => {
     const wasPlaying = trackId === playingTrackId;
@@ -581,8 +601,8 @@ export function ListenInboxClient({
     } else if (wasPlaying) {
       window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
     }
-    router.refresh();
-  }, [playRow, playingTrackId, router, visibleRows]);
+    requestRefresh();
+  }, [playRow, playingTrackId, requestRefresh, visibleRows]);
 
   const markRowReleaseListened = useCallback(async (releaseId: number, trackId: number, releaseDiscogsUrl: string) => {
     if (reviewingReleaseId === releaseId) return;
@@ -617,13 +637,13 @@ export function ListenInboxClient({
       } else if (wasPlayingRelease) {
         window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
       }
-      router.refresh();
+      requestRefresh();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Unable to mark release reviewed.");
     } finally {
       setReviewingReleaseId(null);
     }
-  }, [playRow, playingTrackId, reviewingReleaseId, router, showQueueFilters, visibleRows]);
+  }, [playRow, playingTrackId, requestRefresh, reviewingReleaseId, showQueueFilters, visibleRows]);
 
   const toggleRowSaved = useCallback(async (trackId: number) => {
     const updated = await updateTracks({ trackIds: [trackId], field: "saved", mode: "toggle" });
@@ -637,8 +657,8 @@ export function ListenInboxClient({
       );
       return showQueueFilters ? next : next.filter((row) => row.saved);
     });
-    router.refresh();
-  }, [router, showQueueFilters]);
+    requestRefresh();
+  }, [requestRefresh, showQueueFilters]);
 
   const toggleRowRecordWishlist = useCallback(async (releaseId: number) => {
     if (wishlistReleaseIdLoading === releaseId) return;
@@ -663,14 +683,14 @@ export function ListenInboxClient({
       setFeedback(
         `${result.wishlist ? "Added record to Discogs wishlist" : "Removed record from Discogs wishlist"}${scopeSuffix}.${syncSuffix}${verifySuffix}`,
       );
-      router.refresh();
+      requestRefresh();
     } catch (error) {
       setRows((prev) => prev.map((row) => (row.releaseId === releaseId ? { ...row, releaseWishlist: currentValue } : row)));
       setFeedback(error instanceof Error ? error.message : "Unable to update record wishlist.");
     } finally {
       setWishlistReleaseIdLoading(null);
     }
-  }, [rows, router, wishlistReleaseIdLoading]);
+  }, [requestRefresh, rows, wishlistReleaseIdLoading]);
 
   const addRowLabel = useCallback(async (releaseId: number) => {
     if (addingLabelReleaseId === releaseId) return;
@@ -682,13 +702,13 @@ export function ListenInboxClient({
       setRows((prev) => prev.map((row) => (row.releaseId === releaseId ? { ...row, labelActive: true } : row)));
       setAddedLabelReleaseIds((prev) => (prev.includes(releaseId) ? prev : [...prev, releaseId]));
       setFeedback("Label added and activated.");
-      router.refresh();
+      requestRefresh();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Unable to add label.");
     } finally {
       setAddingLabelReleaseId(null);
     }
-  }, [addedLabelReleaseIds, addingLabelReleaseId, router]);
+  }, [addedLabelReleaseIds, addingLabelReleaseId, requestRefresh]);
 
   const toggleSelectTrack = useCallback((trackId: number, checked: boolean) => {
     setSelectedTrackIds((prev) => {
@@ -716,8 +736,8 @@ export function ListenInboxClient({
     setRows((prev) => prev.map((row) => (eligible.includes(row.trackId) ? { ...row, listened: true, isUpNext: false } : row)));
     setSelectedTrackIds((prev) => prev.filter((id) => !eligible.includes(id)));
     setFeedback(`Marked ${eligible.length} tracks reviewed.`);
-    router.refresh();
-  }, [router, selectedVisibleRows]);
+    requestRefresh();
+  }, [requestRefresh, selectedVisibleRows]);
 
   const bulkSetSelectedSaved = useCallback(async (value: boolean) => {
     const ids = selectedVisibleRows.map((row) => row.trackId);
@@ -733,8 +753,8 @@ export function ListenInboxClient({
     });
     setSelectedTrackIds((prev) => prev.filter((id) => !ids.includes(id)));
     setFeedback(value ? `Saved ${ids.length} tracks.` : `Removed ${ids.length} saved tracks.`);
-    router.refresh();
-  }, [router, selectedVisibleRows, showQueueFilters]);
+    requestRefresh();
+  }, [requestRefresh, selectedVisibleRows, showQueueFilters]);
 
   const bulkMarkVisiblePlayedReviewed = useCallback(async () => {
     const ids = visibleNeedsReviewRows.map((row) => row.trackId);
@@ -743,8 +763,8 @@ export function ListenInboxClient({
     setRows((prev) => prev.map((row) => (ids.includes(row.trackId) ? { ...row, listened: true, isUpNext: false } : row)));
     setSelectedTrackIds((prev) => prev.filter((id) => !ids.includes(id)));
     setFeedback(`Marked ${ids.length} played tracks reviewed.`);
-    router.refresh();
-  }, [router, visibleNeedsReviewRows]);
+    requestRefresh();
+  }, [requestRefresh, visibleNeedsReviewRows]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -898,6 +918,10 @@ export function ListenInboxClient({
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(interval);
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     };
   }, [syncUpNextFromQueue]);
 
