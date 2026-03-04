@@ -1,4 +1,4 @@
-import type { SyncRunEvent } from "@/lib/sync-telemetry";
+import type { SyncRunEvent } from "@/lib/sync-types";
 
 function computePercentile(values: number[], percentile: number) {
   if (values.length === 0) return 0;

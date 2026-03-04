@@ -4,21 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { getTimelineBarStyle, getTimelineMaxRuns } from "@/lib/sync-timeline";
 import type { SyncThroughput } from "@/lib/sync-throughput";
-
-type SyncTelemetry = {
-  sourceId: number;
-  sourceName: string;
-  sourceKind: "label" | "artist";
-  phase: "idle" | "loading_release_page" | "processing_release" | "matching_track" | "queued" | "complete" | "error";
-  releaseId?: number;
-  releaseTitle?: string;
-  trackId?: number;
-  trackTitle?: string;
-  trackIndex?: number;
-  trackTotal?: number;
-  message?: string;
-  updatedAt: number;
-};
+import type { SyncRunEvent, SyncTelemetry } from "@/lib/sync-types";
 
 type SourceRow = {
   id: number;
@@ -31,16 +17,7 @@ type SourceNextResponse = {
   processingSources?: SourceRow[];
   syncTelemetry?: SyncTelemetry | null;
   lastSuccessBySource?: Array<{ sourceId: number; sourceName: string; lastSuccessAt: number }>;
-  runHistory?: Array<{
-    sourceId: number | null;
-    sourceName: string;
-    outcome: "ok" | "error" | "skipped";
-    message?: string;
-    error?: string;
-    lockAcquired: boolean;
-    durationMs: number;
-    createdAt: number;
-  }>;
+  runHistory?: SyncRunEvent[];
   throughput?: SyncThroughput;
   throughputLong?: SyncThroughput;
   blocker?: string | null;

@@ -1,36 +1,11 @@
 import { and, eq, gt } from "drizzle-orm";
 import { apiCache } from "@/db/schema";
 import { db } from "@/lib/db";
+import type { SyncRunEvent, SyncTelemetry } from "@/lib/sync-types";
 
 const TTL_MS = 10 * 60 * 1000;
 const RUN_HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
 const RUN_HISTORY_LIMIT = 40;
-
-export type SyncTelemetry = {
-  sourceId: number;
-  sourceName: string;
-  sourceKind: "label" | "artist";
-  phase: "idle" | "loading_release_page" | "processing_release" | "matching_track" | "queued" | "complete" | "error";
-  releaseId?: number;
-  releaseTitle?: string;
-  trackId?: number;
-  trackTitle?: string;
-  trackIndex?: number;
-  trackTotal?: number;
-  message?: string;
-  updatedAt: number;
-};
-
-export type SyncRunEvent = {
-  sourceId: number | null;
-  sourceName: string;
-  outcome: "ok" | "error" | "skipped";
-  message?: string;
-  error?: string;
-  lockAcquired: boolean;
-  durationMs: number;
-  createdAt: number;
-};
 
 function syncTelemetryKey(userId: string) {
   return `sync_telemetry:${userId}`;
