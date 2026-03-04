@@ -273,6 +273,7 @@ export function ListenInboxClient({
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
   const [loadingTrackId, setLoadingTrackId] = useState<number | null>(null);
   const [mobileQuickRailCollapsed, setMobileQuickRailCollapsed] = useState(false);
+  const [compactMobileRows, setCompactMobileRows] = useState(true);
   const router = useRouter();
   const refreshTimerRef = useRef<number | null>(null);
   const queueSyncInFlightRef = useRef(false);
@@ -475,6 +476,7 @@ export function ListenInboxClient({
     }
     setYoutubeQuotaExceeded(isYouTubeQuotaExceededInSession());
     setMobileQuickRailCollapsed(window.sessionStorage.getItem("digqueue:mobile-quick-rail-collapsed") === "1");
+    setCompactMobileRows(window.sessionStorage.getItem("digqueue:mobile-compact-rows") !== "0");
   }, []);
 
   useEffect(() => {
@@ -485,6 +487,15 @@ export function ListenInboxClient({
       window.sessionStorage.removeItem("digqueue:mobile-quick-rail-collapsed");
     }
   }, [mobileQuickRailCollapsed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (compactMobileRows) {
+      window.sessionStorage.setItem("digqueue:mobile-compact-rows", "1");
+    } else {
+      window.sessionStorage.setItem("digqueue:mobile-compact-rows", "0");
+    }
+  }, [compactMobileRows]);
 
   useEffect(() => {
     if (!showMobileQuickRail || !current) return;
@@ -1181,6 +1192,16 @@ export function ListenInboxClient({
                     >
                       Reset Preset
                     </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={compactMobileRows ? "secondary" : "outline"}
+                      className="col-span-2 h-9 w-full justify-center"
+                      onClick={() => setCompactMobileRows((prev) => !prev)}
+                      title="Compact mode reduces row density for faster phone scanning"
+                    >
+                      {compactMobileRows ? "Compact rows: on" : "Compact rows: off"}
+                    </Button>
                   </div>
                   <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <button type="button" onClick={() => { setStateView("all"); setCursor(0); }} className={filterButtonClass(stateView === "all")} aria-pressed={stateView === "all"}>All ({queueFilterCounts.all})</button>
@@ -1657,6 +1678,7 @@ export function ListenInboxClient({
 
       <div className="space-y-2 outline-none">
         {visibleRows.map((item, index) => {
+          const mobileCompactRow = compactMobileRows && showQueueFilters;
           const isPlaying = item.trackId === playingTrackId && playerIsPlaying;
           const isUpNext = Boolean(item.isUpNext) && !isPlaying;
           const playedCount = item.playedCount ?? (item.wasPlayed ? 1 : 0);
@@ -1682,7 +1704,7 @@ export function ListenInboxClient({
               ref={(node) => {
                 rowRefs.current[item.trackId] = node;
               }}
-              className={`rounded-lg border p-3 ${
+              className={`rounded-lg border ${mobileCompactRow ? "p-2.5 sm:p-3" : "p-3"} ${
                 isPlaying
                   ? "border-emerald-500/70 bg-emerald-500/10"
                   : index === activeCursor
@@ -1693,14 +1715,14 @@ export function ListenInboxClient({
               onMouseEnter={() => setCursor(index)}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="flex min-w-0 items-center gap-3">
+                <div className={`flex min-w-0 items-center ${mobileCompactRow ? "gap-2" : "gap-3"}`}>
                   <input
                     type="checkbox"
                     checked={selectedSet.has(item.trackId)}
                     onChange={(event) => toggleSelectTrack(item.trackId, event.target.checked)}
                     aria-label={`Select ${item.trackTitle}`}
                   />
-                  <ReleaseArtwork src={item.releaseThumbUrl} title={item.releaseTitle} />
+                  {!mobileCompactRow ? <ReleaseArtwork src={item.releaseThumbUrl} title={item.releaseTitle} /> : null}
                   <div className="min-w-0">
                     {(() => {
                       const artistLine = (item.trackArtists || item.releaseArtist || "").trim();
@@ -1708,7 +1730,7 @@ export function ListenInboxClient({
                         <p className="line-clamp-1 text-xs text-[var(--color-muted)]">{artistLine}</p>
                       ) : null;
                     })()}
-                    <p className="line-clamp-2 text-sm font-medium leading-snug">
+                    <p className={`${mobileCompactRow ? "line-clamp-1 text-[13px]" : "line-clamp-2 text-sm"} font-medium leading-snug`}>
                       {item.position}
                       {" "}
                       {item.trackTitle}
@@ -1723,14 +1745,14 @@ export function ListenInboxClient({
                         <Disc3 className="h-3.5 w-3.5" />
                       </a>
                     </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-muted)]">
+                    <div className={`mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-muted)] ${mobileCompactRow ? "sm:flex" : ""}`}>
                       <span>{item.labelName}</span>
                       <span>•</span>
                       <a className="underline-offset-2 hover:underline" href={`/releases/${item.releaseId}`}>
                         {item.releaseTitle}
                         {item.releaseCatno ? <span className="ml-1 text-[var(--color-muted)]">({item.releaseCatno})</span> : null}
                       </a>
-                      <span className="group relative ml-1 inline-flex">
+                      {!mobileCompactRow ? <span className="group relative ml-1 inline-flex">
                         <Button
                           type="button"
                           size="sm"
@@ -1761,7 +1783,7 @@ export function ListenInboxClient({
                               ? "Remove from Discogs wishlist"
                               : "Add to Discogs wishlist"}
                         </span>
-                      </span>
+                      </span> : null}
                       {item.duration ? (
                         <>
                           <span>•</span>
@@ -1773,15 +1795,19 @@ export function ListenInboxClient({
                       {isPlaying ? <Badge className="border-emerald-600/50 text-emerald-300">Now Playing</Badge> : null}
                       {isUpNext ? <Badge className="border-blue-600/50 text-blue-300">Up Next</Badge> : null}
                       {item.listened ? <Badge className="border-cyan-600/50 text-cyan-300">Reviewed</Badge> : null}
-                      {item.saved ? <Badge className="border-fuchsia-600/50 text-fuchsia-300">Track Saved</Badge> : null}
-                      {item.releaseWishlist ? (
-                        <Badge className="border-amber-500/60 bg-amber-500/15 text-amber-200">
-                          <BookmarkCheck className="mr-1 h-3 w-3" />
-                          Wishlisted
-                        </Badge>
-                      ) : null}
                       {needsMark ? <Badge className="border-amber-600/50 text-amber-300">Needs Review</Badge> : null}
-                      {wasPlayed ? <Badge className="border-zinc-600/50 text-zinc-300">Played{playedCount > 1 ? ` x${playedCount}` : ""}</Badge> : null}
+                      {!mobileCompactRow ? (
+                        <>
+                          {item.saved ? <Badge className="border-fuchsia-600/50 text-fuchsia-300">Track Saved</Badge> : null}
+                          {item.releaseWishlist ? (
+                            <Badge className="border-amber-500/60 bg-amber-500/15 text-amber-200">
+                              <BookmarkCheck className="mr-1 h-3 w-3" />
+                              Wishlisted
+                            </Badge>
+                          ) : null}
+                          {wasPlayed ? <Badge className="border-zinc-600/50 text-zinc-300">Played{playedCount > 1 ? ` x${playedCount}` : ""}</Badge> : null}
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 </div>
