@@ -26,9 +26,15 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   LISTENING_SCOPE_EVENT,
+  PLAY_ITEM_EVENT,
   PLAYBACK_MODE_EVENT,
+  PLAYBACK_NEXT_EVENT,
   PLAYBACK_MODE_STORAGE_KEY,
+  PLAYBACK_PLAYPAUSE_EVENT,
+  PLAYBACK_PREV_EVENT,
+  PLAYER_CURRENT_EVENT,
   RELEASE_WISHLIST_UPDATED_EVENT,
+  REQUEST_PLAYER_CURRENT_EVENT,
   TRACK_TODO_UPDATED_EVENT,
 } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
@@ -617,7 +623,7 @@ export function MiniPlayer() {
         }),
       );
       window.dispatchEvent(
-        new CustomEvent("digqueue:player-current", {
+        new CustomEvent(PLAYER_CURRENT_EVENT, {
           detail: {
             trackId,
             queueItemId: currentRef.current?.id ?? null,
@@ -1050,21 +1056,21 @@ export function MiniPlayer() {
       loadSpecific(custom.detail);
     };
 
-    window.addEventListener("digqueue:playpause", playPause);
-    window.addEventListener("digqueue:next", next);
-    window.addEventListener("digqueue:prev", prev);
+    window.addEventListener(PLAYBACK_PLAYPAUSE_EVENT, playPause);
+    window.addEventListener(PLAYBACK_NEXT_EVENT, next);
+    window.addEventListener(PLAYBACK_PREV_EVENT, prev);
     window.addEventListener("digqueue:reviewed-current", reviewedCurrent);
     // Backward compatibility for older shortcut/event emitters.
     window.addEventListener("digqueue:done-current", reviewedCurrent);
-    window.addEventListener("digqueue:play-item", playItem as EventListener);
+    window.addEventListener(PLAY_ITEM_EVENT, playItem as EventListener);
 
     return () => {
-      window.removeEventListener("digqueue:playpause", playPause);
-      window.removeEventListener("digqueue:next", next);
-      window.removeEventListener("digqueue:prev", prev);
+      window.removeEventListener(PLAYBACK_PLAYPAUSE_EVENT, playPause);
+      window.removeEventListener(PLAYBACK_NEXT_EVENT, next);
+      window.removeEventListener(PLAYBACK_PREV_EVENT, prev);
       window.removeEventListener("digqueue:reviewed-current", reviewedCurrent);
       window.removeEventListener("digqueue:done-current", reviewedCurrent);
-      window.removeEventListener("digqueue:play-item", playItem as EventListener);
+      window.removeEventListener(PLAY_ITEM_EVENT, playItem as EventListener);
     };
   }, [current, ensurePlaybackOwnership, loadNext, loadPrev, loadSpecific, markReviewed, playing, ready]);
 
@@ -1513,7 +1519,7 @@ export function MiniPlayer() {
 
   useEffect(() => {
     window.dispatchEvent(
-      new CustomEvent("digqueue:player-current", {
+      new CustomEvent(PLAYER_CURRENT_EVENT, {
         detail: {
           trackId: current?.track?.id ?? null,
           queueItemId: current?.id ?? null,
@@ -1528,7 +1534,7 @@ export function MiniPlayer() {
   useEffect(() => {
     const onRequestCurrent = () => {
       window.dispatchEvent(
-        new CustomEvent("digqueue:player-current", {
+        new CustomEvent(PLAYER_CURRENT_EVENT, {
           detail: {
             trackId: currentRef.current?.track?.id ?? null,
             queueItemId: currentRef.current?.id ?? null,
@@ -1540,8 +1546,8 @@ export function MiniPlayer() {
       );
     };
 
-    window.addEventListener("digqueue:request-player-current", onRequestCurrent);
-    return () => window.removeEventListener("digqueue:request-player-current", onRequestCurrent);
+    window.addEventListener(REQUEST_PLAYER_CURRENT_EVENT, onRequestCurrent);
+    return () => window.removeEventListener(REQUEST_PLAYER_CURRENT_EVENT, onRequestCurrent);
   }, [playing]);
 
   useEffect(() => {

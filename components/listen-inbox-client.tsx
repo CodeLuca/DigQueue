@@ -26,9 +26,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   LISTENING_SCOPE_EVENT,
+  PLAY_ITEM_EVENT,
   PLAYBACK_MODE_EVENT,
+  PLAYBACK_NEXT_EVENT,
   PLAYBACK_MODE_STORAGE_KEY,
+  PLAYER_CURRENT_EVENT,
   RELEASE_WISHLIST_UPDATED_EVENT,
+  REQUEST_PLAYER_CURRENT_EVENT,
   TRACK_TODO_UPDATED_EVENT,
   YOUTUBE_QUOTA_CLEAR_EVENT,
   YOUTUBE_QUOTA_EVENT,
@@ -506,12 +510,12 @@ export function ListenInboxClient({
     const optimisticItem = row ? createOptimisticPlayItem(row) : null;
     try {
       if (optimisticItem) {
-        window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: optimisticItem }));
+        window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: optimisticItem }));
       }
 
       const item = await enqueueTrack(trackId, "next");
       if (!optimisticItem || optimisticItem.youtubeVideoId !== item.youtubeVideoId) {
-        window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: item }));
+        window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: item }));
       }
       setPlayingTrackId(trackId);
       setPlayerIsPlaying(true);
@@ -572,7 +576,7 @@ export function ListenInboxClient({
     if (wasPlaying && nextTrackId) {
       void playRow(nextTrackId);
     } else if (wasPlaying) {
-      window.dispatchEvent(new CustomEvent("digqueue:next"));
+      window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
     }
     router.refresh();
   }, [activeCursor, current, playRow, playingTrackId, router, visibleRows]);
@@ -612,7 +616,7 @@ export function ListenInboxClient({
     if (wasPlaying && nextTrackId) {
       void playRow(nextTrackId);
     } else if (wasPlaying) {
-      window.dispatchEvent(new CustomEvent("digqueue:next"));
+      window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
     }
     router.refresh();
   }, [playRow, playingTrackId, router, visibleRows]);
@@ -648,7 +652,7 @@ export function ListenInboxClient({
       if (wasPlayingRelease && nextTrackId) {
         void playRow(nextTrackId);
       } else if (wasPlayingRelease) {
-        window.dispatchEvent(new CustomEvent("digqueue:next"));
+        window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
       }
       router.refresh();
     } catch (error) {
@@ -879,8 +883,8 @@ export function ListenInboxClient({
       void syncUpNextFromQueue();
     };
 
-    window.addEventListener("digqueue:player-current", onPlayerCurrent as EventListener);
-    return () => window.removeEventListener("digqueue:player-current", onPlayerCurrent as EventListener);
+    window.addEventListener(PLAYER_CURRENT_EVENT, onPlayerCurrent as EventListener);
+    return () => window.removeEventListener(PLAYER_CURRENT_EVENT, onPlayerCurrent as EventListener);
   }, [didAutoSelectPlayerLabel, labelFilterTouched, labelIdByTrackId, selectedLabelId, showQueueFilters, syncUpNextFromQueue]);
 
   useEffect(() => {
@@ -927,7 +931,7 @@ export function ListenInboxClient({
   useEffect(() => {
     const initial = window.setTimeout(() => void syncUpNextFromQueue(), 0);
     const interval = window.setInterval(() => void syncUpNextFromQueue(), 15000);
-    window.dispatchEvent(new CustomEvent("digqueue:request-player-current"));
+    window.dispatchEvent(new CustomEvent(REQUEST_PLAYER_CURRENT_EVENT));
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(interval);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT, YOUTUBE_QUOTA_STORAGE_KEY } from "@/lib/client-events";
+import { PLAY_ITEM_EVENT, YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT, YOUTUBE_QUOTA_STORAGE_KEY } from "@/lib/client-events";
 
 type QueueApiItem = {
   id: number;
@@ -52,7 +52,7 @@ export function PlayMatchButton({ trackId, matchId }: { trackId: number; matchId
         return;
       }
 
-      window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: body.item }));
+      window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: body.item }));
       router.refresh();
     } finally {
       setLoading(false);

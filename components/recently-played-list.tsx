@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { YOUTUBE_QUOTA_EVENT } from "@/lib/client-events";
+import { PLAY_ITEM_EVENT, YOUTUBE_QUOTA_EVENT } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 type RecentlyPlayedItem = {
@@ -90,7 +90,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
     setLoadingId(item.id);
     try {
       const queued = await enqueueTrack(item.trackId, "next");
-      window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: queued }));
+      window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: queued }));
       setFeedback("Playing again.");
     } catch (error) {
       if (error instanceof Error && error.message === "NO_MATCH") {

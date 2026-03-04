@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { PLAYBACK_NEXT_EVENT } from "@/lib/client-events";
 
 export function QueuePlayControls() {
   return (
@@ -10,7 +11,7 @@ export function QueuePlayControls() {
         size="sm"
         className="w-full justify-center sm:w-auto sm:justify-start"
         title="Start playback in the mini-player from the next queued item"
-        onClick={() => window.dispatchEvent(new CustomEvent("digqueue:next"))}
+        onClick={() => window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT))}
       >
         Play Queue
       </Button>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT, YOUTUBE_QUOTA_STORAGE_KEY } from "@/lib/client-events";
+import { PLAY_ITEM_EVENT, YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT, YOUTUBE_QUOTA_STORAGE_KEY } from "@/lib/client-events";
 
 type QueueApiItem = {
   id: number;
@@ -72,7 +72,7 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
       }
 
       if (playNow) {
-        window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: body.item }));
+        window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: body.item }));
       }
       router.refresh();
     } catch (err) {

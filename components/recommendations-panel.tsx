@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PLAY_ITEM_EVENT } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 type RecommendationItem = {
@@ -143,7 +144,7 @@ export function RecommendationsPanel({
       const queued = await enqueueTrack(trackId, "next");
       if (playNow) {
         // Always route through bottom mini-player and replace current playback.
-        window.dispatchEvent(new CustomEvent("digqueue:play-item", { detail: queued }));
+        window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: queued }));
       }
       removeItem(trackId);
       setFeedback(playNow ? "Playing in bottom player." : "Queued next.");
