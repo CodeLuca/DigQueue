@@ -14,6 +14,7 @@ import {
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
 } from "@/lib/queue-next-mutation";
+import { markQueueItemPlayed } from "@/lib/queue-next-db";
 import { selectNextQueueItem } from "@/lib/queue-next-selection";
 import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
   if (shouldApplyPlayedOnlyMutation(mutation)) {
     const currentId = mutation.currentId as number;
     const item = await db.query.queueItems.findFirst({ where: and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)) });
-    await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)));
+    await markQueueItemPlayed(userId, currentId);
     const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
     if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
   }
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         await db.update(releases).set({ listened }).where(and(eq(releases.id, item.releaseId), eq(releases.userId, userId)));
       }
     }
-    await db.update(queueItems).set({ status: "played" }).where(and(eq(queueItems.id, currentId), eq(queueItems.userId, userId)));
+    await markQueueItemPlayed(userId, currentId);
   }
 
   const next = await selectNextQueueItem({
