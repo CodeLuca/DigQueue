@@ -9,8 +9,10 @@ import {
   CheckCheck,
   CheckCircle2,
   CheckSquare,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Disc3,
   ExternalLink,
   Heart,
@@ -269,6 +271,7 @@ export function ListenInboxClient({
   const [addedLabelReleaseIds, setAddedLabelReleaseIds] = useState<number[]>([]);
   const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(false);
   const [loadingTrackId, setLoadingTrackId] = useState<number | null>(null);
+  const [mobileQuickRailCollapsed, setMobileQuickRailCollapsed] = useState(false);
   const router = useRouter();
   const refreshTimerRef = useRef<number | null>(null);
   const queueSyncInFlightRef = useRef(false);
@@ -470,7 +473,17 @@ export function ListenInboxClient({
       setPlaybackMode(storedPlaybackMode);
     }
     setYoutubeQuotaExceeded(isYouTubeQuotaExceededInSession());
+    setMobileQuickRailCollapsed(window.sessionStorage.getItem("digqueue:mobile-quick-rail-collapsed") === "1");
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (mobileQuickRailCollapsed) {
+      window.sessionStorage.setItem("digqueue:mobile-quick-rail-collapsed", "1");
+    } else {
+      window.sessionStorage.removeItem("digqueue:mobile-quick-rail-collapsed");
+    }
+  }, [mobileQuickRailCollapsed]);
 
   const moveLabel = useCallback((direction: -1 | 1) => {
     if (effectiveLabelOptions.length === 0) {
@@ -1479,6 +1492,35 @@ export function ListenInboxClient({
       ) : null}
       {showMobileQuickRail && current ? (
         <div className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-30 rounded-xl border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] p-2 shadow-xl sm:hidden">
+          {mobileQuickRailCollapsed ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-2"
+                onClick={() => setMobileQuickRailCollapsed(false)}
+                aria-label="Expand quick actions"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </Button>
+              <p className="line-clamp-1 min-w-0 flex-1 text-[11px] font-medium text-[var(--color-text)]">
+                {current.position} {current.trackTitle}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 px-2"
+                onClick={() => void playRow(current.trackId)}
+                disabled={!currentCanPlay || loadingTrackId === current.trackId}
+                aria-label="Play current track"
+              >
+                {loadingTrackId === current.trackId ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+          ) : (
+            <>
           <div className="flex items-center justify-between gap-2">
             <Button
               type="button"
@@ -1509,6 +1551,19 @@ export function ListenInboxClient({
               aria-label="Next track in current view"
             >
               <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="mt-1 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[10px] text-[var(--color-muted)]"
+              onClick={() => setMobileQuickRailCollapsed(true)}
+              aria-label="Collapse quick actions"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+              Collapse
             </Button>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
@@ -1587,6 +1642,8 @@ export function ListenInboxClient({
               Release
             </Button>
           </div>
+            </>
+          )}
         </div>
       ) : null}
 
