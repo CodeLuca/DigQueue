@@ -6,6 +6,7 @@ import { labels, releases, sourceReleases } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
+import { resolveSourceNextBlocker } from "@/lib/source-next-blocker";
 import { createEmptySourceNextResponse, type SourceNextResponse } from "@/lib/source-next-response";
 import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
 import { buildLastSuccessBySource, buildSyncRunStats } from "@/lib/sync-run-stats";
@@ -196,14 +197,11 @@ export async function GET() {
       throughput,
       throughputLong,
       processingAttempt,
-      blocker:
-        nextSourceId !== null
-          ? null
-          : counts.error > 0
-            ? "Only errored sources remain. Retry or clear errors to continue."
-            : activeSources.length === 0
-              ? "No active sources."
-              : "No queued/processing sources.",
+      blocker: resolveSourceNextBlocker({
+        nextSourceId,
+        errorCount: counts.error,
+        activeCount: activeSources.length,
+      }),
     };
     return NextResponse.json(response);
   } catch (error) {

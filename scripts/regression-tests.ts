@@ -41,6 +41,7 @@ import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { parsePositiveSourceIds } from "../lib/source-id-list";
+import { resolveSourceNextBlocker } from "../lib/source-next-blocker";
 import { createEmptySourceNextResponse } from "../lib/source-next-response";
 import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
 import { getTimelineBarStyle, getTimelineMaxRuns } from "../lib/sync-timeline";
@@ -260,6 +261,13 @@ async function run() {
   assert.equal(getFailureCategoryMeta("unknown").label, "Unknown");
   assert.deepEqual(parsePositiveSourceIds("1,2,2, x, -1, 4"), [1, 2, 4]);
   assert.deepEqual(parsePositiveSourceIds("10,11,12", 2), [10, 11]);
+  assert.equal(resolveSourceNextBlocker({ nextSourceId: 1, errorCount: 5, activeCount: 10 }), null);
+  assert.equal(
+    resolveSourceNextBlocker({ nextSourceId: null, errorCount: 1, activeCount: 3 }),
+    "Only errored sources remain. Retry or clear errors to continue.",
+  );
+  assert.equal(resolveSourceNextBlocker({ nextSourceId: null, errorCount: 0, activeCount: 0 }), "No active sources.");
+  assert.equal(resolveSourceNextBlocker({ nextSourceId: null, errorCount: 0, activeCount: 2 }), "No queued/processing sources.");
   const groupedFailures = groupSourceFailuresByCategory(
     [
       { id: 1, lastError: "OAuth token expired" },
