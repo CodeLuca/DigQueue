@@ -11,6 +11,7 @@ import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "
 import { buildOAuthTempCookieOptions } from "../lib/oauth-cookie-options";
 import { normalizeNextPath } from "../lib/next-path";
 import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
+import { createOAuthState, getOAuthStateByteLength } from "../lib/oauth-state";
 import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "../lib/oauth-start-routing";
 import { readJsonBodyOrNull } from "../lib/request-json";
 import {
@@ -99,6 +100,14 @@ async function run() {
   assert.equal(getOAuthErrorQueryKey("youtube"), "youtube_error");
   assert.equal(getOAuthTempCookieKey("discogs"), "discogs_oauth_tmp");
   assert.equal(getOAuthTempCookieKey("youtube"), "youtube_oauth_tmp");
+  assert.equal(getOAuthStateByteLength("discogs"), 12);
+  assert.equal(getOAuthStateByteLength("youtube"), 18);
+  const discogsState = createOAuthState("discogs");
+  const youtubeState = createOAuthState("youtube");
+  assert.equal(discogsState.length, 24);
+  assert.equal(youtubeState.length, 36);
+  assert.match(discogsState, /^[a-f0-9]+$/);
+  assert.match(youtubeState, /^[a-f0-9]+$/);
   assert.equal(
     buildDiscogsOAuthCallbackUrl("https://digqueue.local", "/settings?tab=step-2", "abc"),
     "https://digqueue.local/api/discogs/oauth/callback?next=%2Fsettings%3Ftab%3Dstep-2&state=abc",

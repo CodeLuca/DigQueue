@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
@@ -7,6 +6,7 @@ import { normalizeNextPath } from "@/lib/next-path";
 import { YOUTUBE_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { buildOAuthTempCookieOptions } from "@/lib/oauth-cookie-options";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
+import { createOAuthState } from "@/lib/oauth-state";
 import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "@/lib/oauth-start-routing";
 import { encodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { buildYoutubeOAuthAuthorizeUrl } from "@/lib/youtube-oauth";
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const state = randomBytes(18).toString("hex");
+    const state = createOAuthState("youtube");
     const cookieStore = await cookies();
     cookieStore.set(YOUTUBE_OAUTH_TMP_COOKIE, encodeYoutubeOAuthPending({ state, nextPath }), buildOAuthTempCookieOptions());
 

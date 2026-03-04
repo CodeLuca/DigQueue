@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
@@ -7,6 +6,7 @@ import { buildDiscogsOAuthCallbackUrl } from "@/lib/discogs-oauth-callback-url";
 import { discogsOAuthAuthorizeUrl, fetchDiscogsOAuthRequestToken } from "@/lib/discogs-oauth";
 import { DISCOGS_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { buildOAuthTempCookieOptions } from "@/lib/oauth-cookie-options";
+import { createOAuthState } from "@/lib/oauth-state";
 import { normalizeNextPath } from "@/lib/next-path";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { buildOAuthStartLoginPath, parseOAuthStartQuery } from "@/lib/oauth-start-routing";
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const state = randomBytes(12).toString("hex");
+    const state = createOAuthState("discogs");
     const requestToken = await fetchDiscogsOAuthRequestToken(buildDiscogsOAuthCallbackUrl(appOrigin, nextPath, state));
     const cookieStore = await cookies();
     cookieStore.set(DISCOGS_OAUTH_TMP_COOKIE, encodeDiscogsOAuthPending({
