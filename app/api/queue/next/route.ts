@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { releases, tracks } from "@/db/schema";
+import { tracks } from "@/db/schema";
 import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
@@ -14,9 +14,13 @@ import {
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
 } from "@/lib/queue-next-mutation";
-import { findQueueItemForUser, markPendingTrackQueueItemsPlayed, markQueueItemPlayed } from "@/lib/queue-next-db";
+import {
+  findQueueItemForUser,
+  markPendingTrackQueueItemsPlayed,
+  markQueueItemPlayed,
+  refreshReleaseListenedFromTracks,
+} from "@/lib/queue-next-db";
 import { selectNextQueueItem } from "@/lib/queue-next-selection";
-import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
 import { parseQueueNextGetParams } from "@/lib/queue-next-request";
 import { logFeedbackEvent } from "@/lib/recommendations";
@@ -75,9 +79,7 @@ export async function POST(request: Request) {
       if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
 
       if (item.releaseId) {
-        const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, item.releaseId), eq(tracks.userId, userId)) });
-        const listened = deriveReleaseListenedFromTracks(releaseTracks);
-        await db.update(releases).set({ listened }).where(and(eq(releases.id, item.releaseId), eq(releases.userId, userId)));
+        await refreshReleaseListenedFromTracks(userId, item.releaseId);
       }
     }
     await markQueueItemPlayed(userId, currentId);

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
-import { queueItems } from "@/db/schema";
+import { queueItems, releases, tracks } from "@/db/schema";
 import { db } from "@/lib/db";
+import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 
 export async function findQueueItemForUser(userId: string, queueItemId: number) {
   return db.query.queueItems.findFirst({
@@ -17,4 +18,12 @@ export async function markPendingTrackQueueItemsPlayed(userId: string, trackId: 
     .update(queueItems)
     .set({ status: "played" })
     .where(and(eq(queueItems.trackId, trackId), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)));
+}
+
+export async function refreshReleaseListenedFromTracks(userId: string, releaseId: number) {
+  const releaseTracks = await db.query.tracks.findMany({
+    where: and(eq(tracks.releaseId, releaseId), eq(tracks.userId, userId)),
+  });
+  const listened = deriveReleaseListenedFromTracks(releaseTracks);
+  await db.update(releases).set({ listened }).where(and(eq(releases.id, releaseId), eq(releases.userId, userId)));
 }
