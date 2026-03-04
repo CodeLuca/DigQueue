@@ -1,11 +1,8 @@
 export const dynamic = "force-dynamic";
 
-import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { tracks } from "@/db/schema";
 import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
-import { db } from "@/lib/db";
 import { readJsonBodyOrNull } from "@/lib/request-json";
 import {
   buildQueueFeedbackPayload,
@@ -15,6 +12,7 @@ import {
 } from "@/lib/queue-next-mutation";
 import {
   findQueueItemForUser,
+  markTrackListenedForUser,
   markPendingTrackQueueItemsPlayed,
   markQueueItemPlayed,
   refreshReleaseListenedFromTracks,
@@ -66,7 +64,7 @@ export async function POST(request: Request) {
     const currentId = mutation.currentId as number;
     const item = await findQueueItemForUser(userId, currentId);
     if (item?.trackId) {
-      await db.update(tracks).set({ listened: true }).where(and(eq(tracks.id, item.trackId), eq(tracks.userId, userId)));
+      await markTrackListenedForUser(userId, item.trackId);
       await markPendingTrackQueueItemsPlayed(userId, item.trackId);
       const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
       if (feedbackPayload) await logFeedbackEvent(feedbackPayload);

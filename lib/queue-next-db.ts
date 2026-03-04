@@ -20,6 +20,10 @@ export async function markPendingTrackQueueItemsPlayed(userId: string, trackId: 
     .where(and(eq(queueItems.trackId, trackId), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)));
 }
 
+export async function markTrackListenedForUser(userId: string, trackId: number) {
+  await db.update(tracks).set({ listened: true }).where(and(eq(tracks.id, trackId), eq(tracks.userId, userId)));
+}
+
 export async function refreshReleaseListenedFromTracks(userId: string, releaseId: number) {
   const releaseTracks = await db.query.tracks.findMany({
     where: and(eq(tracks.releaseId, releaseId), eq(tracks.userId, userId)),
