@@ -6,6 +6,7 @@ import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLAY_ITEM_EVENT } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
+import { QUEUE_ERROR_NO_MATCH } from "@/lib/queue-errors";
 
 type RecommendationItem = {
   id: number;
@@ -48,7 +49,7 @@ async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "nor
   const body = (await response.json().catch(() => null)) as
     | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
     | null;
-  if (body?.reason === "no_match") throw new Error("NO_MATCH");
+  if (body?.reason === "no_match") throw new Error(QUEUE_ERROR_NO_MATCH);
   if (body?.reason === "youtube_quota_exceeded") throw new Error("YOUTUBE_QUOTA");
   if (!response.ok || !body?.ok || !body.item) throw new Error(body?.error || "Unable to queue track.");
   return body.item;
@@ -149,7 +150,7 @@ export function RecommendationsPanel({
       removeItem(trackId);
       setFeedback(playNow ? "Playing in bottom player." : "Queued next.");
     } catch (error) {
-      if (error instanceof Error && error.message === "NO_MATCH") {
+      if (error instanceof Error && error.message === QUEUE_ERROR_NO_MATCH) {
         setFeedback("No playable match available yet. Open release and run matching.");
       } else {
         setFeedback(error instanceof Error ? error.message : "Unable to queue recommendation.");

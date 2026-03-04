@@ -43,6 +43,7 @@ import {
   isYouTubeQuotaExceededInSession,
   setYouTubeQuotaExceededInSession,
 } from "@/lib/youtube-quota-client";
+import { QUEUE_ERROR_NO_MATCH, QUEUE_ERROR_TIMEOUT, QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED } from "@/lib/queue-errors";
 
 type ListenRow = {
   trackId: number;
@@ -162,10 +163,10 @@ async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "nor
         | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
         | null;
       if (body?.reason === "no_match") {
-        throw new Error("NO_MATCH");
+        throw new Error(QUEUE_ERROR_NO_MATCH);
       }
       if (body?.reason === "youtube_quota_exceeded") {
-        throw new Error("YOUTUBE_QUOTA_EXCEEDED");
+        throw new Error(QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED);
       }
       if (!response.ok || !body?.ok) {
         throw new Error(body?.error || "Unable to queue track.");
@@ -174,7 +175,7 @@ async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "nor
       return body.item;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error("QUEUE_TIMEOUT");
+        throw new Error(QUEUE_ERROR_TIMEOUT);
       }
       throw error;
     } finally {
@@ -186,7 +187,7 @@ async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "nor
     return await tryEnqueue();
   } catch (error) {
     // One quick retry smooths over transient API stalls.
-    if (error instanceof Error && error.message === "QUEUE_TIMEOUT") {
+    if (error instanceof Error && error.message === QUEUE_ERROR_TIMEOUT) {
       return tryEnqueue();
     }
     throw error;
@@ -533,17 +534,17 @@ export function ListenInboxClient({
       setFeedback(optimisticItem ? "Loading in mini-player…" : "Playing.");
       void syncUpNextFromQueue();
     } catch (error) {
-      if (error instanceof Error && error.message === "NO_MATCH") {
+      if (error instanceof Error && error.message === QUEUE_ERROR_NO_MATCH) {
         setFeedback("No playable video found yet for this track. Try again in a few seconds.");
         return;
       }
-      if (error instanceof Error && error.message === "YOUTUBE_QUOTA_EXCEEDED") {
+      if (error instanceof Error && error.message === QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED) {
         setYoutubeQuotaExceeded(true);
         setFeedback("YouTube quota reached. Queue/play is temporarily disabled. You can still mark tracks listened.");
         setYouTubeQuotaExceededInSession();
         return;
       }
-      if (error instanceof Error && error.message === "QUEUE_TIMEOUT") {
+      if (error instanceof Error && error.message === QUEUE_ERROR_TIMEOUT) {
         setFeedback("Play request timed out. Retrying often fixes this.");
         return;
       }

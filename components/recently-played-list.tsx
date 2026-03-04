@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLAY_ITEM_EVENT } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
+import { QUEUE_ERROR_NO_MATCH, QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED } from "@/lib/queue-errors";
 import { setYouTubeQuotaExceededInSession } from "@/lib/youtube-quota-client";
 
 type RecentlyPlayedItem = {
@@ -34,10 +35,10 @@ async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "nor
     | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
     | null;
   if (body?.reason === "no_match") {
-    throw new Error("NO_MATCH");
+    throw new Error(QUEUE_ERROR_NO_MATCH);
   }
   if (body?.reason === "youtube_quota_exceeded") {
-    throw new Error("YOUTUBE_QUOTA_EXCEEDED");
+    throw new Error(QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED);
   }
   if (!response.ok || !body?.ok) {
     throw new Error(body?.error || "Unable to queue track.");
@@ -94,9 +95,9 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
       window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: queued }));
       setFeedback("Playing again.");
     } catch (error) {
-      if (error instanceof Error && error.message === "NO_MATCH") {
+      if (error instanceof Error && error.message === QUEUE_ERROR_NO_MATCH) {
         setFeedback("No playable video match found for this track.");
-      } else if (error instanceof Error && error.message === "YOUTUBE_QUOTA_EXCEEDED") {
+      } else if (error instanceof Error && error.message === QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED) {
         setYouTubeQuotaExceededInSession();
         setFeedback("YouTube quota reached. Replay is temporarily disabled.");
       } else {
