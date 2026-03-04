@@ -413,6 +413,14 @@ export function ListenInboxClient({
     ? "No linked playable video yet. Play Now will search and queue one."
     : null;
   const showMobileQuickRail = showQueueFilters && Boolean(current);
+  const goPrevVisibleRow = useCallback(() => {
+    setCursor((prev) => Math.max(0, prev - 1));
+  }, []);
+  const goNextVisibleRow = useCallback(() => {
+    setCursor((prev) => Math.min(Math.max(0, visibleRows.length - 1), prev + 1));
+  }, [visibleRows.length]);
+  const canGoPrevVisibleRow = activeCursor > 0;
+  const canGoNextVisibleRow = activeCursor < Math.max(0, visibleRows.length - 1);
   const filterButtonClass = (active: boolean) =>
     `inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 sm:px-3 sm:text-sm ${
       active
@@ -1458,12 +1466,38 @@ export function ListenInboxClient({
       ) : null}
       {showMobileQuickRail && current ? (
         <div className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-30 rounded-xl border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] p-2 shadow-xl sm:hidden">
-          <p className="line-clamp-1 text-[11px] font-medium text-[var(--color-text)]">
-            {current.position} {current.trackTitle}
-          </p>
-          <p className="line-clamp-1 text-[10px] text-[var(--color-muted)]">
-            {current.labelName} • {current.releaseTitle}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 px-2"
+              onClick={goPrevVisibleRow}
+              disabled={!canGoPrevVisibleRow}
+              aria-label="Previous track in current view"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <div className="min-w-0 flex-1 text-center">
+              <p className="line-clamp-1 text-[11px] font-medium text-[var(--color-text)]">
+                {current.position} {current.trackTitle}
+              </p>
+              <p className="line-clamp-1 text-[10px] text-[var(--color-muted)]">
+                {activeCursor + 1}/{visibleRows.length} • {current.labelName}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 px-2"
+              onClick={goNextVisibleRow}
+              disabled={!canGoNextVisibleRow}
+              aria-label="Next track in current view"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             <Button
               type="button"
@@ -1550,6 +1584,7 @@ export function ListenInboxClient({
                     ? "border-[var(--color-accent)] bg-[var(--color-surface2)]"
                     : "border-[var(--color-border)]"
               }`}
+              onClick={() => setCursor(index)}
               onMouseEnter={() => setCursor(index)}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -1645,7 +1680,7 @@ export function ListenInboxClient({
                     </div>
                   </div>
                 </div>
-                {showQueueFilters ? (
+                {showQueueFilters && !showMobileQuickRail ? (
                   <div className="grid w-full grid-cols-2 gap-2 sm:hidden">
                     <a
                       href={toDiscogsWebUrl(item.releaseDiscogsUrl, "")}
