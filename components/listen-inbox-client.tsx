@@ -421,6 +421,19 @@ export function ListenInboxClient({
   }, [visibleRows.length]);
   const canGoPrevVisibleRow = activeCursor > 0;
   const canGoNextVisibleRow = activeCursor < Math.max(0, visibleRows.length - 1);
+  const nextNeedsReviewCursor = useMemo(() => {
+    if (visibleRows.length === 0) return -1;
+    for (let idx = activeCursor + 1; idx < visibleRows.length; idx += 1) {
+      const row = visibleRows[idx];
+      const alreadyPlayed = (row.playedCount ?? 0) > 0 || Boolean(row.wasPlayed);
+      if (alreadyPlayed && !row.listened) return idx;
+    }
+    return -1;
+  }, [activeCursor, visibleRows]);
+  const jumpToNextNeedsReview = useCallback(() => {
+    if (nextNeedsReviewCursor < 0) return;
+    setCursor(nextNeedsReviewCursor);
+  }, [nextNeedsReviewCursor]);
   const filterButtonClass = (active: boolean) =>
     `inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 sm:px-3 sm:text-sm ${
       active
@@ -1499,6 +1512,30 @@ export function ListenInboxClient({
             </Button>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-10 w-full justify-center"
+              onClick={jumpToNextNeedsReview}
+              disabled={nextNeedsReviewCursor < 0}
+              title="Jump to next played track that still needs review"
+              aria-label="Jump to next track needing review"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Next needs review
+            </Button>
+            <a
+              href={toDiscogsWebUrl(current.releaseDiscogsUrl, "")}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 w-full items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
+              title="Open current release on Discogs"
+              aria-label="Open current release on Discogs"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Discogs
+            </a>
             <Button
               type="button"
               size="sm"
