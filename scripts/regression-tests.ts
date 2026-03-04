@@ -124,6 +124,7 @@ async function run() {
   assert.equal(getInvalidOAuthCallbackMessage("discogs"), "Invalid Discogs OAuth callback.");
   assert.equal(getInvalidOAuthCallbackMessage("youtube"), "Invalid YouTube OAuth callback.");
   assert.equal(getOAuthStateMismatchMessage("discogs"), "Discogs OAuth state mismatch.");
+  assert.equal(buildOAuthCallbackSuccessPath("/settings?tab=step-1", "discogs"), "/settings?tab=step-1&discogs=connected");
   assert.equal(buildOAuthCallbackSuccessPath("/settings?tab=library", "youtube"), "/settings?tab=library&youtube=connected");
   assert.equal(getOAuthCallbackErrorMessage("discogs", "invalid_callback"), "Invalid Discogs OAuth callback.");
   assert.equal(getOAuthCallbackErrorMessage("discogs", "state_mismatch"), "Discogs OAuth state mismatch.");
