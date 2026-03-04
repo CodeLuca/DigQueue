@@ -8,7 +8,7 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
 import { searchDiscogsArtists, searchDiscogsLabels } from "@/lib/discogs";
-import { parseArtistIdFromInput, parseLabelIdFromInput } from "@/lib/discogs-input";
+import { detectDiscogsSourceKindFromInput, parseArtistIdFromInput, parseLabelIdFromInput } from "@/lib/discogs-input";
 import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
 import { toExternalDiscogsId, toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshSourceMetadata } from "@/lib/label-metadata";
@@ -276,18 +276,13 @@ export async function addSourceAction(formData: FormData) {
   const requestedKind: "label" | "artist" | null =
     requestedKindRaw === "artist" ? "artist" : requestedKindRaw === "label" ? "label" : null;
 
-  const explicitArtistUrl = /\/artists?\/\d+/i.test(raw);
-  const explicitLabelUrl = /\/labels?\/\d+/i.test(raw);
+  const explicitKind = detectDiscogsSourceKindFromInput(raw);
   const parsedArtistId = parseArtistIdFromInput(raw);
   const parsedLabelId = parseLabelIdFromInput(raw);
 
   let entityKind: "label" | "artist" =
     requestedKind ??
-    (explicitArtistUrl && !explicitLabelUrl
-      ? "artist"
-      : explicitLabelUrl && !explicitArtistUrl
-        ? "label"
-        : "label");
+    (explicitKind === "artist" ? "artist" : "label");
   let id = entityKind === "artist" ? parsedArtistId : parsedLabelId;
   let name = raw;
 
