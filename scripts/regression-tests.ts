@@ -370,6 +370,15 @@ async function run() {
   assert.equal(groupedFailures[0]?.items.length, 2);
   assert.equal(groupedFailures[1]?.category, "auth");
   assert.equal(groupedFailures[2]?.category, "unknown");
+  const groupedTie = groupSourceFailuresByCategory(
+    [
+      { id: 1, lastError: "Discogs error 429" },
+      { id: 2, lastError: "OAuth token expired" },
+    ],
+    (row) => row.lastError,
+  );
+  assert.equal(groupedTie[0]?.category, "auth");
+  assert.equal(groupedTie[1]?.category, "rate_limit");
 
   // OAuth temp cookie parsing coverage.
   const encodedDiscogs = encodeDiscogsOAuthPending({

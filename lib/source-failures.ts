@@ -159,6 +159,14 @@ export function groupSourceFailuresByCategory<T>(
   items: T[],
   resolveVisibleError: (item: T) => string,
 ): GroupedSourceFailures<T> {
+  const categoryPriority: Record<FailureCategory, number> = {
+    auth: 0,
+    database: 1,
+    rate_limit: 2,
+    provider: 3,
+    data: 4,
+    unknown: 5,
+  };
   const grouped = new Map<FailureCategory, Array<{ label: T; error: string }>>();
   for (const item of items) {
     const visibleError = resolveVisibleError(item) || "Unknown source failure.";
@@ -169,5 +177,9 @@ export function groupSourceFailuresByCategory<T>(
   }
   return [...grouped.entries()]
     .map(([category, groupedItems]) => ({ category, items: groupedItems }))
-    .sort((a, b) => b.items.length - a.items.length);
+    .sort((a, b) => {
+      const countDelta = b.items.length - a.items.length;
+      if (countDelta !== 0) return countDelta;
+      return categoryPriority[a.category] - categoryPriority[b.category];
+    });
 }
