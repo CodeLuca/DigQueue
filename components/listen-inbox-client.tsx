@@ -30,6 +30,9 @@ import {
   PLAYBACK_MODE_STORAGE_KEY,
   RELEASE_WISHLIST_UPDATED_EVENT,
   TRACK_TODO_UPDATED_EVENT,
+  YOUTUBE_QUOTA_CLEAR_EVENT,
+  YOUTUBE_QUOTA_EVENT,
+  YOUTUBE_QUOTA_STORAGE_KEY,
 } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
@@ -85,9 +88,6 @@ type QueueApiItem = {
   label?: { name: string } | null;
 };
 
-const YOUTUBE_QUOTA_EVENT = "digqueue:youtube-quota-exceeded";
-const YOUTUBE_QUOTA_CLEAR_EVENT = "digqueue:youtube-quota-cleared";
-const YOUTUBE_QUOTA_STORAGE_KEY = "digqueue:youtube-quota-exceeded";
 const ENQUEUE_TIMEOUT_MS = 6000;
 type PlaybackMode = "in_order" | "shuffle";
 type QueueStateView = "all" | "needs_review" | "reviewed" | "played";

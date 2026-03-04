@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT, YOUTUBE_QUOTA_STORAGE_KEY } from "@/lib/client-events";
 
 type QueueApiItem = {
   id: number;
@@ -13,10 +14,6 @@ type QueueApiItem = {
   release?: { title: string } | null;
   label?: { name: string } | null;
 };
-
-const YOUTUBE_QUOTA_EVENT = "digqueue:youtube-quota-exceeded";
-const YOUTUBE_QUOTA_CLEAR_EVENT = "digqueue:youtube-quota-cleared";
-const YOUTUBE_QUOTA_STORAGE_KEY = "digqueue:youtube-quota-exceeded";
 
 export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: number; youtubeSearchUrl: string }) {
   const [loading, setLoading] = useState<"queue" | "play" | null>(null);

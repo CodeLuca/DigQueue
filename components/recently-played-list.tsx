@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { YOUTUBE_QUOTA_EVENT } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 type RecentlyPlayedItem = {
@@ -95,7 +96,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
       if (error instanceof Error && error.message === "NO_MATCH") {
         setFeedback("No playable video match found for this track.");
       } else if (error instanceof Error && error.message === "YOUTUBE_QUOTA_EXCEEDED") {
-        window.dispatchEvent(new CustomEvent("digqueue:youtube-quota-exceeded"));
+        window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_EVENT));
         setFeedback("YouTube quota reached. Replay is temporarily disabled.");
       } else {
         setFeedback(error instanceof Error ? error.message : "Unable to play track.");
