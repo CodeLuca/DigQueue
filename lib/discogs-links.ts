@@ -11,9 +11,11 @@ function normalizeDiscogsPath(inputPath: string) {
       : kind === "artists" ? "artist"
       : kind === "masters" ? "master"
       : kind;
-    if (/^\d+$/.test(id) && ["release", "label", "artist", "master"].includes(canonicalKind)) {
+    const idMatch = id.match(/^(\d+)(-.+)?$/);
+    if (idMatch && ["release", "label", "artist", "master"].includes(canonicalKind)) {
+      const canonicalId = `${idMatch[1]}${idMatch[2] ?? ""}`;
       const suffix = normalized.slice(2).join("/");
-      return suffix ? `/${canonicalKind}/${id}/${suffix}` : `/${canonicalKind}/${id}`;
+      return suffix ? `/${canonicalKind}/${canonicalId}/${suffix}` : `/${canonicalKind}/${canonicalId}`;
     }
   }
   return path;

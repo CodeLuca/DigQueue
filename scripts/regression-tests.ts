@@ -180,8 +180,16 @@ async function run() {
     "https://www.discogs.com/release/2060",
   );
   assert.equal(
+    toDiscogsWebUrl("https://www.discogs.com/releases/2060-Geometry", ""),
+    "https://www.discogs.com/release/2060-Geometry",
+  );
+  assert.equal(
     toDiscogsWebUrl("https://api.discogs.com/releases/24761", ""),
     "https://www.discogs.com/release/24761",
+  );
+  assert.equal(
+    toDiscogsWebUrl("https://www.discogs.com/labels/1120990-Kalahari-Oyster-Cult", ""),
+    "https://www.discogs.com/label/1120990-Kalahari-Oyster-Cult",
   );
   assert.equal(
     toDiscogsWebUrl("www.discogs.com/labels/123", ""),
