@@ -718,7 +718,12 @@ export async function retryLabelAction(formData: FormData) {
     .where(and(eq(labels.id, labelId), scope.labels));
 
   // Kick one processing step immediately so "Reload tracks" has visible progress without requiring queue runner.
-  await processSingleReleaseForSource(labelId, userId);
+  let failed = 0;
+  try {
+    await processSingleReleaseForSource(labelId, userId);
+  } catch {
+    failed = 1;
+  }
 
   const nextPath = resolveActionNextPath(formData.get("next")?.toString(), "");
   if (nextPath.includes("tab=step-2")) {
@@ -726,6 +731,7 @@ export async function retryLabelAction(formData: FormData) {
       action: "retry source",
       scope: "single source",
       affected: 1,
+      failed,
     }));
   }
   revalidatePath(nextPath.split("?")[0] || "/");
