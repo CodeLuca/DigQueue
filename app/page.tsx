@@ -955,7 +955,7 @@ export default async function HomePage({
                           <div className="space-y-2 border-t border-[color-mix(in_oklab,var(--color-border)_55%,transparent)] px-2 py-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="hidden text-[11px] text-[var(--color-muted)] sm:block">{meta.hint}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <form action={retrySpecificSourcesAction}>
                                   <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
                                   <FormSubmitButton
