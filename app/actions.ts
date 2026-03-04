@@ -592,6 +592,45 @@ export async function pauseAllActiveSourcesAction() {
   revalidatePath("/");
 }
 
+export async function pauseAndClearErroredActiveSourcesAction() {
+  const userId = await requireCurrentAppUserId();
+  const scope = userScope(userId);
+  const now = new Date();
+
+  const activeSources = await db.query.labels.findMany({
+    where: and(eq(labels.active, true), scope.labels),
+    columns: { id: true, status: true },
+  });
+
+  for (const source of activeSources) {
+    const isErrored = source.status === "error";
+    const nextStatus = source.status === "complete" ? "complete" : "paused";
+    if (isErrored) {
+      await db
+        .update(labels)
+        .set({
+          active: false,
+          status: nextStatus,
+          lastError: null,
+          retryCount: 0,
+          updatedAt: now,
+        })
+        .where(and(eq(labels.id, source.id), scope.labels));
+    } else {
+      await db
+        .update(labels)
+        .set({
+          active: false,
+          status: nextStatus,
+          updatedAt: now,
+        })
+        .where(and(eq(labels.id, source.id), scope.labels));
+    }
+  }
+
+  revalidatePath("/");
+}
+
 export async function clearStaleWorkerLocksAction() {
   await requireCurrentAppUserId();
   await purgeExpiredWorkerLocks();

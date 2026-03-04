@@ -18,6 +18,7 @@ import {
 import {
   addSourceAction,
   clearStaleWorkerLocksAction,
+  pauseAndClearErroredActiveSourcesAction,
   pauseAllActiveSourcesAction,
   pullDiscogsWantsAction,
   refreshLabelMetadataAction,
@@ -998,6 +999,20 @@ export default async function HomePage({
                                       title="Pause all active sources to let rate limits cool down."
                                     >
                                       Pause all sources
+                                    </FormSubmitButton>
+                                  </form>
+                                ) : null}
+                                {group.category === "provider" ? (
+                                  <form action={pauseAndClearErroredActiveSourcesAction}>
+                                    <FormSubmitButton
+                                      type="submit"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[11px]"
+                                      pendingText="Pausing..."
+                                      title="Pause active sources and clear transient provider error flags."
+                                    >
+                                      Cool down + clear errors
                                     </FormSubmitButton>
                                   </form>
                                 ) : null}
