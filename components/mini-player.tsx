@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  DONE_CURRENT_EVENT,
   LISTENING_SCOPE_EVENT,
   PLAY_ITEM_EVENT,
   PLAYBACK_MODE_EVENT,
@@ -34,6 +35,7 @@ import {
   PLAYBACK_PREV_EVENT,
   PLAYER_CURRENT_EVENT,
   RELEASE_WISHLIST_UPDATED_EVENT,
+  REVIEWED_CURRENT_EVENT,
   REQUEST_PLAYER_CURRENT_EVENT,
   TRACK_TODO_UPDATED_EVENT,
 } from "@/lib/client-events";
@@ -1059,17 +1061,17 @@ export function MiniPlayer() {
     window.addEventListener(PLAYBACK_PLAYPAUSE_EVENT, playPause);
     window.addEventListener(PLAYBACK_NEXT_EVENT, next);
     window.addEventListener(PLAYBACK_PREV_EVENT, prev);
-    window.addEventListener("digqueue:reviewed-current", reviewedCurrent);
+    window.addEventListener(REVIEWED_CURRENT_EVENT, reviewedCurrent);
     // Backward compatibility for older shortcut/event emitters.
-    window.addEventListener("digqueue:done-current", reviewedCurrent);
+    window.addEventListener(DONE_CURRENT_EVENT, reviewedCurrent);
     window.addEventListener(PLAY_ITEM_EVENT, playItem as EventListener);
 
     return () => {
       window.removeEventListener(PLAYBACK_PLAYPAUSE_EVENT, playPause);
       window.removeEventListener(PLAYBACK_NEXT_EVENT, next);
       window.removeEventListener(PLAYBACK_PREV_EVENT, prev);
-      window.removeEventListener("digqueue:reviewed-current", reviewedCurrent);
-      window.removeEventListener("digqueue:done-current", reviewedCurrent);
+      window.removeEventListener(REVIEWED_CURRENT_EVENT, reviewedCurrent);
+      window.removeEventListener(DONE_CURRENT_EVENT, reviewedCurrent);
       window.removeEventListener(PLAY_ITEM_EVENT, playItem as EventListener);
     };
   }, [current, ensurePlaybackOwnership, loadNext, loadPrev, loadSpecific, markReviewed, playing, ready]);

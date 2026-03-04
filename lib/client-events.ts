@@ -12,3 +12,5 @@ export const PLAYBACK_NEXT_EVENT = "digqueue:next";
 export const PLAYBACK_PREV_EVENT = "digqueue:prev";
 export const PLAYER_CURRENT_EVENT = "digqueue:player-current";
 export const REQUEST_PLAYER_CURRENT_EVENT = "digqueue:request-player-current";
+export const REVIEWED_CURRENT_EVENT = "digqueue:reviewed-current";
+export const DONE_CURRENT_EVENT = "digqueue:done-current";
