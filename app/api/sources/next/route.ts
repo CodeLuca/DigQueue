@@ -6,9 +6,9 @@ import { labels, releases, sourceReleases } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
 import { processSingleReleaseForSource } from "@/lib/processing";
+import { createEmptySourceNextResponse, type SourceNextResponse } from "@/lib/source-next-response";
 import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
 import { buildLastSuccessBySource, buildSyncRunStats } from "@/lib/sync-run-stats";
-import { createZeroSyncThroughput } from "@/lib/sync-throughput";
 import { isTransientLabelError } from "@/lib/utils";
 import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
@@ -182,10 +182,10 @@ export async function GET() {
       .map((source) => ({
         id: source.id,
         name: source.name,
-        kind: source.entityKind,
+        kind: (source.entityKind === "artist" ? "artist" : "label") as "artist" | "label",
       }));
 
-    return NextResponse.json({
+    const response: SourceNextResponse = {
       nextSourceId,
       counts,
       activeCount: activeSources.length,
@@ -204,35 +204,11 @@ export async function GET() {
             : activeSources.length === 0
               ? "No active sources."
               : "No queued/processing sources.",
-    });
+    };
+    return NextResponse.json(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[sources-next] fatal error: ${message}`);
-    return NextResponse.json({
-      nextSourceId: null,
-      counts: {
-        queued: 0,
-        processing: 0,
-        error: 0,
-        paused: 0,
-        complete: 0,
-        other: 0,
-      },
-      activeCount: 0,
-      processingSources: [],
-      syncTelemetry: null,
-      runHistory: [],
-      lastSuccessBySource: [],
-      throughput: createZeroSyncThroughput(10),
-      throughputLong: createZeroSyncThroughput(60),
-      processingAttempt: {
-        attempted: false,
-        sourceId: null,
-        lockAcquired: false,
-        outcome: "error",
-        error: message,
-      },
-      blocker: "Database unavailable.",
-    });
+    return NextResponse.json(createEmptySourceNextResponse(message));
   }
 }

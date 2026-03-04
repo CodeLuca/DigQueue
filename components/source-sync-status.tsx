@@ -2,26 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import type { SourceNextResponse } from "@/lib/source-next-response";
 import { getTimelineBarStyle, getTimelineMaxRuns } from "@/lib/sync-timeline";
-import type { SyncThroughput } from "@/lib/sync-throughput";
-import type { SyncRunEvent, SyncTelemetry } from "@/lib/sync-types";
-
-type SourceRow = {
-  id: number;
-  name: string;
-  kind: "label" | "artist";
-};
-
-type SourceNextResponse = {
-  counts?: { processing?: number; queued?: number; error?: number; complete?: number };
-  processingSources?: SourceRow[];
-  syncTelemetry?: SyncTelemetry | null;
-  lastSuccessBySource?: Array<{ sourceId: number; sourceName: string; lastSuccessAt: number }>;
-  runHistory?: SyncRunEvent[];
-  throughput?: SyncThroughput;
-  throughputLong?: SyncThroughput;
-  blocker?: string | null;
-};
+import type { SyncTelemetry } from "@/lib/sync-types";
 
 const POLL_MS = 2000;
 
@@ -52,8 +35,15 @@ function formatDuration(durationMs: number | undefined) {
 }
 
 export function SourceSyncStatus({ initialProcessingCount }: { initialProcessingCount: number }) {
-  const [data, setData] = useState<SourceNextResponse>({
-    counts: { processing: initialProcessingCount },
+  const [data, setData] = useState<Partial<SourceNextResponse>>({
+    counts: {
+      queued: 0,
+      processing: initialProcessingCount,
+      error: 0,
+      paused: 0,
+      complete: 0,
+      other: 0,
+    },
     processingSources: [],
     syncTelemetry: null,
     blocker: null,
@@ -66,7 +56,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
       try {
         const response = await fetch("/api/sources/next", { cache: "no-store" });
         if (!response.ok) return;
-        const payload = (await response.json()) as SourceNextResponse;
+        const payload = (await response.json()) as Partial<SourceNextResponse>;
         if (!canceled) setData(payload);
       } catch {
         // Keep previous state on transient failures.

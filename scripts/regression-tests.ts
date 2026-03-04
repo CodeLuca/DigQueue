@@ -40,6 +40,7 @@ import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
 import { deriveReleaseListenedFromTracks } from "../lib/release-listened";
 import { parsePositiveSourceIds } from "../lib/source-id-list";
+import { createEmptySourceNextResponse } from "../lib/source-next-response";
 import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
 import { getTimelineBarStyle, getTimelineMaxRuns } from "../lib/sync-timeline";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
@@ -446,6 +447,11 @@ async function run() {
   assert.equal(zeroThroughput.windowMinutes, 10);
   assert.equal(zeroThroughput.runs, 0);
   assert.equal(zeroThroughput.timeline.length, 0);
+  const emptyNextResponse = createEmptySourceNextResponse("boom");
+  assert.equal(emptyNextResponse.blocker, "Database unavailable.");
+  assert.equal(emptyNextResponse.processingAttempt.error, "boom");
+  assert.equal(emptyNextResponse.throughput.windowMinutes, 10);
+  assert.equal(emptyNextResponse.throughputLong.windowMinutes, 60);
   const timelineMax = getTimelineMaxRuns([{ minuteOffset: 0, runs: 0, successfulRuns: 0, failedRuns: 0 }, { minuteOffset: 1, runs: 4, successfulRuns: 4, failedRuns: 0 }]);
   assert.equal(timelineMax, 4);
   assert.deepEqual(getTimelineBarStyle({ minuteOffset: 1, runs: 4, successfulRuns: 4, failedRuns: 0 }, timelineMax), {
