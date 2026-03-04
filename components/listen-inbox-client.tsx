@@ -398,6 +398,14 @@ export function ListenInboxClient({
   );
   const activeCursor = Math.max(0, Math.min(cursor, Math.max(0, visibleRows.length - 1)));
   const current = visibleRows[activeCursor] ?? null;
+  const currentHasPlayableVideo =
+    Boolean(current?.youtubeVideoId) &&
+    (current?.playbackSource === "discogs" || current?.videoEmbeddable !== false);
+  const currentCanPlay = !youtubeQuotaExceeded;
+  const currentPlayHint = !currentHasPlayableVideo
+    ? "No linked playable video yet. Play Now will search and queue one."
+    : null;
+  const showMobileQuickRail = showQueueFilters && Boolean(current);
   const filterButtonClass = (active: boolean) =>
     `inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 sm:px-3 sm:text-sm ${
       active
@@ -966,7 +974,7 @@ export function ListenInboxClient({
   }, []);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-36 sm:pb-0">
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-2.5">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-[color-mix(in_oklab,var(--color-accent)_35%,var(--color-border))] bg-[color-mix(in_oklab,var(--color-surface)_70%,var(--color-surface2)_30%)] p-1.5">
@@ -1400,6 +1408,68 @@ export function ListenInboxClient({
             <RefreshCcw className="h-3.5 w-3.5" />
             Retry queue/play
           </Button>
+        </div>
+      ) : null}
+      {showMobileQuickRail && current ? (
+        <div className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-30 rounded-xl border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] p-2 shadow-xl sm:hidden">
+          <p className="line-clamp-1 text-[11px] font-medium text-[var(--color-text)]">
+            {current.position} {current.trackTitle}
+          </p>
+          <p className="line-clamp-1 text-[10px] text-[var(--color-muted)]">
+            {current.labelName} • {current.releaseTitle}
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-10 w-full justify-center"
+              onClick={() => void playRow(current.trackId)}
+              disabled={!currentCanPlay || loadingTrackId === current.trackId}
+              title={currentPlayHint || "Play now in the mini-player"}
+              aria-label="Play current track now"
+            >
+              {loadingTrackId === current.trackId ? <RefreshCcw className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              {loadingTrackId === current.trackId ? "Loading..." : "Play"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-10 w-full justify-center rounded-md border border-emerald-400/60 bg-emerald-500/28 text-emerald-50 hover:bg-emerald-500/38"
+              onClick={() => void markCurrentListened()}
+              title="Mark current track reviewed and move forward"
+              aria-label="Mark current track reviewed"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Reviewed
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={current.saved ? "secondary" : "ghost"}
+              className="h-10 w-full justify-center"
+              onClick={() => void toggleCurrentSaved()}
+              title="Track save is local only and does not add to your Discogs wantlist."
+              aria-label={current.saved ? "Unsave current track" : "Save current track"}
+            >
+              {current.saved ? <HeartOff className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
+              {current.saved ? "Saved" : "Save"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => void markRowReleaseListened(current.releaseId, current.trackId, current.releaseDiscogsUrl)}
+              disabled={reviewingReleaseId === current.releaseId}
+              className="h-10 w-full justify-center rounded-md border border-amber-400/60 bg-amber-500/22 text-black hover:bg-amber-500/32"
+              title="Mark full release reviewed and skip to next release"
+              aria-label="Mark current release reviewed"
+            >
+              {reviewingReleaseId === current.releaseId ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+              Release
+            </Button>
+          </div>
         </div>
       ) : null}
 
