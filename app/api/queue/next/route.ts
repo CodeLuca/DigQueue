@@ -5,7 +5,7 @@ import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { readJsonBodyOrNull } from "@/lib/request-json";
 import {
-  buildQueueFeedbackPayload,
+  buildQueueFeedbackPayloadFromItem,
   parseQueueNextMutationInput,
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
@@ -57,7 +57,11 @@ export async function POST(request: Request) {
     const currentId = mutation.currentId as number;
     const item = await findQueueItemForUser(userId, currentId);
     await markQueueItemPlayed(userId, currentId);
-    const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
+    const feedbackPayload = buildQueueFeedbackPayloadFromItem({
+      eventType: mutation.transitionPlan.feedbackEventType,
+      queueItem: item,
+      userId,
+    });
     if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
   }
 
@@ -67,7 +71,11 @@ export async function POST(request: Request) {
     if (item?.trackId) {
       await markTrackListenedForUser(userId, item.trackId);
       await markPendingTrackQueueItemsPlayed(userId, item.trackId);
-      const feedbackPayload = buildQueueFeedbackPayload(mutation.transitionPlan.feedbackEventType, item, userId);
+      const feedbackPayload = buildQueueFeedbackPayloadFromItem({
+        eventType: mutation.transitionPlan.feedbackEventType,
+        queueItem: item,
+        userId,
+      });
       if (feedbackPayload) await logFeedbackEvent(feedbackPayload);
 
       if (shouldRefreshReleaseListened(item.releaseId)) {

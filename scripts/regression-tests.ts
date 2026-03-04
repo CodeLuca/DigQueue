@@ -31,6 +31,7 @@ import {
 } from "../lib/queue-next-actions";
 import {
   buildQueueFeedbackPayload,
+  buildQueueFeedbackPayloadFromItem,
   parseQueueNextMutationInput,
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
@@ -486,6 +487,21 @@ async function run() {
       releaseId: 22,
       labelId: 33,
       userId: "user-1",
+    },
+  );
+  assert.deepEqual(
+    buildQueueFeedbackPayloadFromItem({
+      eventType: "listened",
+      queueItem: { trackId: 7, releaseId: 8, labelId: 9 },
+      userId: "user-2",
+    }),
+    {
+      eventType: "listened",
+      source: "api_queue_next",
+      trackId: 7,
+      releaseId: 8,
+      labelId: 9,
+      userId: "user-2",
     },
   );
   assert.equal(buildQueueFeedbackPayload(null, { trackId: 1 }, "user-1"), null);

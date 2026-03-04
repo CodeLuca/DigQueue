@@ -56,3 +56,11 @@ export function buildQueueFeedbackPayload(
     userId,
   };
 }
+
+export function buildQueueFeedbackPayloadFromItem(input: {
+  eventType: "played" | "listened" | null;
+  queueItem: { trackId?: number | null; releaseId?: number | null; labelId?: number | null } | null | undefined;
+  userId: string;
+}) {
+  return buildQueueFeedbackPayload(input.eventType, input.queueItem, input.userId);
+}
