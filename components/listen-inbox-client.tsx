@@ -373,6 +373,13 @@ export function ListenInboxClient({
     noVideoOrPrivate: scopedRows.filter((item) => !item.hasChosenVideo || item.videoEmbeddable === false).length,
   }), [scopedRows]);
   const hasAdvancedFiltersActive = sourceFilter !== "all" || videoFilter !== "all" || playbackMode !== "in_order";
+  const commuteModeActive =
+    showQueueFilters &&
+    stateView === "needs_review" &&
+    videoFilter === "playable" &&
+    hideReviewed &&
+    hideAlreadyPlayed &&
+    sourceFilter === "all";
   const visibleRows = useMemo(
     () =>
       scopedRows.filter((item) => {
@@ -725,6 +732,22 @@ export function ListenInboxClient({
       else next.delete(trackId);
       return [...next];
     });
+  }, []);
+  const applyCommuteMode = useCallback(() => {
+    setStateView("needs_review");
+    setVideoFilter("playable");
+    setHideReviewed(true);
+    setHideAlreadyPlayed(true);
+    setSourceFilter("all");
+    setCursor(0);
+  }, []);
+  const resetCommuteMode = useCallback(() => {
+    setStateView("all");
+    setVideoFilter("all");
+    setHideReviewed(false);
+    setHideAlreadyPlayed(false);
+    setSourceFilter("all");
+    setCursor(0);
   }, []);
 
   const selectVisibleTracks = useCallback(() => {
@@ -1094,6 +1117,29 @@ export function ListenInboxClient({
                   Filters & Bulk
                 </summary>
                 <div className="mt-2 space-y-2">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={commuteModeActive ? "secondary" : "outline"}
+                      className="h-9 w-full justify-center"
+                      onClick={applyCommuteMode}
+                      title="Train-friendly preset: Needs Review + Playable + hide reviewed/played"
+                    >
+                      Commute Mode
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 w-full justify-center"
+                      onClick={resetCommuteMode}
+                      disabled={!commuteModeActive}
+                      title="Reset commute preset filters"
+                    >
+                      Reset Preset
+                    </Button>
+                  </div>
                   <div className="flex flex-nowrap items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <button type="button" onClick={() => { setStateView("all"); setCursor(0); }} className={filterButtonClass(stateView === "all")} aria-pressed={stateView === "all"}>All ({queueFilterCounts.all})</button>
                     <button type="button" onClick={() => { setStateView("needs_review"); setCursor(0); }} className={filterButtonClass(stateView === "needs_review")} aria-pressed={stateView === "needs_review"}>Needs Review ({queueFilterCounts.needsReview})</button>
