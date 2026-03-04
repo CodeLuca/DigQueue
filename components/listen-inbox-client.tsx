@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import {
   LISTENING_SCOPE_EVENT,
   PLAYBACK_MODE_EVENT,
+  PLAYBACK_MODE_STORAGE_KEY,
   RELEASE_WISHLIST_UPDATED_EVENT,
   TRACK_TODO_UPDATED_EVENT,
 } from "@/lib/client-events";
@@ -87,7 +88,6 @@ type QueueApiItem = {
 const YOUTUBE_QUOTA_EVENT = "digqueue:youtube-quota-exceeded";
 const YOUTUBE_QUOTA_CLEAR_EVENT = "digqueue:youtube-quota-cleared";
 const YOUTUBE_QUOTA_STORAGE_KEY = "digqueue:youtube-quota-exceeded";
-const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
 const ENQUEUE_TIMEOUT_MS = 6000;
 type PlaybackMode = "in_order" | "shuffle";
 type QueueStateView = "all" | "needs_review" | "reviewed" | "played";

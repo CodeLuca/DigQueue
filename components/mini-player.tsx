@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import {
   LISTENING_SCOPE_EVENT,
   PLAYBACK_MODE_EVENT,
+  PLAYBACK_MODE_STORAGE_KEY,
   RELEASE_WISHLIST_UPDATED_EVENT,
   TRACK_TODO_UPDATED_EVENT,
 } from "@/lib/client-events";
@@ -121,7 +122,6 @@ type FinderLinksApiResponse = {
   fallback?: FinderCandidate[];
 };
 
-const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";
 const PLAYBACK_OWNER_STORAGE_KEY = "digqueue:playback-owner";
 const PLAYBACK_OWNER_TTL_MS = 12000;
 const REQUEST_TIMEOUT_MS = 15000;
