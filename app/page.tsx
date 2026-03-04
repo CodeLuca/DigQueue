@@ -18,7 +18,7 @@ import {
 import {
   addSourceAction,
   clearStaleWorkerLocksAction,
-  pauseAndClearErroredActiveSourcesAction,
+  pauseAndClearSpecificSourcesAction,
   pauseAllActiveSourcesAction,
   pullDiscogsWantsAction,
   refreshLabelMetadataAction,
@@ -1003,7 +1003,8 @@ export default async function HomePage({
                                   </form>
                                 ) : null}
                                 {group.category === "provider" ? (
-                                  <form action={pauseAndClearErroredActiveSourcesAction}>
+                                  <form action={pauseAndClearSpecificSourcesAction}>
+                                    <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
                                     <FormSubmitButton
                                       type="submit"
                                       size="sm"

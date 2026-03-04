@@ -593,13 +593,16 @@ export async function pauseAllActiveSourcesAction() {
   revalidatePath("/");
 }
 
-export async function pauseAndClearErroredActiveSourcesAction() {
+export async function pauseAndClearSpecificSourcesAction(formData: FormData) {
   const userId = await requireCurrentAppUserId();
   const scope = userScope(userId);
+  const rawIds = String(formData.get("sourceIds") || "");
+  const ids = parsePositiveSourceIds(rawIds, 30);
+  if (ids.length === 0) return;
   const now = new Date();
 
   const activeSources = await db.query.labels.findMany({
-    where: and(eq(labels.active, true), scope.labels),
+    where: and(inArray(labels.id, ids), eq(labels.active, true), scope.labels),
     columns: { id: true, status: true },
   });
 
