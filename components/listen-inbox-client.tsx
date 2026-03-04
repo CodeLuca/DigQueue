@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { enqueueTrackForClient } from "@/lib/client-queue";
 import {
   LISTENING_SCOPE_EVENT,
   PLAY_ITEM_EVENT,
@@ -146,52 +147,6 @@ async function updateTracks(payload: {
   }
 
   return body.tracks ?? [];
-}
-
-async function enqueueTrack(trackId: number, queueMode: "normal" | "next" = "normal") {
-  const tryEnqueue = async () => {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), ENQUEUE_TIMEOUT_MS);
-    try {
-      const response = await fetch("/api/queue/enqueue", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trackId, queueMode }),
-        signal: controller.signal,
-      });
-      const body = (await response.json().catch(() => null)) as
-        | { ok?: boolean; item?: QueueApiItem | null; error?: string; reason?: string }
-        | null;
-      if (body?.reason === "no_match") {
-        throw new Error(QUEUE_ERROR_NO_MATCH);
-      }
-      if (body?.reason === "youtube_quota_exceeded") {
-        throw new Error(QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED);
-      }
-      if (!response.ok || !body?.ok) {
-        throw new Error(body?.error || "Unable to queue track.");
-      }
-      if (!body.item) throw new Error("Queued track not found.");
-      return body.item;
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error(QUEUE_ERROR_TIMEOUT);
-      }
-      throw error;
-    } finally {
-      window.clearTimeout(timeoutId);
-    }
-  };
-
-  try {
-    return await tryEnqueue();
-  } catch (error) {
-    // One quick retry smooths over transient API stalls.
-    if (error instanceof Error && error.message === QUEUE_ERROR_TIMEOUT) {
-      return tryEnqueue();
-    }
-    throw error;
-  }
 }
 
 async function addLabelFromRelease(releaseId: number) {
@@ -518,7 +473,12 @@ export function ListenInboxClient({
         window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: optimisticItem }));
       }
 
-      const item = await enqueueTrack(trackId, "next");
+      const item = await enqueueTrackForClient<QueueApiItem>({
+        trackId,
+        queueMode: "next",
+        timeoutMs: ENQUEUE_TIMEOUT_MS,
+        retryTimeoutCount: 1,
+      });
       if (!optimisticItem || optimisticItem.youtubeVideoId !== item.youtubeVideoId) {
         window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: item }));
       }
