@@ -16,23 +16,7 @@ const DISCOGS_API = "https://api.discogs.com";
 const DISCOGS_MIN_CALL_GAP_MS = 1200;
 const DISCOGS_MAX_RETRIES = 4;
 
-export function parseLabelIdFromInput(input: string): number | null {
-  const trimmed = input.trim();
-  if (/^\d+$/.test(trimmed)) {
-    return Number(trimmed);
-  }
-  const match = trimmed.match(/\/labels?\/(\d+)/i);
-  return match ? Number(match[1]) : null;
-}
-
-export function parseArtistIdFromInput(input: string): number | null {
-  const trimmed = input.trim();
-  if (/^\d+$/.test(trimmed)) {
-    return Number(trimmed);
-  }
-  const match = trimmed.match(/\/artists?\/(\d+)/i);
-  return match ? Number(match[1]) : null;
-}
+export { parseArtistIdFromInput, parseLabelIdFromInput } from "@/lib/discogs-input";
 
 async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));

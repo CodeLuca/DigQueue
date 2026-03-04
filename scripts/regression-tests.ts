@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { toDiscogsWebUrl } from "../lib/discogs-links";
+import { parseArtistIdFromInput, parseLabelIdFromInput } from "../lib/discogs-input";
 import { buildDiscogsOAuthCallbackUrl } from "../lib/discogs-oauth-callback-url";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { buildOAuthCallbackLoginPath } from "../lib/oauth-callback-routing";
@@ -204,6 +205,8 @@ async function run() {
     toDiscogsWebUrl("", ""),
     "https://www.discogs.com",
   );
+  assert.equal(parseLabelIdFromInput("https://www.discogs.com/labels/1120990-Kalahari-Oyster-Cult"), 1120990);
+  assert.equal(parseArtistIdFromInput("https://api.discogs.com/artists/12345"), 12345);
 
   // Playlist export normalization + dedupe coverage.
   const exportInput = normalizePlaylistExportInput({

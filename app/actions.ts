@@ -7,7 +7,8 @@ import { apiCache, labels, queueItems, releases, sourceReleases, tracks } from "
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
-import { parseArtistIdFromInput, parseLabelIdFromInput, searchDiscogsArtists, searchDiscogsLabels } from "@/lib/discogs";
+import { searchDiscogsArtists, searchDiscogsLabels } from "@/lib/discogs";
+import { parseArtistIdFromInput, parseLabelIdFromInput } from "@/lib/discogs-input";
 import { syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
 import { toExternalDiscogsId, toStoredDiscogsId } from "@/lib/discogs-id";
 import { refreshSourceMetadata } from "@/lib/label-metadata";
@@ -275,8 +276,8 @@ export async function addSourceAction(formData: FormData) {
   const requestedKind: "label" | "artist" | null =
     requestedKindRaw === "artist" ? "artist" : requestedKindRaw === "label" ? "label" : null;
 
-  const explicitArtistUrl = /\/artist\/\d+/i.test(raw);
-  const explicitLabelUrl = /\/label\/\d+/i.test(raw);
+  const explicitArtistUrl = /\/artists?\/\d+/i.test(raw);
+  const explicitLabelUrl = /\/labels?\/\d+/i.test(raw);
   const parsedArtistId = parseArtistIdFromInput(raw);
   const parsedLabelId = parseLabelIdFromInput(raw);
 
