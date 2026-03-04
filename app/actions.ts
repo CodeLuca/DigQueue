@@ -16,6 +16,7 @@ import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
 import { logFeedbackEvent } from "@/lib/recommendations";
 import { seedLabels, seedSearchLabels } from "@/lib/seed-data";
 import { parsePositiveSourceIds } from "@/lib/source-id-list";
+import { getPausedStatusFromCurrent } from "@/lib/source-status-transitions";
 import { purgeExpiredWorkerLocks } from "@/lib/worker-locks";
 
 function userScope(userId: string) {
@@ -582,7 +583,7 @@ export async function pauseAllActiveSourcesAction() {
   });
 
   for (const source of activeSources) {
-    const nextStatus = source.status === "complete" ? "complete" : "paused";
+    const nextStatus = getPausedStatusFromCurrent(source.status);
     await db
       .update(labels)
       .set({ active: false, status: nextStatus, updatedAt: now })
@@ -604,7 +605,7 @@ export async function pauseAndClearErroredActiveSourcesAction() {
 
   for (const source of activeSources) {
     const isErrored = source.status === "error";
-    const nextStatus = source.status === "complete" ? "complete" : "paused";
+    const nextStatus = getPausedStatusFromCurrent(source.status);
     if (isErrored) {
       await db
         .update(labels)
