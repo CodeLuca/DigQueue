@@ -28,7 +28,7 @@ export async function enqueueTrackForClient<TItem>({
 }: EnqueueTrackInput): Promise<TItem> {
   const attempt = async () => {
     const controller = typeof timeoutMs === "number" ? new AbortController() : null;
-    const timeoutId = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
       const response = await fetch("/api/queue/enqueue", {
         method: "POST",
@@ -54,7 +54,7 @@ export async function enqueueTrackForClient<TItem>({
       throw error;
     } finally {
       if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
       }
     }
   };
