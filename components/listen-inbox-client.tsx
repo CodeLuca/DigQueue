@@ -36,9 +36,13 @@ import {
   TRACK_TODO_UPDATED_EVENT,
   YOUTUBE_QUOTA_CLEAR_EVENT,
   YOUTUBE_QUOTA_EVENT,
-  YOUTUBE_QUOTA_STORAGE_KEY,
 } from "@/lib/client-events";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
+import {
+  clearYouTubeQuotaExceededInSession,
+  isYouTubeQuotaExceededInSession,
+  setYouTubeQuotaExceededInSession,
+} from "@/lib/youtube-quota-client";
 
 type ListenRow = {
   trackId: number;
@@ -460,7 +464,7 @@ export function ListenInboxClient({
     if (storedPlaybackMode === "shuffle" || storedPlaybackMode === "in_order") {
       setPlaybackMode(storedPlaybackMode);
     }
-    setYoutubeQuotaExceeded(window.sessionStorage.getItem(YOUTUBE_QUOTA_STORAGE_KEY) === "1");
+    setYoutubeQuotaExceeded(isYouTubeQuotaExceededInSession());
   }, []);
 
   const moveLabel = useCallback((direction: -1 | 1) => {
@@ -536,8 +540,7 @@ export function ListenInboxClient({
       if (error instanceof Error && error.message === "YOUTUBE_QUOTA_EXCEEDED") {
         setYoutubeQuotaExceeded(true);
         setFeedback("YouTube quota reached. Queue/play is temporarily disabled. You can still mark tracks listened.");
-        window.sessionStorage.setItem(YOUTUBE_QUOTA_STORAGE_KEY, "1");
-        window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_EVENT));
+        setYouTubeQuotaExceededInSession();
         return;
       }
       if (error instanceof Error && error.message === "QUEUE_TIMEOUT") {
@@ -554,8 +557,7 @@ export function ListenInboxClient({
   const clearYoutubeQuotaExceeded = useCallback(() => {
     setYoutubeQuotaExceeded(false);
     setFeedback(null);
-    window.sessionStorage.removeItem(YOUTUBE_QUOTA_STORAGE_KEY);
-    window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_CLEAR_EVENT));
+    clearYouTubeQuotaExceededInSession();
   }, []);
 
   const markCurrentListened = useCallback(async () => {

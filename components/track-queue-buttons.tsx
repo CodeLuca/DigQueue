@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PLAY_ITEM_EVENT, YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT, YOUTUBE_QUOTA_STORAGE_KEY } from "@/lib/client-events";
+import { PLAY_ITEM_EVENT, YOUTUBE_QUOTA_CLEAR_EVENT, YOUTUBE_QUOTA_EVENT } from "@/lib/client-events";
+import { isYouTubeQuotaExceededInSession, setYouTubeQuotaExceededInSession } from "@/lib/youtube-quota-client";
 
 type QueueApiItem = {
   id: number;
@@ -18,10 +19,7 @@ type QueueApiItem = {
 export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: number; youtubeSearchUrl: string }) {
   const [loading, setLoading] = useState<"queue" | "play" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem(YOUTUBE_QUOTA_STORAGE_KEY) === "1";
-  });
+  const [youtubeQuotaExceeded, setYoutubeQuotaExceeded] = useState(() => isYouTubeQuotaExceededInSession());
   const router = useRouter();
 
   useEffect(() => {
@@ -62,8 +60,7 @@ export function TrackQueueButtons({ trackId, youtubeSearchUrl }: { trackId: numb
       if (body?.reason === "youtube_quota_exceeded") {
         setYoutubeQuotaExceeded(true);
         setError("YouTube quota reached. Queue/play disabled.");
-        window.sessionStorage.setItem(YOUTUBE_QUOTA_STORAGE_KEY, "1");
-        window.dispatchEvent(new CustomEvent(YOUTUBE_QUOTA_EVENT));
+        setYouTubeQuotaExceededInSession();
         return;
       }
 
