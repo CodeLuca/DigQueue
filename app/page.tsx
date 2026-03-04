@@ -1041,7 +1041,7 @@ export default async function HomePage({
                                     <Link href={`/labels/${label.id}`} className="line-clamp-1 text-xs font-medium text-[var(--color-text)] hover:text-[var(--color-accent)]">
                                       {label.name}
                                     </Link>
-                                    <p className="text-[10px] text-[var(--color-muted)]">
+                                    <p className="hidden text-[10px] text-[var(--color-muted)] sm:block">
                                       Last attempt {new Date(label.updatedAt).toLocaleString()} • Retries {label.retryCount}
                                     </p>
                                     <p className="line-clamp-2 text-[11px] text-[var(--color-muted)]">{error}</p>
