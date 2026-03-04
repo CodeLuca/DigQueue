@@ -7,7 +7,7 @@ import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
 import { resolveOAuthCallbackNextPath } from "@/lib/oauth-callback-next";
 import { parseYoutubeOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { YOUTUBE_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
-import { getInvalidOAuthCallbackMessage } from "@/lib/oauth-messages";
+import { getOAuthCallbackErrorMessage } from "@/lib/oauth-messages";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { decodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     expectedState,
   });
   if (!validation.ok) {
-    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", getInvalidOAuthCallbackMessage("youtube")), appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", getOAuthCallbackErrorMessage("youtube", "invalid_callback")), appOrigin));
   }
 
   try {

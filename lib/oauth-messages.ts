@@ -7,3 +7,11 @@ export function getInvalidOAuthCallbackMessage(provider: OAuthProvider) {
 export function getOAuthStateMismatchMessage(provider: OAuthProvider) {
   return provider === "discogs" ? "Discogs OAuth state mismatch." : "OAuth state mismatch.";
 }
+
+export function getOAuthCallbackErrorMessage(
+  provider: OAuthProvider,
+  reason: "invalid_callback" | "state_mismatch",
+) {
+  if (reason === "state_mismatch") return getOAuthStateMismatchMessage(provider);
+  return getInvalidOAuthCallbackMessage(provider);
+}

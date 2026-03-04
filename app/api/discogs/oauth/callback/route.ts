@@ -9,7 +9,7 @@ import { serializeDiscogsOAuthAuth } from "@/lib/discogs-auth";
 import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { fetchDiscogsOAuthAccessToken } from "@/lib/discogs-oauth";
 import { DISCOGS_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
-import { getInvalidOAuthCallbackMessage, getOAuthStateMismatchMessage } from "@/lib/oauth-messages";
+import { getOAuthCallbackErrorMessage } from "@/lib/oauth-messages";
 import { normalizeNextPath } from "@/lib/next-path";
 import { parseDiscogsOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { validateDiscogsOAuthCallbackInput } from "@/lib/oauth-callback-validation";
@@ -45,10 +45,10 @@ export async function GET(request: Request) {
     requestTokenSecret,
   });
   if (!validation.ok && validation.reason === "invalid_callback") {
-    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", getInvalidOAuthCallbackMessage("discogs")), appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", getOAuthCallbackErrorMessage("discogs", "invalid_callback")), appOrigin));
   }
   if (!validation.ok && validation.reason === "state_mismatch") {
-    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", getOAuthStateMismatchMessage("discogs")), appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("discogs", getOAuthCallbackErrorMessage("discogs", "state_mismatch")), appOrigin));
   }
 
   try {
