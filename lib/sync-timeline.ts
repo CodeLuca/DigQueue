@@ -5,6 +5,21 @@ export type SyncTimelineBucket = {
   failedRuns: number;
 };
 
+export function groupTimelineBuckets(timeline: SyncTimelineBucket[], groupSize = 5) {
+  const size = Math.max(1, Math.floor(groupSize));
+  const grouped: SyncTimelineBucket[] = [];
+  for (let idx = 0; idx < timeline.length; idx += size) {
+    const chunk = timeline.slice(idx, idx + size);
+    grouped.push({
+      minuteOffset: chunk[0]?.minuteOffset ?? idx,
+      runs: chunk.reduce((sum, bucket) => sum + bucket.runs, 0),
+      successfulRuns: chunk.reduce((sum, bucket) => sum + bucket.successfulRuns, 0),
+      failedRuns: chunk.reduce((sum, bucket) => sum + bucket.failedRuns, 0),
+    });
+  }
+  return grouped;
+}
+
 export function getTimelineMaxRuns(timeline: SyncTimelineBucket[]) {
   const runs = timeline.map((bucket) => bucket.runs);
   return Math.max(1, ...runs);

@@ -45,7 +45,7 @@ import { resolveSourceNextBlocker } from "../lib/source-next-blocker";
 import { toSourceKind } from "../lib/source-kind";
 import { createEmptySourceNextResponse } from "../lib/source-next-response";
 import { classifySourceFailure, getFailureCategoryMeta, groupSourceFailuresByCategory } from "../lib/source-failures";
-import { getTimelineBarStyle, getTimelineMaxRuns } from "../lib/sync-timeline";
+import { getTimelineBarStyle, getTimelineMaxRuns, groupTimelineBuckets } from "../lib/sync-timeline";
 import { buildLastSuccessBySource, buildSyncRunStats } from "../lib/sync-run-stats";
 import { createZeroSyncThroughput } from "../lib/sync-throughput";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../lib/youtube-playlist-export";
@@ -469,6 +469,18 @@ async function run() {
   assert.equal(emptyNextResponse.throughputLong.windowMinutes, 60);
   const timelineMax = getTimelineMaxRuns([{ minuteOffset: 0, runs: 0, successfulRuns: 0, failedRuns: 0 }, { minuteOffset: 1, runs: 4, successfulRuns: 4, failedRuns: 0 }]);
   assert.equal(timelineMax, 4);
+  assert.deepEqual(
+    groupTimelineBuckets([
+      { minuteOffset: 0, runs: 1, successfulRuns: 1, failedRuns: 0 },
+      { minuteOffset: 1, runs: 2, successfulRuns: 2, failedRuns: 0 },
+      { minuteOffset: 2, runs: 3, successfulRuns: 2, failedRuns: 1 },
+      { minuteOffset: 3, runs: 4, successfulRuns: 4, failedRuns: 0 },
+    ], 2),
+    [
+      { minuteOffset: 0, runs: 3, successfulRuns: 3, failedRuns: 0 },
+      { minuteOffset: 2, runs: 7, successfulRuns: 6, failedRuns: 1 },
+    ],
+  );
   assert.deepEqual(getTimelineBarStyle({ minuteOffset: 1, runs: 4, successfulRuns: 4, failedRuns: 0 }, timelineMax), {
     heightPct: 100,
     className: "bg-emerald-400/80",

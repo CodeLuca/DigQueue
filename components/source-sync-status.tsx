@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { SourceNextResponse } from "@/lib/source-next-response";
-import { getTimelineBarStyle, getTimelineMaxRuns } from "@/lib/sync-timeline";
+import { getTimelineBarStyle, getTimelineMaxRuns, groupTimelineBuckets } from "@/lib/sync-timeline";
 import type { SyncTelemetry } from "@/lib/sync-types";
 
 const POLL_MS = 2000;
@@ -87,6 +87,12 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
   const timelineMaxRuns = useMemo(() => {
     return getTimelineMaxRuns(data.throughput?.timeline ?? []);
   }, [data.throughput?.timeline]);
+  const longTimelineGrouped = useMemo(() => {
+    return groupTimelineBuckets(data.throughputLong?.timeline ?? [], 5);
+  }, [data.throughputLong?.timeline]);
+  const longTimelineMaxRuns = useMemo(() => {
+    return getTimelineMaxRuns(longTimelineGrouped);
+  }, [longTimelineGrouped]);
 
   return (
     <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
@@ -165,6 +171,24 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
           <p className="text-[10px] text-[var(--color-muted)]">
             Duration p50/p90: {formatDuration(data.throughputLong.durationP50Ms)} / {formatDuration(data.throughputLong.durationP90Ms)}
           </p>
+          {longTimelineGrouped.length > 0 ? (
+            <div className="mt-1">
+              <p className="text-[10px] text-[var(--color-muted)]">5-minute grouped activity</p>
+              <div className="mt-1 flex h-7 items-end gap-0.5 rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/40 p-1">
+                {longTimelineGrouped.map((bucket, index) => {
+                  const { heightPct, className } = getTimelineBarStyle(bucket, longTimelineMaxRuns);
+                  return (
+                    <span
+                      key={`${bucket.minuteOffset}-${index}`}
+                      title={`${bucket.runs} runs (${bucket.successfulRuns} ok, ${bucket.failedRuns} failed)`}
+                      className={`w-2 rounded-sm ${className}`}
+                      style={{ height: `${heightPct}%` }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </details>
       ) : null}
       {data.runHistory && data.runHistory.length > 0 ? (
