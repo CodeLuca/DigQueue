@@ -35,6 +35,7 @@ import {
   shouldApplyListenedMutation,
   shouldApplyPlayedOnlyMutation,
 } from "../lib/queue-next-mutation";
+import { parseQueueNextPostBody } from "../lib/queue-next-post";
 import { isShuffleQueueOrder, selectNextQueueItem } from "../lib/queue-next-selection";
 import { parseQueueNextGetParams } from "../lib/queue-next-request";
 import { getQueueTransitionPlan } from "../lib/queue-transition-plan";
@@ -397,6 +398,8 @@ async function run() {
   const listenedMutation = parseQueueNextMutationInput({ currentId: 9, action: "listened", mode: "track", order: "shuffle" });
   assert.equal(shouldApplyPlayedOnlyMutation(listenedMutation), false);
   assert.equal(shouldApplyListenedMutation(listenedMutation), true);
+  assert.equal(parseQueueNextPostBody({ currentId: 1, action: "played", mode: "hybrid", order: "in_order" }).success, true);
+  assert.equal(parseQueueNextPostBody({ currentId: "1", action: "played" }).success, false);
   assert.equal(isShuffleQueueOrder("shuffle"), true);
   assert.equal(isShuffleQueueOrder("in_order"), false);
   const selected: string[] = [];

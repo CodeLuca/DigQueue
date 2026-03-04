@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { tracks } from "@/db/schema";
 import { guardMutationRateLimit } from "@/lib/api-guard";
 import { requireCurrentAppUserId } from "@/lib/app-user";
@@ -21,16 +20,10 @@ import {
   refreshReleaseListenedFromTracks,
 } from "@/lib/queue-next-db";
 import { selectNextQueueItem } from "@/lib/queue-next-selection";
+import { parseQueueNextPostBody } from "@/lib/queue-next-post";
 import { nextQueueItem, nextQueueItemShuffled } from "@/lib/processing";
 import { parseQueueNextGetParams } from "@/lib/queue-next-request";
 import { logFeedbackEvent } from "@/lib/recommendations";
-
-const postSchema = z.object({
-  currentId: z.number().optional(),
-  action: z.enum(["next", "played", "listened"]).optional(),
-  mode: z.enum(["track", "release", "hybrid"]).optional(),
-  order: z.enum(["in_order", "shuffle"]).optional(),
-});
 
 export async function GET(request: Request) {
   const userId = await requireCurrentAppUserId();
@@ -55,7 +48,7 @@ export async function POST(request: Request) {
   });
   if (rateLimited) return rateLimited;
 
-  const parsed = postSchema.safeParse(await readJsonBodyOrNull(request));
+  const parsed = parseQueueNextPostBody(await readJsonBodyOrNull(request));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
