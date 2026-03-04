@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 type RecommendationItem = {
   id: number;
@@ -458,7 +459,7 @@ export function RecommendationsPanel({
                   <BookmarkPlus className="h-3.5 w-3.5" />
                 </Button>
                 <a
-                  href={item.discogsUrl}
+                  href={toDiscogsWebUrl(item.discogsUrl, "")}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--color-border)] px-2.5 text-xs text-[var(--color-text)] transition-colors duration-150 hover:bg-[var(--color-surface2)]/80 sm:justify-start"

@@ -10,6 +10,7 @@ import { ProcessingToggle } from "@/components/processing-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { getLabelDetail } from "@/lib/queries";
 import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
 
@@ -121,7 +122,7 @@ export default async function LabelPage({
             <Progress value={matchedPct} className="mt-1" />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <a href={data.label.discogsUrl} target="_blank" rel="noreferrer" className="text-sm text-[var(--color-accent)] hover:underline">Open on Discogs</a>
+            <a href={toDiscogsWebUrl(data.label.discogsUrl, "")} target="_blank" rel="noreferrer" className="text-sm text-[var(--color-accent)] hover:underline">Open on Discogs</a>
             <form action={refreshLabelMetadataAction}>
               <input type="hidden" name="labelId" value={data.label.id} />
               <Button type="submit" size="sm" variant="ghost">
