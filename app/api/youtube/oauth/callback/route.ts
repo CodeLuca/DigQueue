@@ -4,10 +4,10 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
 import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
+import { resolveOAuthCallbackNextPath } from "@/lib/oauth-callback-next";
 import { parseYoutubeOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { YOUTUBE_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
 import { getInvalidOAuthCallbackMessage } from "@/lib/oauth-messages";
-import { normalizeNextPath } from "@/lib/next-path";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { decodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
@@ -23,15 +23,17 @@ export async function GET(request: Request) {
 
   const callbackQuery = parseYoutubeOAuthCallbackQuery(requestUrl);
   const { returnedState, code } = callbackQuery;
-  const explicitNext = normalizeNextPath(callbackQuery.nextRaw, { fallback: "/settings" });
 
   const cookieStore = await cookies();
   const pending = cookieStore.get(YOUTUBE_OAUTH_TMP_COOKIE)?.value || "";
   cookieStore.delete(YOUTUBE_OAUTH_TMP_COOKIE);
   const parsedPending = decodeYoutubeOAuthPending(pending);
   const expectedState = parsedPending?.state || "";
-  const cookieNext = parsedPending?.nextPath || "";
-  const nextPath = normalizeNextPath(cookieNext || explicitNext, { fallback: "/settings" });
+  const nextPath = resolveOAuthCallbackNextPath({
+    cookieNext: parsedPending?.nextPath,
+    explicitNext: callbackQuery.nextRaw,
+    fallback: "/settings",
+  });
 
   const validation = validateYoutubeOAuthCallbackInput({
     returnedState,

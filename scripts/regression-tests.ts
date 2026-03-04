@@ -3,6 +3,7 @@ import { toDiscogsWebUrl } from "../lib/discogs-links";
 import { buildDiscogsOAuthCallbackUrl } from "../lib/discogs-oauth-callback-url";
 import { sanitizeDiscogsConnectionErrorMessage } from "../lib/discogs-errors";
 import { buildOAuthCallbackLoginPath } from "../lib/oauth-callback-routing";
+import { resolveOAuthCallbackNextPath } from "../lib/oauth-callback-next";
 import { DISCOGS_OAUTH_TMP_COOKIE, YOUTUBE_OAUTH_TMP_COOKIE } from "../lib/oauth-cookie-keys";
 import { getInvalidOAuthCallbackMessage, getOAuthStateMismatchMessage } from "../lib/oauth-messages";
 import { getOAuthErrorQueryKey, getOAuthProviderLoginNextPath, getOAuthTempCookieKey } from "../lib/oauth-provider";
@@ -105,6 +106,18 @@ async function run() {
   assert.equal(getInvalidOAuthCallbackMessage("discogs"), "Invalid Discogs OAuth callback.");
   assert.equal(getInvalidOAuthCallbackMessage("youtube"), "Invalid YouTube OAuth callback.");
   assert.equal(getOAuthStateMismatchMessage("discogs"), "Discogs OAuth state mismatch.");
+  assert.equal(
+    resolveOAuthCallbackNextPath({ cookieNext: "/?tab=library", explicitNext: "/settings", fallback: "/settings" }),
+    "/?tab=library",
+  );
+  assert.equal(
+    resolveOAuthCallbackNextPath({ cookieNext: "", explicitNext: "/settings?tab=library", fallback: "/settings" }),
+    "/settings?tab=library",
+  );
+  assert.equal(
+    resolveOAuthCallbackNextPath({ cookieNext: "https://evil.example", explicitNext: "https://evil.example", fallback: "/settings" }),
+    "/settings",
+  );
   assert.equal(buildOAuthStartLoginPath("discogs"), "/login?next=%2Fconnect-discogs");
   assert.equal(buildOAuthStartLoginPath("youtube"), "/login?next=%2Fsettings");
   const cookieOptions = buildOAuthTempCookieOptions();
