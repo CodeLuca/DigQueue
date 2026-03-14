@@ -21,12 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { getCurrentAppUserId } from "@/lib/app-user";
-import { getEffectiveApiKeys } from "@/lib/api-keys";
-import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
-import { buildOnboardingHealth } from "@/lib/onboarding-health";
-import { getDashboardData } from "@/lib/queries";
-import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
+import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 
 function NativeTooltip({ text, children }: { text: string; children: ReactNode }) {
   return (
@@ -45,31 +42,7 @@ function NativeTooltip({ text, children }: { text: string; children: ReactNode }
 export default async function HowToUsePage() {
   const userId = await getCurrentAppUserId();
   const isLoggedIn = Boolean(userId);
-  const onboardingHealth = isLoggedIn
-    ? await (async () => {
-        const [keys, dashboardData, youtubeOAuth] = await Promise.all([
-          getEffectiveApiKeys(),
-          getDashboardData({ tab: "step-2" }),
-          getYoutubeOAuthConnectionStatus(),
-        ]);
-        const discogsConnected = parseDiscogsStoredAuth(keys.discogsToken)?.kind === "oauth";
-        return buildOnboardingHealth({
-          discogsConnected,
-          youtubeOAuthConfigured: youtubeOAuth.configured,
-          youtubeOAuthConnected: youtubeOAuth.connected,
-          sourceCount: dashboardData.labels.length,
-          activeSourceCount: dashboardData.labels.filter((label) => label.active).length,
-          erroredSourceCount: dashboardData.metrics.labelsErrored,
-          queueCount: dashboardData.queueCount,
-        });
-      })()
-    : null;
-  const healthToneClass =
-    onboardingHealth?.tone === "ready"
-      ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
-      : onboardingHealth?.tone === "blocked"
-        ? "border-rose-500/60 bg-rose-500/10 text-rose-200"
-        : "border-amber-500/60 bg-amber-500/10 text-amber-200";
+  const onboardingSnapshot = isLoggedIn ? await getOnboardingSnapshot() : null;
 
   return (
     <main className="mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-8">
@@ -103,37 +76,13 @@ export default async function HowToUsePage() {
         </div>
       </section>
 
-      {isLoggedIn && onboardingHealth ? (
+      {isLoggedIn && onboardingSnapshot ? (
         <section className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="inline-flex items-center gap-2">
-                <Settings className="h-4 w-4 text-[var(--color-accent)]" />
-                Your Current Setup
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${healthToneClass}`}>
-                {onboardingHealth.label}
-              </span>
-              <div>
-                <p className="font-medium">{onboardingHealth.title}</p>
-                <p className="mt-1 text-[var(--color-muted)]">{onboardingHealth.summary}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {onboardingHealth.nextSteps.map((step) => (
-                  <Link key={step.href + step.label} href={step.href}>
-                    <Button type="button" size="sm" variant="outline">{step.label}</Button>
-                  </Link>
-                ))}
-                {onboardingHealth.optionalStep ? (
-                  <Link href={onboardingHealth.optionalStep.href}>
-                    <Button type="button" size="sm" variant="ghost">{onboardingHealth.optionalStep.label}</Button>
-                  </Link>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+          <OnboardingStatusCard
+            snapshot={onboardingSnapshot}
+            title="Your Current Setup"
+            titleIcon={<Settings className="h-4 w-4 text-[var(--color-accent)]" />}
+          />
         </section>
       ) : null}
 
@@ -316,7 +265,7 @@ export default async function HowToUsePage() {
             <CardTitle>First 10 Minutes Checklist</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {isLoggedIn && onboardingHealth ? (
+            {isLoggedIn && onboardingSnapshot ? (
               <>
                 <p>1. Check the setup state above.</p>
                 <p>2. Follow the next-step buttons that match your current state.</p>

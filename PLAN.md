@@ -297,11 +297,13 @@
 
 ## Near-Term (P1)
 - [ ] Final polish / low-risk cleanup
+  - Completed in this pass:
+    - Consolidated onboarding snapshot loading and setup-status card rendering so the dashboard, Welcome, How To Use, and Settings pages now share one server-side onboarding snapshot plus one status-card surface instead of drifting across four near-identical implementations.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 
 ## Later (P2)
 ## Next Execution Order
 1. Run authenticated `release:verify:live` with `SMOKE_COOKIE` when a fresh production session is available.
-2. Pick off any UX/copy mismatches that appear in authenticated smoke or manual review.
+2. Pick off any remaining UX/copy mismatches that appear in authenticated smoke or manual review.
 3. Add more operational alerts only if the current smoke checks expose weak spots.

@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { Bookmark, CheckCheck, Disc3, Heart, Inbox, Settings, Sparkles } from "lucide-react";
+import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentAppUserId } from "@/lib/app-user";
-import { getEffectiveApiKeys } from "@/lib/api-keys";
-import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
-import { buildOnboardingHealth } from "@/lib/onboarding-health";
-import { getDashboardData } from "@/lib/queries";
-import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
+import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 
 const highlights = [
   {
@@ -30,31 +27,7 @@ const highlights = [
 export default async function WelcomePage() {
   const userId = await getCurrentAppUserId();
   const isLoggedIn = Boolean(userId);
-  const onboardingHealth = isLoggedIn
-    ? await (async () => {
-        const [keys, dashboardData, youtubeOAuth] = await Promise.all([
-          getEffectiveApiKeys(),
-          getDashboardData({ tab: "step-2" }),
-          getYoutubeOAuthConnectionStatus(),
-        ]);
-        const discogsConnected = parseDiscogsStoredAuth(keys.discogsToken)?.kind === "oauth";
-        return buildOnboardingHealth({
-          discogsConnected,
-          youtubeOAuthConfigured: youtubeOAuth.configured,
-          youtubeOAuthConnected: youtubeOAuth.connected,
-          sourceCount: dashboardData.labels.length,
-          activeSourceCount: dashboardData.labels.filter((label) => label.active).length,
-          erroredSourceCount: dashboardData.metrics.labelsErrored,
-          queueCount: dashboardData.queueCount,
-        });
-      })()
-    : null;
-  const healthToneClass =
-    onboardingHealth?.tone === "ready"
-      ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
-      : onboardingHealth?.tone === "blocked"
-        ? "border-rose-500/60 bg-rose-500/10 text-rose-200"
-        : "border-amber-500/60 bg-amber-500/10 text-amber-200";
+  const onboardingSnapshot = isLoggedIn ? await getOnboardingSnapshot() : null;
 
   return (
     <main className="mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-8 md:py-8">
@@ -98,31 +71,12 @@ export default async function WelcomePage() {
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 reveal reveal-delay-2">
-        {isLoggedIn && onboardingHealth ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="inline-flex items-center gap-2">
-                <Settings className="h-4 w-4 text-[var(--color-accent)]" />
-                Current Setup
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${healthToneClass}`}>
-                {onboardingHealth.label}
-              </span>
-              <div>
-                <p className="font-medium">{onboardingHealth.title}</p>
-                <p className="mt-1 text-[var(--color-muted)]">{onboardingHealth.summary}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {onboardingHealth.nextSteps.map((step) => (
-                  <Link key={step.href + step.label} href={step.href}>
-                    <Button type="button" size="sm" variant="outline">{step.label}</Button>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        {isLoggedIn && onboardingSnapshot ? (
+          <OnboardingStatusCard
+            snapshot={onboardingSnapshot}
+            title="Current Setup"
+            titleIcon={<Settings className="h-4 w-4 text-[var(--color-accent)]" />}
+          />
         ) : null}
         <Card>
           <CardHeader>

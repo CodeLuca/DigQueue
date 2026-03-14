@@ -1,22 +1,18 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import { Disc3, ExternalLink } from "lucide-react";
 import { AuthStartLink } from "@/components/auth-start-link";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsConnectLink } from "@/components/discogs-connect-link";
 import { IntegrationDisconnectButton } from "@/components/integration-disconnect-button";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaybackModeSettings } from "@/components/playback-mode-settings";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getApiKeys } from "@/lib/api-keys";
 import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
-import { buildOnboardingHealth } from "@/lib/onboarding-health";
+import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
-import { getDashboardData } from "@/lib/queries";
-import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
 
 export default async function SettingsPage({
   searchParams,
@@ -28,27 +24,10 @@ export default async function SettingsPage({
   const discogsSavedAuth = parseDiscogsStoredAuth(savedKeys.discogsToken);
   const discogsConnected = discogsSavedAuth?.kind === "oauth";
   const discogsError = sanitizeDiscogsConnectionErrorMessage(params.discogs_error);
-  const [dashboardData, youtubeOAuth] = await Promise.all([
-    getDashboardData({ tab: "step-2" }),
-    getYoutubeOAuthConnectionStatus(),
-  ]);
-  const sourceCount = dashboardData.labels.length;
-  const activeSourceCount = dashboardData.labels.filter((label) => label.active).length;
-  const onboardingHealth = buildOnboardingHealth({
-    discogsConnected,
-    youtubeOAuthConfigured: youtubeOAuth.configured,
-    youtubeOAuthConnected: youtubeOAuth.connected,
-    sourceCount,
-    activeSourceCount,
-    erroredSourceCount: dashboardData.metrics.labelsErrored,
-    queueCount: dashboardData.queueCount,
-  });
-  const healthToneClass =
-    onboardingHealth.tone === "ready"
-      ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
-      : onboardingHealth.tone === "blocked"
-        ? "border-rose-500/60 bg-rose-500/10 text-rose-200"
-        : "border-amber-500/60 bg-amber-500/10 text-amber-200";
+  const onboardingSnapshot = await getOnboardingSnapshot();
+  const youtubeOAuthConfigured = onboardingSnapshot?.youtubeOAuthConfigured ?? false;
+  const youtubeOAuthConnected = onboardingSnapshot?.youtubeOAuthConnected ?? false;
+  const youtubeChannelTitle = onboardingSnapshot?.youtubeChannelTitle ?? null;
 
   return (
     <main className="pb-player-safe mx-auto max-w-[980px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
@@ -78,44 +57,16 @@ export default async function SettingsPage({
           <CardTitle className="text-xl">Integrations</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 p-4 md:p-5">
-          <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-2">
-                <Badge className={healthToneClass}>{onboardingHealth.label}</Badge>
-                <div>
-                  <p className="text-sm font-semibold">{onboardingHealth.title}</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">{onboardingHealth.summary}</p>
-                </div>
-              </div>
-              <div className="grid min-w-[200px] gap-2 text-xs text-[var(--color-muted)] sm:text-right">
-                <p>Discogs: <span className="mono">{discogsConnected ? "connected" : "not connected"}</span></p>
-                <p>Sources: <span className="mono">{sourceCount}</span></p>
-                <p>Active sources: <span className="mono">{activeSourceCount}</span></p>
-                <p>Queue-ready items: <span className="mono">{dashboardData.queueCount}</span></p>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {onboardingHealth.nextSteps.map((step) => (
-                <Link key={step.href + step.label} href={step.href}>
-                  <Button type="button" size="sm" variant="outline">{step.label}</Button>
-                </Link>
-              ))}
-              {onboardingHealth.optionalStep ? (
-                <Link href={onboardingHealth.optionalStep.href}>
-                  <Button type="button" size="sm" variant="ghost">{onboardingHealth.optionalStep.label}</Button>
-                </Link>
-              ) : null}
-            </div>
-          </section>
-
-          <div className="flex flex-wrap gap-2 text-xs">
-            <Badge className={discogsConnected ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200" : "border-amber-600/50 text-amber-300"}>
-              {discogsConnected ? "Discogs Personal Connected" : "Discogs Not Connected"}
-            </Badge>
-            <Badge className={youtubeOAuth.connected ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200" : "border-[var(--color-border)] text-[var(--color-muted)]"}>
-              {youtubeOAuth.connected ? "YouTube Export Connected" : youtubeOAuth.configured ? "YouTube Export Optional" : "YouTube OAuth Not Configured"}
-            </Badge>
-          </div>
+          {onboardingSnapshot ? (
+            <OnboardingStatusCard
+              snapshot={onboardingSnapshot}
+              title="Current Setup"
+              className="border-[var(--color-border)] bg-[var(--color-surface2)]"
+              showConnectionBadges
+              summaryClassName="text-xs text-[var(--color-muted)]"
+              statsClassName="grid min-w-[200px] gap-2 text-xs text-[var(--color-muted)] sm:text-right"
+            />
+          ) : null}
 
           <section className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
             <p className="text-sm font-semibold">Discogs quick setup</p>
@@ -173,16 +124,16 @@ export default async function SettingsPage({
                 YouTube playlist export
               </p>
               <p className="text-sm">
-                Status: <span className="mono">{youtubeOAuth.connected ? "Connected" : youtubeOAuth.configured ? "Available but not connected" : "Not configured"}</span>
+                Status: <span className="mono">{youtubeOAuthConnected ? "Connected" : youtubeOAuthConfigured ? "Available but not connected" : "Not configured"}</span>
               </p>
               <p className="mt-1 text-xs text-[var(--color-muted)]">
-                {youtubeOAuth.connected
-                  ? `Connected${youtubeOAuth.channelTitle ? ` as ${youtubeOAuth.channelTitle}` : ""}. Playlist export from Library is ready.`
-                  : youtubeOAuth.configured
+                {youtubeOAuthConnected
+                  ? `Connected${youtubeChannelTitle ? ` as ${youtubeChannelTitle}` : ""}. Playlist export from Library is ready.`
+                  : youtubeOAuthConfigured
                     ? "Optional. Connect YouTube only if you want to export a playlist from Library."
                     : "Optional feature. Add YouTube OAuth env vars if you want playlist export support in this deployment."}
               </p>
-              {youtubeOAuth.connected ? (
+              {youtubeOAuthConnected ? (
                 <div className="mt-3">
                   <IntegrationDisconnectButton
                     provider="youtube"

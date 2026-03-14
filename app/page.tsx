@@ -21,6 +21,7 @@ import { DiscogsLink } from "@/components/discogs-link";
 import { LabelDeleteButton } from "@/components/label-delete-button";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
 import { ManualWishlistSyncButton } from "@/components/manual-wishlist-sync-button";
+import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { ExternalLinkRow } from "@/components/external-link-row";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
@@ -42,7 +43,7 @@ import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import { getDiscogsWantsSyncStatus } from "@/lib/discogs-wants-sync";
-import { buildOnboardingHealth } from "@/lib/onboarding-health";
+import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
 import { resolveSourceDisplayName } from "@/lib/source-display";
 import { getSourceKindLabel, toSourceKind } from "@/lib/source-kind";
@@ -53,7 +54,6 @@ import {
   summarizeFailureSourceKinds,
 } from "@/lib/source-failures";
 import { getEffectiveSourceStatus, getSourceViewModel, getSourceVisibleError } from "@/lib/source-view";
-import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
 import { buildDiscogsConnectPath } from "@/lib/auth-provider-paths";
 
 export default async function HomePage({
@@ -287,7 +287,10 @@ export default async function HomePage({
   );
   const totalSavedCount = libraryRows.length;
   const playableSavedCount = libraryRows.filter((row) => row.saved && Boolean(row.youtubeVideoId)).length;
-  const youtubeOAuth = await getYoutubeOAuthConnectionStatus();
+  const onboardingSnapshot = await getOnboardingSnapshot();
+  const youtubeOAuthConfigured = onboardingSnapshot?.youtubeOAuthConfigured ?? false;
+  const youtubeOAuthConnected = onboardingSnapshot?.youtubeOAuthConnected ?? false;
+  const youtubeChannelTitle = onboardingSnapshot?.youtubeChannelTitle ?? null;
   const historyCount = historyRows.length;
   const reviewedCount = reviewedRows.length;
   const needsReviewCount = needsReviewRows.length;
@@ -307,20 +310,8 @@ export default async function HomePage({
     (label) => getSourceVisibleError(label.lastError) || "",
   );
   const activeSourceCount = data.labels.filter((label) => label.active).length;
-  const onboardingHealth = buildOnboardingHealth({
-    discogsConnected: hasDiscogs,
-    youtubeOAuthConfigured: youtubeOAuth.configured,
-    youtubeOAuthConnected: youtubeOAuth.connected,
-    sourceCount: data.labels.length,
-    activeSourceCount,
-    erroredSourceCount: data.metrics.labelsErrored,
-    queueCount: data.queueCount,
-  });
-  const showOnboarding = onboardingHealth.tone !== "ready";
-  const onboardingToneClass =
-    onboardingHealth.tone === "blocked"
-      ? "border-rose-500/60 bg-rose-500/10 text-rose-200"
-      : "border-amber-500/60 bg-amber-500/10 text-amber-200";
+  const onboardingHealth = onboardingSnapshot?.health ?? null;
+  const showOnboarding = onboardingHealth ? onboardingHealth.tone !== "ready" : false;
   const listeningEmptyState = !hasDiscogs
     ? {
         title: "Connect Discogs to start listening",
@@ -565,55 +556,23 @@ export default async function HomePage({
 
       {showOnboarding ? (
         <section className="mb-5 reveal reveal-delay-1">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">What To Do Next</p>
-                <div className="mt-2">
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${onboardingToneClass}`}>
-                    {onboardingHealth.label}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-medium">{onboardingHealth.title}</p>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">{onboardingHealth.summary}</p>
-              </div>
-              <div className="grid gap-1 text-xs text-[var(--color-muted)] sm:text-right">
-                <p>Discogs: <span className="mono">{hasDiscogs ? "connected" : "not connected"}</span></p>
-                <p>Sources: <span className="mono">{data.labels.length}</span></p>
-                <p>Active: <span className="mono">{activeSourceCount}</span></p>
-                <p>Queue-ready: <span className="mono">{data.queueCount}</span></p>
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Badge className={hasDiscogs ? "border-emerald-600/60 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
-                Discogs {hasDiscogs ? "Connected" : "Not Connected"}
-              </Badge>
-              <Badge className={hasAnySources ? "border-emerald-600/60 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
-                Sources {hasAnySources ? `${data.labels.length} Loaded` : "None Yet"}
-              </Badge>
-              <Badge className={data.metrics.labelsErrored > 0 ? "border-amber-600/50 text-amber-300" : "border-emerald-600/60 text-emerald-300"}>
-                Errors {data.metrics.labelsErrored}
-              </Badge>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {onboardingHealth.nextSteps.map((step, index) => (
-                <Link key={step.href + step.label} href={step.href}>
-                  <Button type="button" variant={index === 0 ? "default" : "outline"}>{step.label}</Button>
-                </Link>
-              ))}
-              {hasDiscogs && !hasAnySources ? (
-                <ManualWishlistSyncButton enabled importLabel />
-              ) : null}
-              {onboardingHealth.optionalStep ? (
-                <Link href={onboardingHealth.optionalStep.href}>
-                  <Button type="button" variant="ghost">{onboardingHealth.optionalStep.label}</Button>
-                </Link>
-              ) : null}
-              <Link href="/how-to-use">
-                <Button type="button" variant="ghost">How to use</Button>
-              </Link>
-            </div>
-          </div>
+          {onboardingSnapshot ? (
+            <OnboardingStatusCard
+              snapshot={onboardingSnapshot}
+              title="What To Do Next"
+              className="border-[var(--color-border)] bg-[var(--color-surface2)]"
+              actionVariant="default"
+              actionSize="default"
+              extraActions={
+                <>
+                  {hasDiscogs && !hasAnySources ? <ManualWishlistSyncButton enabled importLabel /> : null}
+                  <Link href="/how-to-use">
+                    <Button type="button" variant="ghost">How to use</Button>
+                  </Link>
+                </>
+              }
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -1296,10 +1255,10 @@ export default async function HomePage({
                 />
 
                 <YoutubePlaylistExportButton
-                  oauthConfigured={youtubeOAuth.configured}
-                  youtubeConnected={youtubeOAuth.connected}
+                  oauthConfigured={youtubeOAuthConfigured}
+                  youtubeConnected={youtubeOAuthConnected}
                   eligibleSavedCount={playableSavedCount}
-                  channelTitle={youtubeOAuth.channelTitle}
+                  channelTitle={youtubeChannelTitle}
                   connectNextPath="/?tab=library&libraryView=library"
                 />
 
