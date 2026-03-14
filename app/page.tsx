@@ -42,6 +42,11 @@ import { Input } from "@/components/ui/input";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
+import {
+  getLibraryItemsEmptyState,
+  getListeningEmptyState,
+  getReviewedEmptyState,
+} from "@/lib/dashboard-empty-states";
 import { getDiscogsWantsSyncStatus } from "@/lib/discogs-wants-sync";
 import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
@@ -312,64 +317,20 @@ export default async function HomePage({
   const activeSourceCount = data.labels.filter((label) => label.active).length;
   const onboardingHealth = onboardingSnapshot?.health ?? null;
   const showOnboarding = onboardingHealth ? onboardingHealth.tone !== "ready" : false;
-  const listeningEmptyState = !hasDiscogs
-    ? {
-        title: "Connect Discogs to start listening",
-        detail: "DigQueue needs Discogs personal OAuth before it can ingest sources and build the queue.",
-        actionHref: buildDiscogsConnectPath("/"),
-        actionLabel: "Connect Discogs",
-      }
-    : activeLabels.length === 0
-      ? {
-          title: "Add or resume an active source",
-          detail: "Listening Station is empty because there are no active sources feeding the queue right now.",
-          actionHref: "/?tab=step-1",
-          actionLabel: "Open Sources",
-        }
-      : (listenData?.rows?.length ?? 0) === 0
-        ? {
-            title: "Run sync to load tracks",
-            detail: "Your sources exist, but no playable tracks are loaded yet. Start or resume sync, then return here.",
-            actionHref: "/?tab=step-1",
-            actionLabel: "Check source sync",
-          }
-        : undefined;
-  const libraryItemsEmptyState = !hasDiscogs
-    ? {
-        title: "Connect Discogs to fill Library",
-        detail: "Library imports and wishlist sync depend on Discogs personal OAuth.",
-        actionHref: buildDiscogsConnectPath("/"),
-        actionLabel: "Connect Discogs",
-      }
-    : totalSavedCount === 0 && totalWishlistedRecords === 0
-      ? {
-          title: "Library is empty for now",
-          detail: "Save tracks while listening or import recent Discogs wants to give Library something to work with.",
-          actionHref: "/?tab=step-2",
-          actionLabel: "Open Listening Station",
-        }
-      : undefined;
-  const reviewedEmptyState =
-    selectedLibraryView === "reviewed"
-      ? {
-          title: "No reviewed tracks yet",
-          detail: "Use the single-check or double-check actions while listening, and reviewed items will land here.",
-          actionHref: "/?tab=step-2",
-          actionLabel: "Start reviewing",
-        }
-      : selectedLibraryView === "needs-review"
-        ? {
-            title: "Nothing needs review right now",
-            detail: "You have cleared the current backlog. Keep listening and come back when more played tracks need a decision.",
-            actionHref: "/?tab=step-2",
-            actionLabel: "Open Listening Station",
-          }
-        : {
-            title: "No history yet",
-            detail: "Play a few tracks from Listening Station and your play history will show up here.",
-            actionHref: "/?tab=step-2",
-            actionLabel: "Start listening",
-          };
+  const listeningEmptyState = getListeningEmptyState({
+    discogsConnected: hasDiscogs,
+    activeSourceCount: activeLabels.length,
+    listeningRowCount: listenData?.rows?.length ?? 0,
+  });
+  const libraryItemsEmptyState = getLibraryItemsEmptyState({
+    discogsConnected: hasDiscogs,
+    savedCount: totalSavedCount,
+    wishlistedRecordCount: totalWishlistedRecords,
+  });
+  const reviewedEmptyState = getReviewedEmptyState({
+    selectedLibraryView:
+      selectedLibraryView === "library" ? "history" : selectedLibraryView,
+  });
   const renderSourceCard = (label: (typeof data.labels)[number]) => {
     const displayName = resolveSourceDisplayName({
       name: label.name,

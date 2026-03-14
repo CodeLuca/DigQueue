@@ -33,4 +33,6 @@ export type ListenInboxEmptyState = {
   detail: string;
   actionHref?: string;
   actionLabel?: string;
+  secondaryActionHref?: string;
+  secondaryActionLabel?: string;
 };

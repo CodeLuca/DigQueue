@@ -18,12 +18,19 @@ export function ListenInboxEmptyStateCard({
       <p className="text-sm font-medium">{emptyState.title}</p>
       <p className="mt-1 text-sm text-[var(--color-muted)]">{emptyState.detail}</p>
       {emptyState.actionHref && emptyState.actionLabel ? (
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
           <Link href={emptyState.actionHref}>
             <Button type="button" size="sm" variant="outline">
               {emptyState.actionLabel}
             </Button>
           </Link>
+          {emptyState.secondaryActionHref && emptyState.secondaryActionLabel ? (
+            <Link href={emptyState.secondaryActionHref}>
+              <Button type="button" size="sm" variant="ghost">
+                {emptyState.secondaryActionLabel}
+              </Button>
+            </Link>
+          ) : null}
         </div>
       ) : null}
     </div>
