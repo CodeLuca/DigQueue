@@ -4,6 +4,7 @@ import {
   buildGoogleAuthStartPath,
   buildYoutubeOAuthStartPath,
 } from "@/lib/auth-provider-paths";
+import { getHighlightActionClassName } from "@/components/highlight-action";
 
 type AuthStartProvider = "discogs" | "google" | "youtube";
 
@@ -12,11 +13,13 @@ export function AuthStartLink({
   nextPath,
   className,
   children,
+  highlighted = false,
 }: {
   provider: AuthStartProvider;
   nextPath?: string | null;
   className?: string;
   children: React.ReactNode;
+  highlighted?: boolean;
 }) {
   const href =
     provider === "discogs"
@@ -26,7 +29,7 @@ export function AuthStartLink({
         : buildGoogleAuthStartPath(nextPath);
 
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={highlighted ? getHighlightActionClassName({ className }) : className}>
       {children}
     </Link>
   );

@@ -83,7 +83,7 @@ export default async function SettingsPage({
               ) : (
                 <DiscogsConnectLink
                   nextPath="/settings"
-                  className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-semibold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
+                  highlighted
                 >
                   Open guided Discogs connect
                 </DiscogsConnectLink>
@@ -113,7 +113,7 @@ export default async function SettingsPage({
                     confirmMessage="Disconnect Discogs personal OAuth from this account?"
                   />
                 ) : (
-                  <AuthStartLink provider="discogs" nextPath="/settings" className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-semibold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80">
+                  <AuthStartLink provider="discogs" nextPath="/settings" highlighted>
                     Connect Discogs
                   </AuthStartLink>
                 )}

@@ -1,9 +1,8 @@
 "use client";
-
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ExternalLink, ListVideo, Youtube } from "lucide-react";
 import { ExternalActionLink } from "@/components/external-action-link";
+import { HighlightActionLink } from "@/components/highlight-action";
 import { MutationActionButton } from "@/components/mutation-action-button";
 import { buildYoutubeOAuthStartPath } from "@/lib/auth-provider-paths";
 import { useYoutubePlaylistExportAction } from "@/lib/use-account-settings-actions";
@@ -73,12 +72,13 @@ export function YoutubePlaylistExportButton(props: Props) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {!props.youtubeConnected ? (
-          <Link
+          <HighlightActionLink
             href={buildYoutubeOAuthStartPath(props.connectNextPath)}
-            className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-3 py-1.5 text-xs font-bold !text-black shadow-[0_6px_16px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c]"
+            size="sm"
+            weight="bold"
           >
             Connect YouTube
-          </Link>
+          </HighlightActionLink>
         ) : (
           <MutationActionButton
             preset="account"
