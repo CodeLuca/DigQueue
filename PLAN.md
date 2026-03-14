@@ -289,6 +289,7 @@
     - Verified the local release path with `yarn check` and `yarn build` on 2026-03-14.
     - Deployed commit `5a37a04` to Railway production on 2026-03-14.
     - Verified the live release path with `SMOKE_BASE_URL=https://digqueue-production.up.railway.app yarn release:verify:live` on 2026-03-14.
+    - Hardened `release:verify:live` so it now waits for the latest Railway deployment to be promoted before falling through to base-URL readiness, removing the stale-revision smoke race from the release workflow.
   - Done when:
     - The release checklist is explicit and matches the current scripts and routes.
     - Duplicate-user and duplicate-queue hot paths are protected by schema-backed invariants instead of best-effort cleanup alone.
