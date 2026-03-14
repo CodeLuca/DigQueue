@@ -301,6 +301,7 @@
     - Consolidated onboarding snapshot loading and setup-status card rendering so the dashboard, Welcome, How To Use, and Settings pages now share one server-side onboarding snapshot plus one status-card surface instead of drifting across four near-identical implementations.
     - Consolidated dashboard empty-state planning so Listening Station and Library views now use one shared planner with stronger next-step CTA coverage instead of a large inline block in `app/page.tsx`.
     - Consolidated highlighted account/connect CTA styling so auth submit buttons plus Discogs/YouTube connect entrypoints now share one reusable highlight-action layer instead of repeating hard-coded gold button classes across auth, connect, settings, and export surfaces.
+    - Consolidated dashboard Discogs-required guidance so ingestion and wishlist-blocked states now share one guidance helper and one reusable notice component instead of repeating slightly different “connect Discogs” copy inline.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

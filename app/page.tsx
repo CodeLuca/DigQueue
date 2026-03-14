@@ -16,6 +16,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
+import { DiscogsRequiredNotice } from "@/components/discogs-required-notice";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { DiscogsLink } from "@/components/discogs-link";
 import { LabelDeleteButton } from "@/components/label-delete-button";
@@ -59,7 +60,6 @@ import {
   summarizeFailureSourceKinds,
 } from "@/lib/source-failures";
 import { getEffectiveSourceStatus, getSourceViewModel, getSourceVisibleError } from "@/lib/source-view";
-import { buildDiscogsConnectPath } from "@/lib/auth-provider-paths";
 
 export default async function HomePage({
   searchParams,
@@ -616,14 +616,15 @@ export default async function HomePage({
             </CardHeader>
             <CardContent className="space-y-4">
               {!canProcess ? (
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                  <p className="text-amber-200">
-                    {hasYoutubeBlockedError
-                      ? "YouTube key is blocked. Processing still works via Discogs release videos where available."
-                      : "Connect Discogs to enable ingestion. YouTube is an optional fallback for releases without Discogs videos."}
-                  </p>
-                  <Link href={buildDiscogsConnectPath("/")} className="mt-2 inline-block text-xs text-[var(--color-accent)] hover:underline">Connect Discogs</Link>
-                </div>
+                hasYoutubeBlockedError ? (
+                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                    <p className="text-amber-200">
+                      YouTube key is blocked. Processing still works via Discogs release videos where available.
+                    </p>
+                  </div>
+                ) : (
+                  <DiscogsRequiredNotice context="ingestion" />
+                )
               ) : null}
               {notice ? (
                 <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
@@ -708,7 +709,7 @@ export default async function HomePage({
                   </p>
                 ) : null}
                 <SourceSyncStatus initialProcessingCount={activeStatusCounts.processing} />
-                {!hasDiscogs ? <p className="mt-1 text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync status.</p> : null}
+                {!hasDiscogs ? <div className="mt-1"><DiscogsRequiredNotice context="wishlist_sync_status" compact /></div> : null}
               </details>
               <details className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3" open={!useSimpleSourcesView}>
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">
@@ -1180,14 +1181,16 @@ export default async function HomePage({
                   <ManualWishlistSyncButton enabled={hasDiscogs} compact className="w-full sm:w-auto" />
                   </div>
                 ) : showLibraryItemsSection ? (
-                  <p className="mt-1.5 text-xs text-[var(--color-muted)]">Connect Discogs to sync wants.</p>
+                  <div className="mt-1.5">
+                    <DiscogsRequiredNotice context="wishlist_actions" compact />
+                  </div>
                 ) : null}
                 {showLibraryItemsSection ? (
                   <div className="mt-1.5">
                     {hasDiscogs ? (
                       <WishlistSyncStatus initialStatus={wantsSyncStatus} compact />
                     ) : (
-                      <p className="text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync.</p>
+                      <DiscogsRequiredNotice context="wishlist_sync_status" compact />
                     )}
                   </div>
                 ) : null}
