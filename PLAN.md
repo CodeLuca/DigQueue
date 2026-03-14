@@ -304,6 +304,7 @@
     - Consolidated dashboard Discogs-required guidance so ingestion and wishlist-blocked states now share one guidance helper and one reusable notice component instead of repeating slightly different “connect Discogs” copy inline.
     - Consolidated settings and setup support shells so Settings section cards plus Discogs/YouTube status panels and the guided Discogs connect explainer now share reusable card/panel components instead of repeating the same bordered support markup across account surfaces.
     - Consolidated account/setup/dashboard feedback banners so login/reset notices, Discogs connect requirements, settings OAuth success/failure, and dashboard blocker/success notices now share one reusable feedback banner instead of repeating parallel success/error/warning alert markup.
+    - Consolidated secondary action links so dashboard/library drill-ins, Discogs-required guidance, YouTube fix navigation, guided connect back-links, settings export/docs links, and existing external action links now share one generic action-link layer instead of keeping separate internal text-link/button markup beside a second external-link styling helper.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

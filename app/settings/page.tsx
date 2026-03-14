@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { Disc3, ExternalLink } from "lucide-react";
+import { ActionLink } from "@/components/action-link";
 import { AuthStartLink } from "@/components/auth-start-link";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsConnectLink } from "@/components/discogs-connect-link";
@@ -147,26 +148,26 @@ export default async function SettingsPage({
       </SettingsSectionCard>
 
       <SettingsSectionCard title="Developer Links" className="mb-4" contentClassName="p-4 md:p-5">
-        <a
-          className="inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[var(--color-surface2)]"
+        <ActionLink
           href="https://www.discogs.com/developers"
           target="_blank"
           rel="noreferrer"
+          className="gap-2 px-3 py-2"
         >
           Discogs developer docs
           <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        </ActionLink>
       </SettingsSectionCard>
 
       <SettingsSectionCard title="Data Export" className="mb-4" contentClassName="space-y-3 p-4 md:p-5 text-sm">
         <p className="text-[var(--color-muted)]">Export queue and metadata snapshots.</p>
         <div className="flex flex-wrap gap-2">
-          <a href="/api/export/csv" className="rounded-md border border-[var(--color-border)] px-3 py-1.5 hover:bg-[var(--color-surface2)]">
+          <ActionLink href="/api/export/csv" className="px-3 py-1.5 text-xs">
             Export CSV
-          </a>
-          <a href="/api/export/json" className="rounded-md border border-[var(--color-border)] px-3 py-1.5 hover:bg-[var(--color-surface2)]">
+          </ActionLink>
+          <ActionLink href="/api/export/json" className="px-3 py-1.5 text-xs">
             Export JSON
-          </a>
+          </ActionLink>
         </div>
       </SettingsSectionCard>
 

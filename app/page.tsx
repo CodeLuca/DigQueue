@@ -16,6 +16,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
+import { ActionLink } from "@/components/action-link";
 import { DiscogsRequiredNotice } from "@/components/discogs-required-notice";
 import { FeedbackBanner } from "@/components/feedback-banner";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
@@ -552,9 +553,9 @@ export default async function HomePage({
               Unplayed
             </p>
             <p className="text-xl font-semibold">{data.metrics.unplayedTracks}</p>
-            <Link href="/?tab=library&libraryView=needs-review" className="text-xs text-[var(--color-accent)] hover:underline">
+            <ActionLink href="/?tab=library&libraryView=needs-review" variant="textLink" className="text-xs">
               Open in library
-            </Link>
+            </ActionLink>
           </CardContent>
         </Card>
         <Card>
@@ -564,9 +565,9 @@ export default async function HomePage({
               Played
             </p>
             <p className="text-xl font-semibold">{data.metrics.playedItems}</p>
-            <Link href="/?tab=library&libraryView=history" className="text-xs text-[var(--color-accent)] hover:underline">
+            <ActionLink href="/?tab=library&libraryView=history" variant="textLink" className="text-xs">
               Open in library
-            </Link>
+            </ActionLink>
           </CardContent>
         </Card>
         <Card>
@@ -576,9 +577,9 @@ export default async function HomePage({
               Reviewed
             </p>
             <p className="text-xl font-semibold">{data.metrics.doneTracks}</p>
-            <Link href="/?tab=library&libraryView=reviewed" className="text-xs text-[var(--color-accent)] hover:underline">
+            <ActionLink href="/?tab=library&libraryView=reviewed" variant="textLink" className="text-xs">
               Open in library
-            </Link>
+            </ActionLink>
           </CardContent>
         </Card>
         <Card>
@@ -588,9 +589,9 @@ export default async function HomePage({
               Saved Tracks
             </p>
             <p className="text-xl font-semibold">{data.metrics.savedTracks}</p>
-            <Link href="/?tab=library&libraryView=library" className="text-xs text-[var(--color-accent)] hover:underline">
+            <ActionLink href="/?tab=library&libraryView=library" variant="textLink" className="text-xs">
               Open in library
-            </Link>
+            </ActionLink>
           </CardContent>
         </Card>
         </div>
@@ -604,9 +605,9 @@ export default async function HomePage({
             className="p-3"
             title="YouTube key is blocked for search.list."
             action={(
-              <Link href="/settings#youtube-fix" className="inline-block text-xs text-[var(--color-accent)] hover:underline">
+              <ActionLink href="/settings#youtube-fix" variant="textLink" className="inline-block text-xs">
                 Open YouTube Block Fix Assistant
-              </Link>
+              </ActionLink>
             )}
           >
             <p>Open Settings and use the YouTube Block Fix Assistant to resolve it in order.</p>
@@ -954,9 +955,9 @@ export default async function HomePage({
                                   <span className="sm:hidden">Retry</span>
                                 </SourceRemediationButton>
                                 {meta.href ? (
-                                  <Link href={meta.href} className="text-[11px] text-[var(--color-accent)] hover:underline">
+                                  <ActionLink href={meta.href} variant="textLink" className="text-[11px]">
                                     {meta.hrefLabel}
-                                  </Link>
+                                  </ActionLink>
                                 ) : null}
                                 {group.category === "database" ? (
                                   <SourceRemediationButton

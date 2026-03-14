@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { ActionLink } from "@/components/action-link";
 import { AuthStartLink } from "@/components/auth-start-link";
 import { FeedbackBanner } from "@/components/feedback-banner";
 import { HighlightActionLink } from "@/components/highlight-action";
@@ -59,12 +59,12 @@ export default async function ConnectDiscogsPage({
               <ArrowRight className="h-4 w-4" />
             </HighlightActionLink>
           )}
-          <Link href="/login" className="rounded-md border border-[var(--color-border)] px-4 py-2 text-center text-sm hover:bg-[var(--color-surface2)]">
+          <ActionLink href="/login">
             Back: Account step
-          </Link>
-          <Link href="/" className="rounded-md border border-[var(--color-border)] px-4 py-2 text-center text-sm hover:bg-[var(--color-surface2)]">
+          </ActionLink>
+          <ActionLink href="/">
             Back to current app
-          </Link>
+          </ActionLink>
         </div>
       </section>
     </main>
