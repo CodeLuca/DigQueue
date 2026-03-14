@@ -28,14 +28,10 @@
 - [x] Product quality upgrades completion (state-aware onboarding guidance across Welcome, Settings, dashboard, empty states, and guide)
 
 ## Current Focus (P0)
-- [~] Release-readiness sweep
+- [x] Release-readiness sweep
   - Goal: lock down the final deploy + live verification path and remaining duplicate-user/data-integrity invariants so release handoff is predictable.
   - Remaining work:
-    - Deploy the current refactor to the production target.
-    - Run `yarn release:verify:live` against a live deployed app URL.
-    - Optionally run authenticated smoke probes with `SMOKE_COOKIE` on the target deploy.
-    - Sanity-check live auth redirects and mutation boundaries now that `smoke:core` also covers tracks todo, release reviewed/wishlist, recommendation feedback, and release-to-source creation endpoints.
-    - Fix any live-only issues exposed by deploy or smoke verification, then re-run the live checks.
+    - Optionally run authenticated smoke probes with `SMOKE_COOKIE` on the target deploy when a fresh session cookie is available.
   - Completed in this pass:
     - Consolidated duplicate track todo mutation flows so API routes, server actions, and single-track toggles share the same listened/saved mutation helpers.
     - Consolidated release wishlist mutation logic so the API route and server action path share the same local/external sync behavior and result shape.
@@ -284,11 +280,15 @@
 - Split wishlist sync mutation hooks from wishlist sync polling/status hooks so manual/saved sync buttons keep using `use-wishlist-sync-actions` while the status pill now imports a dedicated `use-wishlist-sync-status` module instead of sharing one mixed wishlist hook surface.
 - Split low-level auth client mutations from account/settings client mutations so auth hooks now import a dedicated `client-auth-actions` module and settings/tool hooks import `client-account-settings-actions` instead of sharing one mixed account client surface.
     - Expanded `smoke:core` to use shared protected-route probe helpers instead of per-route duplicated checks.
+    - Expanded `smoke:core` to cover public auth validation endpoints so middleware cannot silently block login/register/password-reset flows with a `401`.
     - Normalized protected API auth boundaries around a shared route helper so unauthenticated requests consistently return explicit `401` JSON responses.
+    - Restored public API middleware access for auth and OAuth routes so login/register/password-reset plus Discogs/YouTube OAuth entrypoints are no longer intercepted by the generic protected-API guard.
     - Normalized the remaining queue API routes onto the shared route-auth helper so queue list/next/enqueue/scope match the rest of the protected API surface.
     - Normalized the remaining protected source routes so `sources-next` and `worker-process` now use the same explicit route-auth helper as the other protected JSON endpoints.
     - Extended smoke coverage to labels-next, wishlist sync status, settings key test, YouTube search, label status/active mutations, and queue-item deletion boundaries.
     - Verified the local release path with `yarn check` and `yarn build` on 2026-03-14.
+    - Deployed commit `5a37a04` to Railway production on 2026-03-14.
+    - Verified the live release path with `SMOKE_BASE_URL=https://digqueue-production.up.railway.app yarn release:verify:live` on 2026-03-14.
   - Done when:
     - The release checklist is explicit and matches the current scripts and routes.
     - Duplicate-user and duplicate-queue hot paths are protected by schema-backed invariants instead of best-effort cleanup alone.
@@ -296,11 +296,11 @@
 
 ## Near-Term (P1)
 - [ ] Final polish / low-risk cleanup
-  - Pick off any remaining copy/docs mismatches only if they show up during release verification.
+  - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
+  - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 
 ## Later (P2)
 ## Next Execution Order
-1. Deploy the current refactor to the production target.
-2. Run `yarn release:verify:live` against the deployed app.
-3. Fix any live-only regressions from deploy/smoke verification and re-run the checks.
-4. Add more operational alerts only if the current smoke checks expose weak spots.
+1. Run authenticated `release:verify:live` with `SMOKE_COOKIE` when a fresh production session is available.
+2. Pick off any UX/copy mismatches that appear in authenticated smoke or manual review.
+3. Add more operational alerts only if the current smoke checks expose weak spots.
