@@ -96,6 +96,8 @@ SMOKE_COOKIE='sb-access-token=...; sb-refresh-token=...' \
 yarn release:verify:live
 ```
 
+`release:verify:live` waits for the live base URL to start responding before it runs smoke probes, which helps when a deploy is still warming up.
+
 Release checklist:
 - Confirm Discogs OAuth callback URL is configured for the target deploy origin.
 - Run `yarn release:verify`.

@@ -142,6 +142,19 @@ async function probeValidationErrorPost(name: string, path: string, body: unknow
   });
 }
 
+async function probePublicValidationErrorPost(name: string, path: string, body: unknown): Promise<ProbeResult> {
+  const response = await request(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  assert(response.status === 400, `expected 400, got ${response.status}`);
+  const responseBody = (await response.json()) as unknown;
+  assert(responseBody && typeof responseBody === "object", "expected JSON object");
+  assert("error" in responseBody, "missing error payload");
+  return { name, ok: true, detail: "public validation boundary ok" };
+}
+
 async function probeValidationErrorDelete(name: string, path: string): Promise<ProbeResult> {
   const response = await request(path, { method: "DELETE" });
   if (!cookieHeader) {
@@ -208,6 +221,10 @@ async function main() {
     },
   }));
   results.push(await probeQueueNextPost());
+  results.push(await probePublicValidationErrorPost("auth-login POST", "/api/auth/login", {}));
+  results.push(await probePublicValidationErrorPost("auth-register POST", "/api/auth/register", {}));
+  results.push(await probePublicValidationErrorPost("auth-password-reset-request POST", "/api/auth/password-reset/request", {}));
+  results.push(await probePublicValidationErrorPost("auth-password-reset-complete POST", "/api/auth/password-reset/complete", {}));
   results.push(await probeValidationErrorPost("queue-enqueue POST", "/api/queue/enqueue", {}));
   results.push(await probeValidationErrorPost("queue-scope POST", "/api/queue/scope", { trackIds: "bad" }));
   results.push(await probeValidationErrorPost("worker-process POST", "/api/worker/process", {}));

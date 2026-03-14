@@ -14,7 +14,11 @@ const PUBLIC_PATHS = new Set([
   "/auth/google/start",
   "/reset-password",
 ]);
-const PUBLIC_API_PREFIXES: string[] = [];
+const PUBLIC_API_PREFIXES = [
+  "/api/auth",
+  "/api/discogs/oauth",
+  "/api/youtube/oauth",
+] as const;
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true;
