@@ -1,21 +1,30 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { deleteLabelAction } from "@/app/actions";
-import { FormSubmitButton } from "@/components/form-submit-button";
+import { MutationActionButton } from "@/components/mutation-action-button";
+import { useSourceDeleteButtonAction } from "@/lib/use-source-single-actions";
 
 export function LabelDeleteButton({ labelId, labelName }: { labelId: number; labelName: string }) {
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    const confirmed = window.confirm(`Delete label "${labelName}"? This also removes its releases, tracks, and queue items.`);
-    if (!confirmed) {
-      event.preventDefault();
-    }
+  const { pending, error, message, run } = useSourceDeleteButtonAction();
+
+  const onClick = async () => {
+    await run(labelId, `Delete label "${labelName}"? This also removes its releases, tracks, and queue items.`);
   };
 
   return (
-    <form action={deleteLabelAction} onSubmit={onSubmit}>
-      <input type="hidden" name="labelId" value={labelId} />
-      <FormSubmitButton type="submit" size="sm" variant="destructive" pendingText="Deleting...">Delete</FormSubmitButton>
-    </form>
+    <MutationActionButton
+      preset="source"
+      type="button"
+      size="sm"
+      variant="destructive"
+      ariaLabel={`Delete source ${labelName}`}
+      title={`Delete source ${labelName}`}
+      error={error}
+      message={message}
+      pending={pending}
+      pendingChildren="Deleting..."
+      onClick={() => void onClick()}
+    >
+      Delete
+    </MutationActionButton>
   );
 }

@@ -1,8 +1,12 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
-import { feedbackEvents, queueItems, releases, releaseSignals, tracks, youtubeMatches } from "@/db/schema";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { feedbackEvents, labels, queueItems, releases, releaseSignals, tracks, youtubeMatches } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
+import { buildDismissedReleaseSets, buildDismissedTrackSet, isReleaseDismissed } from "@/lib/recommendation-dismissals";
 import { searchDiscogsReleases } from "@/lib/discogs";
+import { canonicalizeFeedbackTargets } from "@/lib/feedback-targets";
+import { shouldCollapseExternalDismiss } from "@/lib/feedback-dismiss-identity";
+import { isIdempotentFeedbackEvent } from "@/lib/feedback-event-policy";
 
 const EVENT_WEIGHTS: Record<string, number> = {
   played: 0.45,
@@ -20,6 +24,7 @@ const EVENT_WEIGHTS: Record<string, number> = {
 type CandidateTrack = Awaited<ReturnType<typeof db.query.tracks.findMany>>[number] & {
   release?: {
     labelId?: number | null;
+    discogsUrl?: string | null;
     wishlist?: boolean | null;
     listened?: boolean | null;
     year?: number | null;
@@ -161,35 +166,92 @@ export async function logFeedbackEvent(input: {
   source?: string;
   trackId?: number | null;
   releaseId?: number | null;
+  externalDiscogsReleaseId?: number | null;
   labelId?: number | null;
   userId?: string | null;
 }) {
   const userId = input.userId ?? (await requireCurrentAppUserId());
   const trackScope = eq(tracks.userId, userId);
   const releaseScope = eq(releases.userId, userId);
-  const trackId = input.trackId ?? null;
-  let releaseId = input.releaseId ?? null;
-  let labelId = input.labelId ?? null;
+  const labelScope = eq(labels.userId, userId);
+  const track =
+    typeof input.trackId === "number"
+      ? await db.query.tracks.findFirst({
+          where: and(eq(tracks.id, input.trackId), trackScope),
+          columns: { id: true, releaseId: true },
+        })
+      : null;
+  const releaseCandidateId = track?.releaseId ?? input.releaseId ?? null;
+  const release =
+    typeof releaseCandidateId === "number"
+      ? await db.query.releases.findFirst({
+          where: and(eq(releases.id, releaseCandidateId), releaseScope),
+          columns: { id: true, labelId: true, discogsUrl: true },
+        })
+      : null;
+  const labelIsValid =
+    !release && typeof input.labelId === "number"
+      ? Boolean(await db.query.labels.findFirst({
+          where: and(eq(labels.id, input.labelId), labelScope),
+          columns: { id: true },
+        }))
+      : false;
 
-  if (typeof trackId === "number" && (!releaseId || !labelId)) {
-    const track = await db.query.tracks.findFirst({ where: and(eq(tracks.id, trackId), trackScope) });
-    if (track?.releaseId && !releaseId) releaseId = track.releaseId;
-  }
-  if (typeof releaseId === "number" && !labelId) {
-    const release = await db.query.releases.findFirst({ where: and(eq(releases.id, releaseId), releaseScope) });
-    if (release?.labelId) labelId = release.labelId;
+  const {
+    trackId,
+    releaseId,
+    labelId,
+    externalDiscogsReleaseId,
+  } = canonicalizeFeedbackTargets({
+    track,
+    release,
+    requestedTrackId: input.trackId ?? null,
+    requestedReleaseId: input.releaseId ?? null,
+    requestedExternalDiscogsReleaseId: input.externalDiscogsReleaseId ?? null,
+    requestedLabelId: input.labelId ?? null,
+    labelIsValid,
+  });
+
+  if (
+    typeof trackId !== "number" &&
+    typeof releaseId !== "number" &&
+    typeof externalDiscogsReleaseId !== "number" &&
+    typeof labelId !== "number"
+  ) {
+    return;
   }
 
-  await db.insert(feedbackEvents).values({
+  const insertQuery = db.insert(feedbackEvents).values({
     userId,
     trackId,
     releaseId,
+    externalDiscogsReleaseId,
     labelId,
     eventType: input.eventType,
     eventValue: input.eventValue ?? 1,
     source: input.source ?? "app",
     createdAt: new Date(),
   });
+
+  if (isIdempotentFeedbackEvent(input.eventType)) {
+    if (shouldCollapseExternalDismiss({ eventType: input.eventType, releaseId, externalDiscogsReleaseId })) {
+      await db
+        .delete(feedbackEvents)
+        .where(
+          and(
+            eq(feedbackEvents.userId, userId),
+            eq(feedbackEvents.eventType, input.eventType),
+            eq(feedbackEvents.externalDiscogsReleaseId, externalDiscogsReleaseId as number),
+            isNull(feedbackEvents.trackId),
+            isNull(feedbackEvents.releaseId),
+          ),
+        );
+    }
+    await insertQuery.onConflictDoNothing();
+    return;
+  }
+
+  await insertQuery;
 }
 
 export async function upsertReleaseSignals(input: ReleaseSignalInput, userId?: string) {
@@ -229,6 +291,7 @@ export async function buildDeepRecommendations(params: {
   candidateTracks: CandidateTrack[];
   listenedTracks: CandidateTrack[];
   playedQueueItems: Array<{ trackId: number | null; releaseId: number | null; labelId: number | null }>;
+  userId: string;
   limit?: number;
 }) {
   const limit = Math.max(1, params.limit ?? 12);
@@ -245,7 +308,7 @@ export async function buildDeepRecommendations(params: {
         const chunkRows = await db
           .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, chunk), eq(queueItems.status, "pending")));
+          .where(and(inArray(queueItems.trackId, chunk), eq(queueItems.status, "pending"), eq(queueItems.userId, params.userId)));
         rows.push(...chunkRows);
       }
       return rows;
@@ -256,7 +319,7 @@ export async function buildDeepRecommendations(params: {
         const chunkRows = await db
           .select({ trackId: queueItems.trackId })
           .from(queueItems)
-          .where(and(inArray(queueItems.trackId, chunk), eq(queueItems.status, "played")));
+          .where(and(inArray(queueItems.trackId, chunk), eq(queueItems.status, "played"), eq(queueItems.userId, params.userId)));
         rows.push(...chunkRows);
       }
       return rows;
@@ -267,12 +330,13 @@ export async function buildDeepRecommendations(params: {
         const chunkRows = await db
           .select({ trackId: youtubeMatches.trackId })
           .from(youtubeMatches)
-          .where(and(inArray(youtubeMatches.trackId, chunk), eq(youtubeMatches.chosen, true)));
+          .where(and(inArray(youtubeMatches.trackId, chunk), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, params.userId)));
         rows.push(...chunkRows);
       }
       return rows;
     })(),
     db.query.feedbackEvents.findMany({
+      where: eq(feedbackEvents.userId, params.userId),
       orderBy: [desc(feedbackEvents.id)],
       limit: 6000,
     }),
@@ -281,11 +345,8 @@ export async function buildDeepRecommendations(params: {
   const pendingSet = new Set(pendingRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"));
   const playedSet = new Set(playedRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"));
   const playableSet = new Set(playableRows.map((row) => row.trackId).filter((item): item is number => typeof item === "number"));
-  const dismissedSet = new Set(
-    eventRows
-      .filter((row) => row.eventType === "dismiss" && typeof row.trackId === "number")
-      .map((row) => row.trackId as number),
-  );
+  const dismissedSet = buildDismissedTrackSet(eventRows);
+  const dismissedReleases = buildDismissedReleaseSets(eventRows);
 
   const releasePreference = new Map<number, number>();
   const labelPreference = new Map<number, number>();
@@ -327,7 +388,7 @@ export async function buildDeepRecommendations(params: {
   const signalsRows: Awaited<ReturnType<typeof db.query.releaseSignals.findMany>> = [];
   for (const chunk of chunkValues(releaseIdsForSignals)) {
     const chunkRows = await db.query.releaseSignals.findMany({
-      where: inArray(releaseSignals.releaseId, chunk),
+      where: and(inArray(releaseSignals.releaseId, chunk), eq(releaseSignals.userId, params.userId)),
     });
     signalsRows.push(...chunkRows);
   }
@@ -396,6 +457,12 @@ export async function buildDeepRecommendations(params: {
     if (pendingSet.has(track.id)) return false;
     if (playedSet.has(track.id)) return false;
     if (dismissedSet.has(track.id)) return false;
+    if (isReleaseDismissed({
+      releaseId: track.releaseId,
+      discogsUrl: track.release?.discogsUrl,
+      dismissedLocalReleaseIds: dismissedReleases.localReleaseIds,
+      dismissedExternalDiscogsReleaseIds: dismissedReleases.externalDiscogsReleaseIds,
+    })) return false;
     return true;
   });
 
@@ -567,24 +634,22 @@ export async function buildExternalRecommendations(params: {
   candidateTracks: CandidateTrack[];
   listenedTracks: CandidateTrack[];
   activeLabels: Array<{ id: number; name: string }>;
-  existingReleaseIds: number[];
+  existingExternalDiscogsReleaseIds: number[];
   existingLabelNames: string[];
+  userId: string;
   limit?: number;
 }) {
   const limit = Math.max(1, params.limit ?? 12);
-  const existingReleaseSet = new Set(params.existingReleaseIds);
+  const existingReleaseSet = new Set(params.existingExternalDiscogsReleaseIds);
   const existingLabelSet = new Set(params.existingLabelNames.map((item) => normalizeToken(item)));
 
   const recentFeedback = await db.query.feedbackEvents.findMany({
+    where: eq(feedbackEvents.userId, params.userId),
     orderBy: [desc(feedbackEvents.id)],
     limit: 4500,
-    columns: { eventType: true, releaseId: true },
+    columns: { eventType: true, releaseId: true, externalDiscogsReleaseId: true },
   });
-  const dismissedReleaseSet = new Set(
-    recentFeedback
-      .filter((row) => row.eventType === "dismiss" && typeof row.releaseId === "number")
-      .map((row) => row.releaseId as number),
-  );
+  const dismissedReleases = buildDismissedReleaseSets(recentFeedback);
 
   const seedMap = new Map<string, { weight: number; reason: string }>();
   const styleCounts = new Map<string, number>();
@@ -592,7 +657,9 @@ export async function buildExternalRecommendations(params: {
   const releaseIdsForSignals = [...new Set(params.listenedTracks.map((track) => track.releaseId))].slice(0, 1000);
   const signalRows: Awaited<ReturnType<typeof db.query.releaseSignals.findMany>> = [];
   for (const chunk of chunkValues(releaseIdsForSignals, 300)) {
-    const rows = await db.query.releaseSignals.findMany({ where: inArray(releaseSignals.releaseId, chunk) });
+    const rows = await db.query.releaseSignals.findMany({
+      where: and(inArray(releaseSignals.releaseId, chunk), eq(releaseSignals.userId, params.userId)),
+    });
     signalRows.push(...rows);
   }
   for (const row of signalRows) {
@@ -635,7 +702,7 @@ export async function buildExternalRecommendations(params: {
   for (const row of rows) {
     for (const result of row.results) {
       if (existingReleaseSet.has(result.releaseId)) continue;
-      if (dismissedReleaseSet.has(result.releaseId)) continue;
+      if (dismissedReleases.externalDiscogsReleaseIds.has(result.releaseId)) continue;
 
       const normalizedLabels = result.labelNames.map((item) => normalizeToken(item));
       const firstNewLabel = result.labelNames.find((item) => !existingLabelSet.has(normalizeToken(item))) ?? result.labelNames[0] ?? null;

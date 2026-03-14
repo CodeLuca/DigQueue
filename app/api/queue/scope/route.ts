@@ -1,12 +1,14 @@
 export const dynamic = "force-dynamic";
 
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { requireMutationUser, parseMutationBody } from "@/lib/api-mutation";
+import { okJson } from "@/lib/api-response";
 import { db } from "@/lib/db";
+import { normalizePositiveIds } from "@/lib/positive-id-list";
+import { buildQueueScopeMutationResponse } from "@/lib/queue-mutation-contract";
+import { enqueuePendingTrackForUser } from "@/lib/track-queue-enqueue";
 
 const schema = z.object({
   enabled: z.boolean().optional().default(true),
@@ -14,24 +16,22 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const auth = await requireMutationUser({
     bucket: "queue/scope",
     limit: 30,
     windowSeconds: 60,
   });
-  if (rateLimited) return rateLimited;
+  if (auth.response) return auth.response;
+  const userId = auth.userId;
 
-  const parsed = schema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });
-  }
+  const parsed = await parseMutationBody(request, schema, { fallbackBody: null });
+  if (parsed.response) return parsed.response;
 
   if (!parsed.data.enabled) {
-    return NextResponse.json({ ok: true, removed: 0 });
+    return okJson(buildQueueScopeMutationResponse({ removed: 0 }));
   }
 
-  const orderedTrackIds = [...new Set(parsed.data.trackIds)];
+  const orderedTrackIds = normalizePositiveIds(parsed.data.trackIds, { max: 2000 });
   const allowedTrackIds = new Set(orderedTrackIds);
   const pendingItems = await db
     .select({ id: queueItems.id, trackId: queueItems.trackId, source: queueItems.source })
@@ -75,7 +75,11 @@ export async function POST(request: Request) {
     (trackId) => !existingPendingTrackIds.has(trackId) && !playedTrackIds.has(trackId),
   );
   if (missingTrackIds.length === 0) {
-    return NextResponse.json({ ok: true, removed: idsToRemove.length, added: 0, skipped: 0 });
+    return okJson(buildQueueScopeMutationResponse({
+      removed: idsToRemove.length,
+      added: 0,
+      skipped: 0,
+    }));
   }
 
   const candidateMatches = await db
@@ -101,14 +105,14 @@ export async function POST(request: Request) {
     .select({ id: tracks.id, releaseId: tracks.releaseId })
     .from(tracks)
     .where(and(inArray(tracks.id, missingTrackIds), eq(tracks.userId, userId)));
-  const releaseIds = [...new Set(trackRows.map((row) => row.releaseId))];
+  const releaseIds = normalizePositiveIds(trackRows.map((row) => row.releaseId));
   const releaseRows = releaseIds.length
     ? await db
         .select({ id: releases.id, labelId: releases.labelId })
         .from(releases)
         .where(and(inArray(releases.id, releaseIds), eq(releases.userId, userId)))
     : [];
-  const labelIds = [...new Set(releaseRows.map((row) => row.labelId))];
+  const labelIds = normalizePositiveIds(releaseRows.map((row) => row.labelId));
   const labelRows = labelIds.length
     ? await db
         .select({ id: labels.id, active: labels.active })
@@ -164,17 +168,25 @@ export async function POST(request: Request) {
     });
   }
 
-  if (rowsToInsert.length > 0) {
-    for (let start = 0; start < rowsToInsert.length; start += 150) {
-      const chunk = rowsToInsert.slice(start, start + 150);
-      await db.insert(queueItems).values(chunk);
-    }
+  let insertedCount = 0;
+  for (const row of rowsToInsert) {
+    const inserted = await enqueuePendingTrackForUser({
+      userId: row.userId,
+      youtubeVideoId: row.youtubeVideoId,
+      trackId: row.trackId,
+      releaseId: row.releaseId,
+      labelId: row.labelId,
+      queueSource: row.source,
+      feedbackSource: "queue_scope_sync",
+      priority: row.priority,
+      addedAt: row.addedAt,
+    });
+    if (inserted.inserted) insertedCount += 1;
   }
 
-  return NextResponse.json({
-    ok: true,
+  return okJson(buildQueueScopeMutationResponse({
     removed: idsToRemove.length,
-    added: rowsToInsert.length,
+    added: insertedCount,
     skipped,
-  });
+  }));
 }

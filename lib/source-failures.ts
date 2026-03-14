@@ -1,3 +1,5 @@
+import { buildDiscogsOAuthStartPath } from "@/lib/auth-provider-paths";
+
 export type FailureCategory = "auth" | "rate_limit" | "provider" | "database" | "data" | "unknown";
 export type FailureProvider = "discogs" | "youtube" | "unknown";
 export type FailureSourceKind = "label" | "artist";
@@ -105,8 +107,8 @@ export function getFailureCategoryMeta(category: FailureCategory): FailureCatego
     return {
       label: "Auth",
       className: "border-amber-500/50 bg-amber-500/12 text-amber-200",
-      hint: "Reconnect Discogs directly, then retry.",
-      href: "/api/discogs/oauth/start?next=/?tab=step-2",
+      hint: "Reconnect Discogs, then clear or retry the blocked sources.",
+      href: buildDiscogsOAuthStartPath("/?tab=step-2"),
       hrefLabel: "Reconnect Discogs",
     };
   }
@@ -149,7 +151,7 @@ export function getFailureCategoryMeta(category: FailureCategory): FailureCatego
   return {
     label: "Unknown",
     className: "border-zinc-500/50 bg-zinc-500/12 text-zinc-200",
-    hint: "Unclassified failure. Retry source and inspect the source detail page.",
+    hint: "Retry once, or pause the affected sources if the issue keeps repeating.",
     href: null,
     hrefLabel: null,
   };

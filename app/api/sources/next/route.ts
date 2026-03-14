@@ -3,21 +3,29 @@ export const dynamic = "force-dynamic";
 import { and, asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { labels, releases, sourceReleases } from "@/db/schema";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { requireRouteUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
-import { processSingleReleaseForSource } from "@/lib/processing";
 import { resolveSourceNextBlocker } from "@/lib/source-next-blocker";
+import {
+  createProcessingAttempt,
+  getProcessingAttemptSourceMeta,
+  selectNextSourceId,
+} from "@/lib/source-next-processing";
+import { runSourceProcessingAttemptForUser } from "@/lib/source-processing-run";
+import { buildSyncHealthAlerts } from "@/lib/sync-health";
+import { buildSourceStatusCounts, planSourceNextRecovery } from "@/lib/source-next-state";
 import { toSourceKind } from "@/lib/source-kind";
 import { createEmptySourceNextResponse, type SourceNextResponse } from "@/lib/source-next-response";
 import { appendSyncRunEvent, readSyncRunHistory, readSyncTelemetry } from "@/lib/sync-telemetry";
-import { buildLastSuccessBySource, buildSyncRunStats } from "@/lib/sync-run-stats";
+import { buildLastSuccessBySource, buildSyncRunBreakdown, buildSyncRunStats, buildSyncWindowComparison } from "@/lib/sync-run-stats";
 import { isTransientLabelError } from "@/lib/utils";
-import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
 
 export async function GET() {
   try {
     const now = Date.now();
-    const userId = await requireCurrentAppUserId();
+    const auth = await requireRouteUserId();
+    if (auth.response) return auth.response;
+    const userId = auth.userId;
     const initialSources = await db.query.labels.findMany({
       where: and(eq(labels.userId, userId), eq(labels.active, true)),
       columns: { id: true, name: true, entityKind: true, status: true, lastError: true, updatedAt: true, currentPage: true, totalPages: true },
@@ -45,9 +53,17 @@ export async function GET() {
       const hasPendingReleases = pending.length > 0;
       const paginationFinished = source.currentPage >= source.totalPages;
       const hasStartedPagination = source.currentPage > 1;
-      const activeLock: { lockKey: string } | null = null;
+      const recoveryPlan = planSourceNextRecovery({
+        status: source.status,
+        transientError,
+        hasPendingReleases,
+        paginationFinished,
+        hasStartedPagination,
+        staleForMs: now - source.updatedAt.getTime(),
+        hasActiveLock: false,
+      });
 
-      if (!hasPendingReleases && paginationFinished && hasStartedPagination) {
+      if (recoveryPlan.action === "mark_complete") {
         await db
           .update(labels)
           .set({
@@ -58,26 +74,13 @@ export async function GET() {
           .where(and(eq(labels.id, source.id), eq(labels.userId, userId)));
         continue;
       }
-
-      const staleForMs = now - source.updatedAt.getTime();
-      const processingStale = source.status === "processing" && !activeLock && staleForMs > 25_000;
-      const transientErrorStale = transientError && !activeLock && staleForMs > 10_000;
-      if (processingStale) {
+      if (recoveryPlan.action === "recover") {
         await db
           .update(labels)
           .set({
-            status: hasPendingReleases || !paginationFinished || !hasStartedPagination ? "queued" : "complete",
+            status: recoveryPlan.nextStatus,
             updatedAt: new Date(),
-            lastError: null,
-          })
-          .where(and(eq(labels.id, source.id), eq(labels.userId, userId)));
-      } else if (transientErrorStale) {
-        await db
-          .update(labels)
-          .set({
-            status: hasPendingReleases || !paginationFinished || !hasStartedPagination ? "queued" : "complete",
-            updatedAt: new Date(),
-            lastError: null,
+            lastError: recoveryPlan.clearLastError ? null : source.lastError,
           })
           .where(and(eq(labels.id, source.id), eq(labels.userId, userId)));
       }
@@ -89,69 +92,28 @@ export async function GET() {
       orderBy: [asc(labels.updatedAt)],
     });
 
-    const counts = {
-      queued: 0,
-      processing: 0,
-      error: 0,
-      paused: 0,
-      complete: 0,
-      other: 0,
-    };
+    const counts = buildSourceStatusCounts(activeSources.map((source) => source.status));
 
-    for (const source of activeSources) {
-      if (source.status === "queued") counts.queued += 1;
-      else if (source.status === "processing") counts.processing += 1;
-      else if (source.status === "error") counts.error += 1;
-      else if (source.status === "paused") counts.paused += 1;
-      else if (source.status === "complete") counts.complete += 1;
-      else counts.other += 1;
-    }
-
-    const nextProcessing = activeSources.find((source) => source.status === "processing");
-    const nextQueued = activeSources.find((source) => source.status === "queued");
-    const nextSourceId = nextProcessing?.id ?? nextQueued?.id ?? null;
-
-    const processingAttempt: {
-      attempted: boolean;
-      sourceId: number | null;
-      lockAcquired: boolean;
-      outcome: "ok" | "error" | "skipped";
-      message?: string;
-      error?: string;
-    } = {
-      attempted: false,
-      sourceId: nextSourceId,
-      lockAcquired: false,
-      outcome: "skipped",
-    };
+    const nextSourceId = selectNextSourceId(activeSources);
+    let processingAttempt = createProcessingAttempt(nextSourceId);
 
     // Safety net: keep ingestion moving even if client-side worker polling fails.
     if (nextSourceId) {
       const startedAt = Date.now();
-      processingAttempt.attempted = true;
-      const lock = await acquireSourceWorkerLock(userId, nextSourceId, 120_000);
-      if (lock) {
-        processingAttempt.lockAcquired = true;
-        try {
-          const result = await processSingleReleaseForSource(nextSourceId, userId);
-          processingAttempt.outcome = "ok";
-          processingAttempt.message = result?.message || "Processed one source step.";
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          processingAttempt.outcome = "error";
-          processingAttempt.error = message;
-          console.error(`[sources-next] source=${nextSourceId} processing error: ${message}`);
-        } finally {
-          await releaseSourceWorkerLock(lock);
-        }
-      } else {
-        processingAttempt.outcome = "skipped";
-        processingAttempt.message = "Worker lock busy";
+      const run = await runSourceProcessingAttemptForUser({
+        userId,
+        sourceId: nextSourceId,
+        leaseMs: 120_000,
+      });
+      processingAttempt = run.attempt;
+      if (run.attempt.outcome === "error" && run.attempt.error) {
+        console.error(`[sources-next] source=${nextSourceId} processing error: ${run.attempt.error}`);
       }
-      const sourceName = activeSources.find((item) => item.id === nextSourceId)?.name || `Source ${nextSourceId}`;
+      const sourceMeta = getProcessingAttemptSourceMeta(activeSources, nextSourceId);
       await appendSyncRunEvent(userId, {
         sourceId: nextSourceId,
-        sourceName,
+        sourceName: sourceMeta?.sourceName || `Source ${nextSourceId}`,
+        sourceKind: toSourceKind(sourceMeta?.entityKind),
         outcome: processingAttempt.outcome,
         message: processingAttempt.message,
         error: processingAttempt.error,
@@ -179,6 +141,15 @@ export async function GET() {
     }));
     const throughput = buildSyncRunStats(runHistory, 10);
     const throughputLong = buildSyncRunStats(runHistory, 60);
+    const throughputComparison = buildSyncWindowComparison(runHistory, 10);
+    const throughputBreakdown = buildSyncRunBreakdown(runHistory, 60);
+    const healthAlerts = buildSyncHealthAlerts({
+      now,
+      counts: { processing: counts.processing, error: counts.error },
+      syncTelemetry,
+      throughputLong,
+      throughputBreakdown,
+    });
     const processingSources = activeSources
       .filter((source) => source.status === "processing")
       .map((source) => ({
@@ -197,6 +168,9 @@ export async function GET() {
       lastSuccessBySource,
       throughput,
       throughputLong,
+      throughputComparison,
+      throughputBreakdown,
+      healthAlerts,
       processingAttempt,
       blocker: resolveSourceNextBlocker({
         nextSourceId,

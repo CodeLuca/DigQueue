@@ -1,23 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
-
-type WantsSyncStatus = {
-  mode: "auto" | "manual";
-  status: "running" | "synced" | "throttled" | "error";
-  startedAt: string;
-  finishedAt?: string;
-  phase?: "fetching_wants" | "updating_existing" | "importing_missing" | "complete" | "error";
-  processedCount?: number;
-  totalCount?: number;
-  wantedCount?: number;
-  loadedWantedCount?: number;
-  importedMissingCount?: number;
-  maxItems?: number | null;
-  reason?: string;
-  error?: string;
-};
+import { type WantsSyncStatus } from "@/lib/client-wishlist-sync";
+import { useWishlistSyncStatus } from "@/lib/use-wishlist-sync-status";
 
 function fmtUtc(iso?: string) {
   if (!iso) return null;
@@ -49,34 +35,7 @@ export function WishlistSyncStatus({
   initialStatus: WantsSyncStatus | null;
   compact?: boolean;
 }) {
-  const [status, setStatus] = useState<WantsSyncStatus | null>(initialStatus);
-
-  useEffect(() => {
-    let mounted = true;
-    let autoSyncTick = 0;
-    const poll = async () => {
-      try {
-        autoSyncTick += 1;
-        if (autoSyncTick % 7 === 0 && document.visibilityState === "visible") {
-          // Keep auto-sync alive while this page is open; server-side throttling prevents spam.
-          void fetch("/api/wishlist/sync-auto", { method: "POST" });
-        }
-        const response = await fetch("/api/wishlist/sync-status", { cache: "no-store" });
-        if (!response.ok) return;
-        const body = (await response.json().catch(() => null)) as { ok?: boolean; status?: WantsSyncStatus | null } | null;
-        if (!mounted || !body?.ok) return;
-        setStatus(body.status ?? null);
-      } catch {
-        // Best-effort status polling only.
-      }
-    };
-    const interval = window.setInterval(() => void poll(), 3000);
-    void poll();
-    return () => {
-      mounted = false;
-      window.clearInterval(interval);
-    };
-  }, []);
+  const { status } = useWishlistSyncStatus(initialStatus);
 
   const summary = useMemo(() => {
     if (!status) return "Wishlist sync has not run yet on this account.";

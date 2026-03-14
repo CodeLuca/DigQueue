@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { AuthStartLink } from "@/components/auth-start-link";
 import { getCurrentAppUserId } from "@/lib/app-user";
 
 export default async function ConnectDiscogsPage({
@@ -35,13 +36,14 @@ export default async function ConnectDiscogsPage({
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {userId ? (
-            <a
-              href={`/api/discogs/oauth/start?next=${encodeURIComponent(nextPath)}`}
+            <AuthStartLink
+              provider="discogs"
+              nextPath={nextPath}
               className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2 text-sm font-extrabold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80 sm:w-auto"
             >
               Connect Discogs
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </AuthStartLink>
           ) : (
             <Link
               href="/login"

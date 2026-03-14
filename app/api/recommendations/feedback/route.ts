@@ -1,10 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { requireMutationUser, parseMutationBody } from "@/lib/api-mutation";
+import { okJson } from "@/lib/api-response";
+import { buildRecommendationDismissResponse } from "@/lib/library-mutation-contract";
+import { resolveRecommendationReleaseTargetsForIdentity } from "@/lib/recommendation-feedback";
 import { logFeedbackEvent } from "@/lib/recommendations";
+import { resolveUserReleaseIdentity } from "@/lib/user-release-identity";
 
 const schema = z.object({
   trackId: z.number().int().positive().optional(),
@@ -15,26 +17,34 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const auth = await requireMutationUser({
     bucket: "recommendations/feedback",
     limit: 180,
     windowSeconds: 60,
   });
-  if (rateLimited) return rateLimited;
+  if (auth.response) return auth.response;
+  const userId = auth.userId;
 
-  const parsed = schema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  const parsed = await parseMutationBody(request, schema);
+  if (parsed.response) return parsed.response;
+
+  const releaseIdentity =
+    typeof parsed.data.releaseId === "number"
+      ? await resolveUserReleaseIdentity(userId, parsed.data.releaseId)
+      : null;
+  const releaseTargets = resolveRecommendationReleaseTargetsForIdentity(releaseIdentity, parsed.data.releaseId ?? null);
 
   await logFeedbackEvent({
     eventType: parsed.data.eventType,
     source: "api_recommendations_feedback",
     trackId: parsed.data.trackId ?? null,
-    releaseId: parsed.data.releaseId ?? null,
+    releaseId: releaseTargets.releaseId,
+    externalDiscogsReleaseId: releaseTargets.externalDiscogsReleaseId,
     userId,
   });
 
-  return NextResponse.json({ ok: true });
+  return okJson(buildRecommendationDismissResponse({
+    trackId: parsed.data.trackId ?? null,
+    releaseId: releaseTargets.releaseId ?? parsed.data.releaseId ?? null,
+  }));
 }

@@ -1,15 +1,16 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
-import { Bookmark, Check, Heart } from "lucide-react";
-import { chooseMatchAction, toggleReleaseWishlistAction, toggleTrackAction } from "@/app/actions";
+import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
+import { ChooseMatchButton } from "@/components/choose-match-button";
+import { ExternalActionLink } from "@/components/external-action-link";
 import { PlayMatchButton } from "@/components/play-match-button";
-import { ReleaseLinkFinder } from "@/components/release-link-finder";
+import { ReleaseInspectorPanel } from "@/components/release-inspector-panel";
+import { ReleaseTrackTodoButton } from "@/components/release-track-todo-button";
+import { ReleaseWishlistButton } from "@/components/release-wishlist-button";
 import { TrackQueueButtons } from "@/components/track-queue-buttons";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { getReleaseDetail } from "@/lib/queries";
 
 export default async function ReleasePage({
@@ -24,14 +25,19 @@ export default async function ReleasePage({
 
   return (
     <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
+      <ClientRouteRefreshBridge />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">{release.title}</h1>
           <p className="text-sm text-[var(--color-muted)]">{release.artist} • {release.label?.name} • {release.catno || "No catno"}</p>
+          <p className="text-xs text-[var(--color-muted)]">{visibleTracks.length} track{visibleTracks.length === 1 ? "" : "s"} on this release</p>
         </div>
-        <Badge className={release.wishlist ? "border-amber-600/50 text-amber-300" : ""}>
-          {release.wishlist ? "Record Wishlisted" : "Record Not Wishlisted"}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className={release.wishlist ? "border-amber-600/50 text-amber-300" : ""}>
+            {release.wishlist ? "Record Wishlisted" : "Record Not Wishlisted"}
+          </Badge>
+          <ReleaseWishlistButton releaseId={release.id} wishlisted={release.wishlist} />
+        </div>
       </div>
 
       <Card>
@@ -56,47 +62,8 @@ export default async function ReleasePage({
                       `${track.artistsText || release.artist} ${track.title} ${release.label?.name || ""} ${release.catno || ""}`,
                     )}`}
                   />
-                  <form action={toggleTrackAction}>
-                    <input type="hidden" name="trackId" value={track.id} />
-                    <input type="hidden" name="field" value="listened" />
-                    <input type="hidden" name="releaseId" value={release.id} />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      variant={track.listened ? "secondary" : "outline"}
-                      title={track.listened ? "Listened" : "Mark listened"}
-                      aria-label={track.listened ? "Listened" : "Mark listened"}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </Button>
-                  </form>
-                  <form action={toggleTrackAction}>
-                    <input type="hidden" name="trackId" value={track.id} />
-                    <input type="hidden" name="field" value="saved" />
-                    <input type="hidden" name="releaseId" value={release.id} />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      variant={track.saved ? "secondary" : "ghost"}
-                      title={track.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}
-                      aria-label={track.saved ? "Track saved. Does not add to your Discogs wantlist." : "Save track. Does not add to your Discogs wantlist."}
-                    >
-                      <Heart className="h-3.5 w-3.5" />
-                    </Button>
-                  </form>
-                  <form action={toggleReleaseWishlistAction}>
-                    <input type="hidden" name="releaseId" value={release.id} />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      variant={release.wishlist ? "secondary" : "ghost"}
-                      className="h-9 w-9 p-0"
-                      title={release.wishlist ? "Remove record from Discogs Wishlist" : "Add record to Discogs Wishlist"}
-                      aria-label={release.wishlist ? "Remove record from Discogs Wishlist" : "Add record to Discogs Wishlist"}
-                    >
-                      <Bookmark className="h-5 w-5 stroke-[2.25]" />
-                    </Button>
-                  </form>
+                  <ReleaseTrackTodoButton trackId={track.id} field="listened" active={track.listened} />
+                  <ReleaseTrackTodoButton trackId={track.id} field="saved" active={track.saved} />
                 </div>
               </div>
 
@@ -110,13 +77,10 @@ export default async function ReleasePage({
                     <div className="flex flex-wrap items-center gap-2">
                       {match.chosen ? <Badge>chosen</Badge> : null}
                       <PlayMatchButton trackId={track.id} matchId={match.id} />
-                      <a className="text-[var(--color-accent)] hover:underline" href={`https://www.youtube.com/watch?v=${match.videoId}`} target="_blank" rel="noreferrer">Open</a>
-                      <form action={chooseMatchAction}>
-                        <input type="hidden" name="trackId" value={track.id} />
-                        <input type="hidden" name="matchId" value={match.id} />
-                        <input type="hidden" name="releaseId" value={release.id} />
-                        <Button size="sm" type="submit" variant="ghost">Choose</Button>
-                      </form>
+                      <ExternalActionLink href={`https://www.youtube.com/watch?v=${match.videoId}`} title="Open match on YouTube" variant="textLink">
+                        Open
+                      </ExternalActionLink>
+                      <ChooseMatchButton trackId={track.id} matchId={match.id} />
                     </div>
                   </div>
                 ))}
@@ -132,15 +96,21 @@ export default async function ReleasePage({
         </CardContent>
       </Card>
 
-      <section className="mt-4 grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
-        <a href={toDiscogsWebUrl(release.discogsUrl, "")} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Open on Discogs</a>
-        <a href={`https://bandcamp.com/search?q=${encodeURIComponent(`${release.artist} ${release.title}`)}`} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Quick Bandcamp Search</a>
-        <a href={`https://www.juno.co.uk/search/?q[all][]=${encodeURIComponent(`${release.artist} ${release.title}`)}`} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Search on Juno</a>
-        <a href={`https://www.hardwax.com/?search=${encodeURIComponent(`${release.artist} ${release.title}`)}`} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Search on Hardwax</a>
-        <a href={`https://www.phonicarecords.com/search?search=${encodeURIComponent(`${release.artist} ${release.title}`)}`} target="_blank" rel="noreferrer" className="rounded-md border border-[var(--color-border)] p-3 hover:bg-[var(--color-surface2)]">Search on Phonica</a>
-      </section>
-
-      <ReleaseLinkFinder releaseId={release.id} />
+      <div className="mt-4">
+        <ReleaseInspectorPanel
+          current={{
+            release: {
+              id: release.id,
+              title: release.title,
+              artist: release.artist,
+              catno: release.catno,
+              discogsUrl: release.discogsUrl,
+              thumbUrl: release.thumbUrl,
+            },
+          }}
+          showFinderCandidates
+        />
+      </div>
     </main>
   );
 }

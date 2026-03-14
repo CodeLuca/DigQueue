@@ -4,19 +4,22 @@ import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { labels, queueItems, releases, tracks, youtubeMatches } from "@/db/schema";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { requireMutationUser, parseMutationBody } from "@/lib/api-mutation";
+import { notFoundJson, okJson } from "@/lib/api-response";
 import { db } from "@/lib/db";
-import { dedupePendingQueueItems } from "@/lib/queue-maintenance";
-import { readJsonBodyOrNull } from "@/lib/request-json";
-import { getFirstDiscogsReleaseYoutubeVideoId } from "@/lib/discogs";
-import { logFeedbackEvent } from "@/lib/recommendations";
-import { findTrackSeedVideos } from "@/lib/track-video-sources";
 import {
-  buildYoutubeQuery,
+  QUEUE_ENQUEUE_REASON_NO_MATCH,
+  QUEUE_ENQUEUE_REASON_YOUTUBE_ERROR,
+  QUEUE_ENQUEUE_REASON_YOUTUBE_QUOTA_EXCEEDED,
+} from "@/lib/queue-enqueue-contract";
+import { dedupePendingQueueItems } from "@/lib/queue-maintenance";
+import { getFirstDiscogsReleaseYoutubeVideoId } from "@/lib/discogs";
+import { enqueuePendingTrackForUser } from "@/lib/track-queue-enqueue";
+import { findTrackSeedVideos } from "@/lib/track-video-sources";
+import { ensurePendingTrackQueueItem, replaceTrackYoutubeMatches, selectTrackYoutubeMatch } from "@/lib/track-youtube-matches";
+import { buildTrackYoutubeSearchQueries, collectYoutubeSearchMatches } from "@/lib/youtube-match-search";
+import {
   isYoutubeQuotaExceededError,
-  scoreYoutubeMatch,
-  searchYoutube,
 } from "@/lib/youtube";
 
 const schema = z.object({
@@ -36,22 +39,20 @@ async function nextQueuePriority(userId: string) {
 }
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const auth = await requireMutationUser({
     bucket: "queue/enqueue",
     limit: 30,
     windowSeconds: 60,
   });
-  if (rateLimited) return rateLimited;
+  if (auth.response) return auth.response;
+  const userId = auth.userId;
 
-  const parsed = schema.safeParse(await readJsonBodyOrNull(request));
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  const parsed = await parseMutationBody(request, schema);
+  if (parsed.response) return parsed.response;
 
   const track = await db.query.tracks.findFirst({ where: and(eq(tracks.id, parsed.data.trackId), eq(tracks.userId, userId)) });
   if (!track) {
-    return NextResponse.json({ error: "Track not found" }, { status: 404 });
+    return notFoundJson("Track not found");
   }
 
   // Keep pending queue clean for this track to avoid runaway duplicates from prior races/imports.
@@ -62,14 +63,10 @@ export async function POST(request: Request) {
 
   let chosenMatch = null;
   if (parsed.data.matchId) {
-    const explicitMatch = await db.query.youtubeMatches.findFirst({
-      where: and(eq(youtubeMatches.id, parsed.data.matchId), eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)),
-    });
+    const explicitMatch = await selectTrackYoutubeMatch(userId, track.id, parsed.data.matchId, { embeddableOnly: true });
     if (!explicitMatch) {
-      return NextResponse.json({ ok: false, reason: "match_not_found", error: "Match not found for track." }, { status: 404 });
+      return NextResponse.json({ ok: false, reason: QUEUE_ENQUEUE_REASON_NO_MATCH, error: "Match not found for track." });
     }
-    await db.update(youtubeMatches).set({ chosen: false }).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
-    await db.update(youtubeMatches).set({ chosen: true }).where(and(eq(youtubeMatches.id, explicitMatch.id), eq(youtubeMatches.userId, userId)));
     chosenMatch = explicitMatch;
   } else {
     chosenMatch =
@@ -85,10 +82,6 @@ export async function POST(request: Request) {
       }));
   }
 
-  if (chosenMatch && chosenMatch.embeddable === false) {
-    chosenMatch = null;
-  }
-
   if (!chosenMatch) {
     const seeded = release
       ? await findTrackSeedVideos({
@@ -97,20 +90,14 @@ export async function POST(request: Request) {
         })
       : [];
     if (seeded.length > 0) {
-      await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
-      for (const [index, seed] of seeded.entries()) {
-        await db.insert(youtubeMatches).values({
-          userId,
-          trackId: track.id,
-          videoId: seed.videoId,
-          title: seed.title,
-          channelTitle: seed.channelTitle,
-          score: seed.score,
-          embeddable: true,
-          chosen: index === 0,
-          fetchedAt: new Date(),
-        });
-      }
+      await replaceTrackYoutubeMatches(userId, track.id, seeded.map((seed, index) => ({
+        videoId: seed.videoId,
+        title: seed.title,
+        channelTitle: seed.channelTitle,
+        score: seed.score,
+        embeddable: true,
+        chosen: index === 0,
+      })));
       chosenMatch = await db.query.youtubeMatches.findFirst({
         where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
       });
@@ -139,18 +126,14 @@ export async function POST(request: Request) {
     if (release) {
       const discogsReleaseVideo = await getFirstDiscogsReleaseYoutubeVideoId(release.id);
       if (discogsReleaseVideo?.videoId) {
-        await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
-        await db.insert(youtubeMatches).values({
-          userId,
-          trackId: track.id,
+        await replaceTrackYoutubeMatches(userId, track.id, [{
           videoId: discogsReleaseVideo.videoId,
           title: discogsReleaseVideo.title,
           channelTitle: "Discogs",
           score: 2,
           embeddable: true,
           chosen: true,
-          fetchedAt: new Date(),
-        });
+        }]);
         chosenMatch = await db.query.youtubeMatches.findFirst({
           where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
         });
@@ -160,50 +143,25 @@ export async function POST(request: Request) {
 
   if (!chosenMatch) {
     try {
-      const primaryQuery = buildYoutubeQuery({
-        primaryArtist: track.artistsText || release?.artist,
-        trackTitle: track.title,
-        labelName: label?.name,
-        catno: release?.catno,
-      });
-      const broadQuery = `${track.artistsText || release?.artist || ""} ${track.title}`.trim();
-      const bareQuery = track.title.trim();
-
-      const searchQueries = [primaryQuery, broadQuery, bareQuery].filter((value, index, all) => value.length > 0 && all.indexOf(value) === index);
-      const seenIds = new Set<string>();
-      const scored: Array<{ videoId: string; title: string; channelTitle: string; score: number }> = [];
-      for (const query of searchQueries) {
-        const ytResults = await searchYoutube(query);
-        for (const item of ytResults) {
-          const videoId = item.id.videoId;
-          if (!videoId || seenIds.has(videoId)) continue;
-          seenIds.add(videoId);
-          scored.push({
-            videoId,
-            title: item.snippet.title,
-            channelTitle: item.snippet.channelTitle,
-            score: scoreYoutubeMatch(query, item.snippet.title),
-          });
-        }
-        if (scored.length >= 8) break;
-      }
+      const scored = await collectYoutubeSearchMatches(
+        buildTrackYoutubeSearchQueries({
+          primaryArtist: track.artistsText || release?.artist,
+          trackTitle: track.title,
+          labelName: label?.name,
+          catno: release?.catno,
+        }),
+        { limit: 8 },
+      );
 
       if (scored.length > 0) {
-        await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.userId, userId)));
-
-        for (const [idx, match] of scored.entries()) {
-          await db.insert(youtubeMatches).values({
-            userId,
-            trackId: track.id,
-            videoId: match.videoId,
-            title: match.title,
-            channelTitle: match.channelTitle,
-            score: match.score,
-            embeddable: true,
-            chosen: idx === 0,
-            fetchedAt: new Date(),
-          });
-        }
+        await replaceTrackYoutubeMatches(userId, track.id, scored.map((match, idx) => ({
+          videoId: match.videoId,
+          title: match.title,
+          channelTitle: match.channelTitle,
+          score: match.score,
+          embeddable: true,
+          chosen: idx === 0,
+        })));
 
         chosenMatch = await db.query.youtubeMatches.findFirst({
           where: and(eq(youtubeMatches.trackId, track.id), eq(youtubeMatches.chosen, true), eq(youtubeMatches.userId, userId)),
@@ -211,14 +169,16 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      const reason = isYoutubeQuotaExceededError(error) ? "youtube_quota_exceeded" : "youtube_error";
+      const reason = isYoutubeQuotaExceededError(error)
+        ? QUEUE_ENQUEUE_REASON_YOUTUBE_QUOTA_EXCEEDED
+        : QUEUE_ENQUEUE_REASON_YOUTUBE_ERROR;
       return NextResponse.json(
         {
           ok: false,
           reason,
           error: detail,
         },
-        { status: reason === "youtube_quota_exceeded" ? 200 : 502 },
+        { status: reason === QUEUE_ENQUEUE_REASON_YOUTUBE_QUOTA_EXCEEDED ? 200 : 502 },
       );
     }
   }
@@ -226,18 +186,13 @@ export async function POST(request: Request) {
   if (!chosenMatch) {
     return NextResponse.json({
       ok: false,
-      reason: "no_match",
+      reason: QUEUE_ENQUEUE_REASON_NO_MATCH,
       error: "Track unavailable for playback.",
     });
   }
 
   const existing = await db.query.queueItems.findFirst({
-    where: and(
-      eq(queueItems.trackId, track.id),
-      eq(queueItems.youtubeVideoId, chosenMatch.videoId),
-      eq(queueItems.status, "pending"),
-      eq(queueItems.userId, userId),
-    ),
+    where: and(eq(queueItems.trackId, track.id), eq(queueItems.status, "pending"), eq(queueItems.userId, userId)),
     with: {
       track: true,
       release: true,
@@ -248,39 +203,53 @@ export async function POST(request: Request) {
   if (existing) {
     if (parsed.data.queueMode === "next") {
       const priority = await nextQueuePriority(userId);
-      await db
-        .update(queueItems)
-        .set({ priority, bumpedAt: new Date() })
-        .where(and(eq(queueItems.id, existing.id), eq(queueItems.userId, userId)));
+      await ensurePendingTrackQueueItem({
+        userId,
+        youtubeVideoId: chosenMatch.videoId,
+        trackId: track.id,
+        releaseId: track.releaseId,
+        labelId: release?.labelId ?? null,
+        source: "inbox",
+        priority,
+        bumpedAt: new Date(),
+      });
       const promoted = await db.query.queueItems.findFirst({
         where: and(eq(queueItems.id, existing.id), eq(queueItems.userId, userId)),
         with: { track: true, release: true, label: true },
       });
-      return NextResponse.json({ ok: true, item: promoted ?? existing, reused: true, queuedNext: true });
+      return okJson({ item: promoted ?? existing, reused: existing.youtubeVideoId === chosenMatch.videoId, queuedNext: true });
     }
-    return NextResponse.json({ ok: true, item: existing, reused: true });
+    if (existing.youtubeVideoId === chosenMatch.videoId) {
+      return okJson({ item: existing, reused: true });
+    }
+    await ensurePendingTrackQueueItem({
+      userId,
+      youtubeVideoId: chosenMatch.videoId,
+      trackId: track.id,
+      releaseId: track.releaseId,
+      labelId: release?.labelId ?? null,
+      source: "inbox",
+      priority: existing.priority,
+      bumpedAt: existing.bumpedAt,
+    });
+    const replaced = await db.query.queueItems.findFirst({
+      where: and(eq(queueItems.id, existing.id), eq(queueItems.userId, userId)),
+      with: { track: true, release: true, label: true },
+    });
+    return okJson({ item: replaced ?? existing, reused: false });
   }
 
   const priority = parsed.data.queueMode === "next" ? await nextQueuePriority(userId) : 0;
-  await db.insert(queueItems).values({
+  await enqueuePendingTrackForUser({
     userId,
     youtubeVideoId: chosenMatch.videoId,
     trackId: track.id,
     releaseId: track.releaseId,
     labelId: release?.labelId ?? null,
-    source: "inbox",
+    queueSource: "inbox",
+    feedbackSource: "api_queue_enqueue",
     priority,
     bumpedAt: parsed.data.queueMode === "next" ? new Date() : null,
-    status: "pending",
-    addedAt: new Date(),
-  });
-  await logFeedbackEvent({
-    eventType: "queued",
-    source: "api_queue_enqueue",
-    trackId: track.id,
-    releaseId: track.releaseId,
-    labelId: release?.labelId ?? null,
-    userId,
   });
 
   const inserted = await db.query.queueItems.findMany({
@@ -294,8 +263,7 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({
-    ok: true,
+  return okJson({
     item: inserted[0] ?? null,
     reused: false,
     queuedNext: parsed.data.queueMode === "next",

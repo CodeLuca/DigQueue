@@ -1,60 +1,45 @@
 export const dynamic = "force-dynamic";
 
-import { and, eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { labels } from "@/db/schema";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
-import { db } from "@/lib/db";
+import { requireSourceMutationRoute } from "@/lib/api-source-route";
+import { parseMutationBody } from "@/lib/api-mutation";
+import { conflictJson, errorJson, notFoundJson, okJson } from "@/lib/api-response";
+import { buildSourceStatusMutationResponse } from "@/lib/source-state-contract";
+import { updateSourceStatusForUser } from "@/lib/source-status-actions";
 
 const schema = z.object({ status: z.enum(["queued", "processing", "paused", "complete", "error"]) });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const source = await requireSourceMutationRoute(params, {
     bucket: "labels/status",
     limit: 60,
     windowSeconds: 60,
+    invalidMessage: "Invalid label id",
   });
-  if (rateLimited) return rateLimited;
-
-  const { id } = await params;
-  const labelId = Number(id);
-  const payload = schema.safeParse(await request.json());
-  if (!payload.success) {
-    return NextResponse.json({ error: payload.error.flatten() }, { status: 400 });
-  }
+  if (source.response) return source.response;
+  const payload = await parseMutationBody(request, schema);
+  if (payload.response) return payload.response;
 
   try {
-    const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), eq(labels.userId, userId)) });
-    if (!label) {
-      return NextResponse.json({ error: "Label not found" }, { status: 404 });
+    const result = await updateSourceStatusForUser({
+      userId: source.userId,
+      sourceId: source.sourceId,
+      status: payload.data.status,
+    });
+    if (!result.found) {
+      return notFoundJson("Label not found");
     }
-    if (!label.active && payload.data.status === "processing") {
-      return NextResponse.json({ error: "Label is inactive" }, { status: 409 });
+    if (result.conflict) {
+      return conflictJson("Label is inactive");
     }
-
-    const setValues =
-      payload.data.status === "processing"
-        ? { status: payload.data.status, lastError: null, updatedAt: new Date() }
-        : { status: payload.data.status, updatedAt: new Date() };
-
-    await db.update(labels).set(setValues).where(and(eq(labels.id, labelId), eq(labels.userId, userId)));
-    return NextResponse.json({ ok: true });
+    return okJson(buildSourceStatusMutationResponse({
+      sourceId: source.sourceId,
+      status: payload.data.status,
+      fallback: result.fallback,
+    }));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-
-    // Backward-compat fallback if DB wasn't migrated yet and lacks newer columns.
-    if (
-      message.includes("no such column") &&
-      (message.includes("last_error") || message.includes("active"))
-    ) {
-      await db.update(labels).set({ status: payload.data.status, updatedAt: new Date() }).where(and(eq(labels.id, labelId), eq(labels.userId, userId)));
-      return NextResponse.json({ ok: true, fallback: "legacy-schema" });
-    }
-
-    return NextResponse.json(
+    return errorJson(
       {
         error: "Failed to update label status",
         detail: message,

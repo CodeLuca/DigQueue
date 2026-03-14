@@ -1,30 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ExternalLink, ListVideo, Youtube } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ExternalActionLink } from "@/components/external-action-link";
+import { MutationActionButton } from "@/components/mutation-action-button";
+import { buildYoutubeOAuthStartPath } from "@/lib/auth-provider-paths";
+import { useYoutubePlaylistExportAction } from "@/lib/use-account-settings-actions";
 
 type Props = {
   oauthConfigured: boolean;
   youtubeConnected: boolean;
   eligibleSavedCount: number;
   channelTitle?: string | null;
-  connectHref: string;
-};
-
-type ExportResponse = {
-  ok?: boolean;
-  error?: string;
-  playlistUrl?: string;
-  added?: number;
-  totalEligible?: number;
-  skippedByLimit?: number;
+  connectNextPath?: string | null;
 };
 
 export function YoutubePlaylistExportButton(props: Props) {
-  const [running, setRunning] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [playlistUrl, setPlaylistUrl] = useState<string | null>(null);
+  const { pending, error, result, playlistUrl, run } = useYoutubePlaylistExportAction();
   const [playlistTitle, setPlaylistTitle] = useState("DigQueue Saved Tracks");
   const [privacy, setPrivacy] = useState<"private" | "unlisted" | "public">("private");
 
@@ -36,31 +29,7 @@ export function YoutubePlaylistExportButton(props: Props) {
   }, [props.eligibleSavedCount, props.oauthConfigured, props.youtubeConnected]);
 
   const runExport = async () => {
-    setRunning(true);
-    setMessage(null);
-    setPlaylistUrl(null);
-    try {
-      const response = await fetch("/api/youtube/playlist/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: playlistTitle, visibility: privacy }),
-      });
-      const data = (await response.json().catch(() => ({}))) as ExportResponse;
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Playlist export failed.");
-      }
-      setPlaylistUrl(data.playlistUrl || null);
-      const skipped = Number(data.skippedByLimit || 0);
-      setMessage(
-        skipped > 0
-          ? `Playlist created with ${data.added ?? 0} tracks. ${skipped} extra tracks were skipped (limit 200).`
-          : `Playlist created with ${data.added ?? 0} tracks.`,
-      );
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to export playlist.");
-    } finally {
-      setRunning(false);
-    }
+    await run({ title: playlistTitle, visibility: privacy });
   };
 
   return (
@@ -104,39 +73,46 @@ export function YoutubePlaylistExportButton(props: Props) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {!props.youtubeConnected ? (
-          <a
-            href={props.connectHref}
+          <Link
+            href={buildYoutubeOAuthStartPath(props.connectNextPath)}
             className="inline-flex items-center rounded-md border border-[#f2cd8a] bg-[#e7b566] px-3 py-1.5 text-xs font-bold !text-black shadow-[0_6px_16px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c]"
           >
             Connect YouTube
-          </a>
+          </Link>
         ) : (
-          <Button
-            type="button"
+          <MutationActionButton
+            preset="account"
             size="sm"
             className="h-8"
+            pending={pending}
+            pendingChildren={
+              <>
+                <ListVideo className="h-3.5 w-3.5" />
+                Exporting...
+              </>
+            }
+            disabled={!props.oauthConfigured || props.eligibleSavedCount === 0 || !playlistTitle.trim()}
             onClick={() => void runExport()}
-            disabled={!props.oauthConfigured || props.eligibleSavedCount === 0 || running || !playlistTitle.trim()}
+            title="Export saved tracks to a new YouTube playlist"
+            error={error}
+            message={result}
           >
             <ListVideo className="h-3.5 w-3.5" />
-            {running ? "Exporting..." : "Export Saved to Playlist"}
-          </Button>
+            Export Saved to Playlist
+          </MutationActionButton>
         )}
 
         {playlistUrl ? (
-          <a
+          <ExternalActionLink
             href={playlistUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2.5 py-1.5 text-xs hover:bg-[var(--color-surface)]"
+            variant="compactButton"
+            title="Open exported YouTube playlist"
           >
             Open Playlist
             <ExternalLink className="h-3 w-3" />
-          </a>
+          </ExternalActionLink>
         ) : null}
       </div>
-
-      {message ? <p className="mt-2 text-xs text-[var(--color-muted)]">{message}</p> : null}
     </div>
   );
 }

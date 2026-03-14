@@ -69,6 +69,39 @@ yarn db:migrate
 yarn dev
 ```
 
+Smoke checks:
+
+```bash
+# Public auth-start redirects + auth-boundary checks on protected endpoints
+yarn smoke:core
+
+# Include authenticated queue/sync probes plus queue-scope/enqueue/worker validation boundary checks
+SMOKE_BASE_URL=http://127.0.0.1:3000 \
+SMOKE_COOKIE='sb-access-token=...; sb-refresh-token=...' \
+yarn smoke:core
+```
+
+Release verification:
+
+```bash
+# Local release verification path
+yarn release:verify
+
+# Local release verification + live-app smoke verification
+SMOKE_BASE_URL=https://your-deploy.example.com yarn release:verify:live
+
+# Include authenticated smoke probes
+SMOKE_BASE_URL=https://your-deploy.example.com \
+SMOKE_COOKIE='sb-access-token=...; sb-refresh-token=...' \
+yarn release:verify:live
+```
+
+Release checklist:
+- Confirm Discogs OAuth callback URL is configured for the target deploy origin.
+- Run `yarn release:verify`.
+- Run `yarn release:verify:live` against a live app URL.
+- For authenticated smoke probes, provide `SMOKE_COOKIE` with a valid logged-in session.
+
 ## Git Workflow
 
 After every major change or feature is finished:
@@ -87,6 +120,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Pages:
 - `/` dashboard (label queue, up-next, recommendations)
+- `/welcome` guided quick start
+- `/how-to-use` setup + workflow guide
 - `/listen` unlistened track inbox with bulk todo actions
 - `/labels/[id]` label progress + releases
 - `/releases/[id]` tracklist, YouTube candidates, overrides, todo/wishlist
@@ -95,10 +130,17 @@ Pages:
 API:
 - `/api/discogs/label/[id]/releases`
 - `/api/discogs/release/[id]`
+- `/api/discogs/oauth/start`
+- `/api/discogs/oauth/callback`
 - `/api/youtube/search`
 - `/api/youtube/oauth/start`
 - `/api/youtube/oauth/callback`
 - `/api/youtube/playlist/export`
+- `/api/settings/keys/test`
+- `/api/sources/next`
+- `/api/queue/list`
+- `/api/queue/enqueue`
+- `/api/queue/scope`
 - `/api/queue/next`
 - `/api/finder/release/[id]`
 - `/api/worker/process`

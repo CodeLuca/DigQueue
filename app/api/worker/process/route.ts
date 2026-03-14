@@ -1,14 +1,10 @@
 export const dynamic = "force-dynamic";
 
-import { and, eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { labels } from "@/db/schema";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
-import { db } from "@/lib/db";
-import { processSingleReleaseForSource } from "@/lib/processing";
-import { acquireSourceWorkerLock, releaseSourceWorkerLock } from "@/lib/worker-locks";
+import { requireMutationUser, parseMutationBody } from "@/lib/api-mutation";
+import { badRequestJson, errorJson, notFoundJson } from "@/lib/api-response";
+import { buildSourceProcessResponse } from "@/lib/source-state-contract";
+import { attemptProcessSourceForUser } from "@/lib/source-single-actions";
 
 const schema = z.object({
   sourceId: z.number().int().positive().optional(),
@@ -16,46 +12,68 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const auth = await requireMutationUser({
     bucket: "worker/process",
     limit: 240,
     windowSeconds: 60,
   });
-  if (rateLimited) return rateLimited;
+  if (auth.response) return auth.response;
+  const userId = auth.userId;
 
-  const parsed = schema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  const parsed = await parseMutationBody(request, schema);
+  if (parsed.response) return parsed.response;
 
   const sourceId = parsed.data.sourceId ?? parsed.data.labelId;
   if (!sourceId) {
-    return NextResponse.json({ error: "Missing sourceId" }, { status: 400 });
+    return badRequestJson("Missing sourceId");
   }
 
-  const source = await db.query.labels.findFirst({ where: and(eq(labels.id, sourceId), eq(labels.userId, userId)) });
-  if (!source) {
-    return NextResponse.json({ error: "Source not found" }, { status: 404 });
+  const result = await attemptProcessSourceForUser(userId, sourceId);
+  if (!result.found) {
+    return notFoundJson("Source not found");
   }
 
-  if (!source.active) {
-    return NextResponse.json({ done: false, message: "Inactive" });
+  if (result.inactive) {
+    return Response.json(buildSourceProcessResponse({
+      sourceId,
+      done: false,
+      message: "Inactive",
+      outcome: "inactive",
+    }));
   }
 
-  if (source.status === "paused") {
-    return NextResponse.json({ message: "Paused" });
+  if (result.paused) {
+    return Response.json(buildSourceProcessResponse({
+      sourceId,
+      done: false,
+      message: "Paused",
+      outcome: "paused",
+    }));
   }
 
-  const lock = await acquireSourceWorkerLock(userId, sourceId, 120_000);
-  if (!lock) {
-    return NextResponse.json({ done: false, message: "Worker busy" });
+  if (result.busy) {
+    return Response.json(buildSourceProcessResponse({
+      sourceId,
+      done: false,
+      message: "Worker busy",
+      outcome: "busy",
+    }));
   }
-
-  try {
-    const result = await processSingleReleaseForSource(sourceId, userId);
-    return NextResponse.json(result);
-  } finally {
-    await releaseSourceWorkerLock(lock);
+  if (result.failed) {
+    return errorJson(
+      buildSourceProcessResponse({
+        sourceId,
+        done: false,
+        message: result.attempt.error || "Unable to process source.",
+        outcome: "failed",
+      }),
+      { status: 500 },
+    );
   }
+  return Response.json(buildSourceProcessResponse({
+    sourceId,
+    done: true,
+    message: result.attempt.message || "Processed one source step.",
+    outcome: "processed",
+  }));
 }

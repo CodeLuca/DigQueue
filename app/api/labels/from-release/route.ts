@@ -1,15 +1,13 @@
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { labels, sourceReleases } from "@/db/schema";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
-import { db } from "@/lib/db";
+import { requireMutationUser, parseMutationBody } from "@/lib/api-mutation";
+import { notFoundJson, okJson } from "@/lib/api-response";
 import { fetchDiscogsRelease } from "@/lib/discogs";
-import { toStoredDiscogsId } from "@/lib/discogs-id";
-import { refreshSourceMetadata } from "@/lib/label-metadata";
-import { processSingleReleaseForSource } from "@/lib/processing";
+import { warmSourceAfterUpsert } from "@/lib/source-bootstrap";
+import { buildSourceIntakeResponse } from "@/lib/source-intake-contract";
+import { persistReleaseUnderSourceForUser } from "@/lib/source-release-materialization";
+import { upsertSourceForUser } from "@/lib/source-upsert";
 
 const schema = z.object({
   releaseId: z.number().int().positive(),
@@ -25,18 +23,16 @@ function parseLabelIdFromResourceUrl(value: string | undefined) {
 }
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const auth = await requireMutationUser({
     bucket: "labels/from-release",
     limit: 20,
     windowSeconds: 60,
   });
-  if (rateLimited) return rateLimited;
+  if (auth.response) return auth.response;
+  const userId = auth.userId;
 
-  const parsed = schema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  const parsed = await parseMutationBody(request, schema);
+  if (parsed.response) return parsed.response;
 
   const entityKind = parsed.data.entityKind ?? "label";
   const release = await fetchDiscogsRelease(parsed.data.releaseId);
@@ -47,68 +43,46 @@ export async function POST(request: Request) {
       ? (typeof artist?.id === "number" ? artist.id : null)
       : (typeof label?.id === "number" ? label.id : parseLabelIdFromResourceUrl(label?.resource_url));
   if (!externalLabelId) {
-    return NextResponse.json({ error: `No ${entityKind} metadata found for release.` }, { status: 404 });
+    return notFoundJson(`No ${entityKind} metadata found for release.`);
   }
-  const labelId = toStoredDiscogsId(userId, externalLabelId, "label");
-
   const now = new Date();
-  await db
-    .insert(labels)
-    .values({
-      id: labelId,
-      userId,
-      entityKind,
-      externalDiscogsId: externalLabelId,
-      name: entityKind === "artist" ? artist?.name?.trim() || `Artist ${externalLabelId}` : label?.name?.trim() || `Label ${externalLabelId}`,
-      discogsUrl: `https://www.discogs.com/${entityKind}/${externalLabelId}`,
-      sourceType: "workspace",
-      active: true,
-      status: "queued",
-      currentPage: 1,
-      totalPages: 1,
-      retryCount: 0,
-      lastError: null,
-      addedAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: labels.id,
-      set: {
-        entityKind,
-        externalDiscogsId: externalLabelId,
-        name: entityKind === "artist" ? artist?.name?.trim() || `Artist ${externalLabelId}` : label?.name?.trim() || `Label ${externalLabelId}`,
-        discogsUrl: `https://www.discogs.com/${entityKind}/${externalLabelId}`,
-        sourceType: "workspace",
-        active: true,
-        updatedAt: now,
-        status: "queued",
-        lastError: null,
-      },
-    });
+  const releaseThumbUrl = release.images?.[0]?.uri150 || release.images?.[0]?.uri || null;
+  const sourceName =
+    entityKind === "artist"
+      ? artist?.name?.trim() || `Artist ${externalLabelId}`
+      : label?.name?.trim() || `Label ${externalLabelId}`;
+  const labelId = await upsertSourceForUser({
+    userId,
+    kind: entityKind,
+    externalDiscogsId: externalLabelId,
+    fallbackName: sourceName,
+    active: true,
+    sourceType: "workspace",
+  });
 
-  try {
-    await refreshSourceMetadata(labelId, entityKind, userId);
-  } catch {
-    // Non-blocking: label creation should succeed even if metadata lookup fails.
-  }
+  await persistReleaseUnderSourceForUser({
+    userId,
+    sourceId: labelId,
+    externalDiscogsReleaseId: parsed.data.releaseId,
+    releaseOrder: 0,
+    discoveredAt: now,
+    release: {
+      title: release.title,
+      artist: release.artists_sort || release.artists?.map((item) => item?.name).filter(Boolean).join(", ") || "Unknown Artist",
+      year: release.year || null,
+      catno: release.labels?.[0]?.catno || null,
+      discogsUrl: `https://www.discogs.com/release/${parsed.data.releaseId}`,
+      thumbUrl: releaseThumbUrl,
+      detailsFetched: false,
+      fetchedAt: now,
+      importSource: entityKind,
+    },
+  });
+  await warmSourceAfterUpsert({ sourceId: labelId, kind: entityKind, userId });
 
-  const storedReleaseId = toStoredDiscogsId(userId, parsed.data.releaseId, "release");
-  await db
-    .insert(sourceReleases)
-    .values({
-      sourceId: labelId,
-      releaseId: storedReleaseId,
-      userId,
-      releaseOrder: 0,
-      discoveredAt: now,
-    })
-    .onConflictDoNothing();
-
-  try {
-    await processSingleReleaseForSource(labelId, userId);
-  } catch {
-    // Non-blocking: daemon continues sync if immediate step fails.
-  }
-
-  return NextResponse.json({ ok: true, labelId });
+  return okJson(buildSourceIntakeResponse({
+    sourceId: labelId,
+    entityKind,
+    sourceName,
+  }));
 }

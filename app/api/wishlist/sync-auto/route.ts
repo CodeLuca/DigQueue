@@ -1,16 +1,14 @@
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
-import { getDiscogsWantsSyncStatus, syncDiscogsWantsToLocal } from "@/lib/discogs-wants-sync";
+import { runUserJsonRoute } from "@/lib/api-user-route";
+import { runDiscogsWantsAutoSyncForUser } from "@/lib/discogs-wants-sync-service";
 
 export async function POST() {
-  try {
-    await syncDiscogsWantsToLocal({ force: false, maxItems: 200 });
-    const status = await getDiscogsWantsSyncStatus();
-    return NextResponse.json({ ok: true, status });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to run auto wishlist sync.";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
-  }
+  return runUserJsonRoute(
+    async (userId) => ({
+      ok: true,
+      status: await runDiscogsWantsAutoSyncForUser(userId, { maxItems: 200 }),
+    }),
+    { errorMessage: "Unable to run auto wishlist sync." },
+  );
 }
-

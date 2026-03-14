@@ -27,8 +27,11 @@ export function validateYoutubeOAuthCallbackInput(input: {
   code: string;
   expectedState: string;
 }) {
-  if (!input.returnedState || !input.code || !input.expectedState || input.returnedState !== input.expectedState) {
+  if (!input.returnedState || !input.code || !input.expectedState) {
     return { ok: false as const, reason: "invalid_callback" as const };
+  }
+  if (input.returnedState !== input.expectedState) {
+    return { ok: false as const, reason: "state_mismatch" as const };
   }
   return { ok: true as const };
 }

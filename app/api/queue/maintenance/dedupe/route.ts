@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { requireMutationUser, parseMutationBody } from "@/lib/api-mutation";
+import { okJson } from "@/lib/api-response";
+import { buildQueueDedupeMutationResponse } from "@/lib/queue-mutation-contract";
 import { dedupePendingQueueItems } from "@/lib/queue-maintenance";
 
 const schema = z
@@ -13,22 +13,19 @@ const schema = z
   .optional();
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const auth = await requireMutationUser({
     bucket: "queue/maintenance/dedupe",
     limit: 20,
     windowSeconds: 60,
   });
-  if (rateLimited) return rateLimited;
+  if (auth.response) return auth.response;
+  const userId = auth.userId;
 
-  const body = await request.json().catch(() => ({}));
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  const parsed = await parseMutationBody(request, schema, { fallbackBody: {} });
+  if (parsed.response) return parsed.response;
 
   const result = await dedupePendingQueueItems(userId, {
     trackId: parsed.data?.trackId,
   });
-  return NextResponse.json({ ok: true, ...result });
+  return okJson(buildQueueDedupeMutationResponse(result));
 }

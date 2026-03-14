@@ -53,7 +53,7 @@ async function setCache(key: string, data: unknown, ttlSeconds: number, userId: 
     .insert(apiCache)
     .values({ key, userId, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
     .onConflictDoUpdate({
-      target: apiCache.key,
+      target: [apiCache.userId, apiCache.key],
       set: { responseJson: JSON.stringify(data), fetchedAt: now, expiresAt },
     });
 }

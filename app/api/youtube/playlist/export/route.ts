@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { isUnauthorizedError, requireRouteUserId } from "@/lib/app-user";
 import { getWishlistData } from "@/lib/queries";
 import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "@/lib/youtube-playlist-export";
 import { getYoutubeAccessTokenForPlaylistWrite, isYoutubeOAuthConfigured } from "@/lib/youtube-oauth";
@@ -42,7 +42,8 @@ async function youtubeApi<T>(input: {
 
 export async function POST(request: Request) {
   try {
-    await requireCurrentAppUserId();
+    const auth = await requireRouteUserId();
+    if (auth.response) return auth.response;
     if (!isYoutubeOAuthConfigured()) {
       return NextResponse.json({ ok: false, error: "YouTube OAuth is not configured on this deployment." }, { status: 400 });
     }
@@ -106,6 +107,9 @@ export async function POST(request: Request) {
       skippedByLimit,
     });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ ok: false, error: toErrorMessage(error) }, { status: 500 });
   }
 }

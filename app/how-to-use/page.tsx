@@ -21,6 +21,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getCurrentAppUserId } from "@/lib/app-user";
+import { getEffectiveApiKeys } from "@/lib/api-keys";
+import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
+import { buildOnboardingHealth } from "@/lib/onboarding-health";
+import { getDashboardData } from "@/lib/queries";
+import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
 
 function NativeTooltip({ text, children }: { text: string; children: ReactNode }) {
   return (
@@ -37,6 +43,34 @@ function NativeTooltip({ text, children }: { text: string; children: ReactNode }
 }
 
 export default async function HowToUsePage() {
+  const userId = await getCurrentAppUserId();
+  const isLoggedIn = Boolean(userId);
+  const onboardingHealth = isLoggedIn
+    ? await (async () => {
+        const [keys, dashboardData, youtubeOAuth] = await Promise.all([
+          getEffectiveApiKeys(),
+          getDashboardData({ tab: "step-2" }),
+          getYoutubeOAuthConnectionStatus(),
+        ]);
+        const discogsConnected = parseDiscogsStoredAuth(keys.discogsToken)?.kind === "oauth";
+        return buildOnboardingHealth({
+          discogsConnected,
+          youtubeOAuthConfigured: youtubeOAuth.configured,
+          youtubeOAuthConnected: youtubeOAuth.connected,
+          sourceCount: dashboardData.labels.length,
+          activeSourceCount: dashboardData.labels.filter((label) => label.active).length,
+          erroredSourceCount: dashboardData.metrics.labelsErrored,
+          queueCount: dashboardData.queueCount,
+        });
+      })()
+    : null;
+  const healthToneClass =
+    onboardingHealth?.tone === "ready"
+      ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
+      : onboardingHealth?.tone === "blocked"
+        ? "border-rose-500/60 bg-rose-500/10 text-rose-200"
+        : "border-amber-500/60 bg-amber-500/10 text-amber-200";
+
   return (
     <main className="mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-8">
       <section className="rounded-xl border border-[var(--color-border)] bg-[linear-gradient(135deg,rgba(245,158,11,0.14),transparent_48%),var(--color-surface2)] p-4 md:p-6">
@@ -68,6 +102,40 @@ export default async function HowToUsePage() {
           <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Library</Button></Link>
         </div>
       </section>
+
+      {isLoggedIn && onboardingHealth ? (
+        <section className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="inline-flex items-center gap-2">
+                <Settings className="h-4 w-4 text-[var(--color-accent)]" />
+                Your Current Setup
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${healthToneClass}`}>
+                {onboardingHealth.label}
+              </span>
+              <div>
+                <p className="font-medium">{onboardingHealth.title}</p>
+                <p className="mt-1 text-[var(--color-muted)]">{onboardingHealth.summary}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {onboardingHealth.nextSteps.map((step) => (
+                  <Link key={step.href + step.label} href={step.href}>
+                    <Button type="button" size="sm" variant="outline">{step.label}</Button>
+                  </Link>
+                ))}
+                {onboardingHealth.optionalStep ? (
+                  <Link href={onboardingHealth.optionalStep.href}>
+                    <Button type="button" size="sm" variant="ghost">{onboardingHealth.optionalStep.label}</Button>
+                  </Link>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
 
       <section className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
@@ -248,11 +316,23 @@ export default async function HowToUsePage() {
             <CardTitle>First 10 Minutes Checklist</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <p>1. Add sources and activate a few.</p>
-            <p>2. Open Listening Station and press Play Now on a track.</p>
-            <p>3. Use review buttons while listening.</p>
-            <p>4. Check Library → Needs Review and clear leftovers.</p>
-            <p>5. Return to Sources and add one more source.</p>
+            {isLoggedIn && onboardingHealth ? (
+              <>
+                <p>1. Check the setup state above.</p>
+                <p>2. Follow the next-step buttons that match your current state.</p>
+                <p>3. Once the queue is live, use Listening Station to review tracks.</p>
+                <p>4. Clear leftovers in Library → Needs Review.</p>
+                <p>5. Return to Sources and keep only the sources worth rotating.</p>
+              </>
+            ) : (
+              <>
+                <p>1. Add sources and activate a few.</p>
+                <p>2. Open Listening Station and press Play Now on a track.</p>
+                <p>3. Use review buttons while listening.</p>
+                <p>4. Check Library → Needs Review and clear leftovers.</p>
+                <p>5. Return to Sources and add one more source.</p>
+              </>
+            )}
             <div className="flex flex-wrap gap-2">
               <Link href="/settings">
                 <Button size="sm" variant="outline"><Settings className="mr-1 h-3.5 w-3.5" />Settings</Button>

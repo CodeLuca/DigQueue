@@ -1,5 +1,8 @@
-import { ArrowRight, Chrome } from "lucide-react";
-import { loginWithPasswordAction, registerWithPasswordAction, requestPasswordResetAction } from "@/app/auth-actions";
+import { Chrome } from "lucide-react";
+import { AuthStartLink } from "@/components/auth-start-link";
+import { LoginPasswordForm } from "@/components/login-password-form";
+import { PasswordResetRequestForm } from "@/components/password-reset-request-form";
+import { RegisterPasswordForm } from "@/components/register-password-form";
 
 export default async function LoginPage({
   searchParams,
@@ -33,87 +36,12 @@ export default async function LoginPage({
         <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
           <div className={`space-y-3 rounded-xl border p-3 md:p-4 ${startInRegisterMode ? "border-[var(--color-border)]" : "border-[var(--color-accent)]/65 bg-[color-mix(in_oklab,var(--color-accent)_7%,var(--color-surface)_93%)]"}`}>
             <h2 className="text-base font-semibold">Login</h2>
-            <form action={loginWithPasswordAction} className="space-y-2">
-              <input type="hidden" name="next" value={nextPath} />
-              <input
-                id="login-email"
-                name="email"
-                type="email"
-                required
-                defaultValue={sessionEmail}
-                placeholder="Email address"
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-              />
-              <input
-                name="password"
-                type="password"
-                required
-                placeholder="Password"
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-              />
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2.5 text-sm font-semibold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
-              >
-                Login with Email
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </form>
-            <form action={requestPasswordResetAction} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-              <p className="mb-2 text-xs font-medium text-[var(--color-muted)]">Forgot password?</p>
-              <input
-                name="email"
-                type="email"
-                required
-                defaultValue={sessionEmail}
-                placeholder="Email for reset link"
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-              />
-              <button
-                type="submit"
-                className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-[var(--color-border)] px-4 py-2 text-sm font-medium hover:bg-[var(--color-surface)]"
-              >
-                Send reset link
-              </button>
-            </form>
+            <LoginPasswordForm nextPath={nextPath} defaultEmail={sessionEmail} />
+            <PasswordResetRequestForm defaultEmail={sessionEmail} />
           </div>
           <div className={`space-y-3 rounded-xl border p-3 md:p-4 ${startInRegisterMode ? "border-[var(--color-accent)]/65 bg-[color-mix(in_oklab,var(--color-accent)_7%,var(--color-surface)_93%)]" : "border-[var(--color-border)]"}`}>
             <h2 className="text-base font-semibold">Create Account</h2>
-            <form action={registerWithPasswordAction} className="space-y-2">
-              <input type="hidden" name="next" value={nextPath} />
-              <input
-                id="register-email"
-                name="email"
-                type="email"
-                required
-                defaultValue={sessionEmail}
-                placeholder="Email address"
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-              />
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                placeholder="Password (min 6 characters)"
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-              />
-              <input
-                name="confirmPassword"
-                type="password"
-                required
-                minLength={6}
-                placeholder="Confirm password"
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-              />
-              <button
-                type="submit"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2.5 text-sm font-semibold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
-              >
-                Create account with Email
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </form>
+            <RegisterPasswordForm nextPath={nextPath} defaultEmail={sessionEmail} />
           </div>
         </div>
 
@@ -121,13 +49,14 @@ export default async function LoginPage({
           <div className="hidden h-px bg-[var(--color-border)] md:block" />
           <p className="text-center text-xs uppercase tracking-[0.12em] text-[var(--color-muted)]">or</p>
           <div className="hidden h-px bg-[var(--color-border)] md:block" />
-          <a
-            href={`/auth/google/start?next=${encodeURIComponent(nextPath)}`}
+          <AuthStartLink
+            provider="google"
+            nextPath={nextPath}
             className="md:col-span-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-4 py-2.5 text-sm font-medium hover:bg-[var(--color-surface)]"
           >
             <Chrome className="h-4 w-4" />
             Continue with Google
-          </a>
+          </AuthStartLink>
         </div>
       </section>
     </main>

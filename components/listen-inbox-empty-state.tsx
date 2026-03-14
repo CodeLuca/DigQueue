@@ -1,0 +1,31 @@
+"use client";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import type { ListenInboxEmptyState } from "@/lib/listen-inbox-types";
+
+export function ListenInboxEmptyStateCard({
+  emptyState,
+}: {
+  emptyState?: ListenInboxEmptyState;
+}) {
+  if (!emptyState) {
+    return <p className="text-sm text-[var(--color-muted)]">Nothing pending for this view.</p>;
+  }
+
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+      <p className="text-sm font-medium">{emptyState.title}</p>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">{emptyState.detail}</p>
+      {emptyState.actionHref && emptyState.actionLabel ? (
+        <div className="mt-3">
+          <Link href={emptyState.actionHref}>
+            <Button type="button" size="sm" variant="outline">
+              {emptyState.actionLabel}
+            </Button>
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}

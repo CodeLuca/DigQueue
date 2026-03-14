@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { PLAYBACK_NEXT_EVENT, PLAYBACK_PLAYPAUSE_EVENT, PLAYBACK_PREV_EVENT } from "@/lib/client-events";
+import {
+  dispatchPlaybackNextEvent,
+  dispatchPlaybackPlayPauseEvent,
+  dispatchPlaybackPrevEvent,
+} from "@/lib/client-playback-events";
 
 export function KeyboardShortcuts() {
   useEffect(() => {
@@ -11,13 +15,13 @@ export function KeyboardShortcuts() {
 
       if (event.key === " ") {
         event.preventDefault();
-        window.dispatchEvent(new CustomEvent(PLAYBACK_PLAYPAUSE_EVENT));
+        dispatchPlaybackPlayPauseEvent();
       }
       if (event.key.toLowerCase() === "n") {
-        window.dispatchEvent(new CustomEvent(PLAYBACK_NEXT_EVENT));
+        dispatchPlaybackNextEvent();
       }
       if (event.key.toLowerCase() === "b") {
-        window.dispatchEvent(new CustomEvent(PLAYBACK_PREV_EVENT));
+        dispatchPlaybackPrevEvent();
       }
       if (event.key.toLowerCase() === "l") {
         const input = document.getElementById("label-input") as HTMLInputElement | null;

@@ -1,28 +1,20 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { getCurrentAppUserId } from "@/lib/app-user";
-import { resolveRequestAppOrigin } from "@/lib/app-origin";
-import { buildOAuthCallbackLoginPath } from "@/lib/oauth-callback-routing";
+import { resolveOAuthCallbackRedirectPath } from "@/lib/oauth-callback-route";
 import { resolveOAuthCallbackNextPath } from "@/lib/oauth-callback-next";
-import { buildOAuthCallbackSuccessPath } from "@/lib/oauth-callback-success";
 import { parseYoutubeOAuthCallbackQuery } from "@/lib/oauth-callback-query";
 import { YOUTUBE_OAUTH_TMP_COOKIE } from "@/lib/oauth-cookie-keys";
-import { getOAuthCallbackErrorMessage } from "@/lib/oauth-messages";
+import { resolveOAuthCallbackRouteContext } from "@/lib/oauth-route-context";
 import { validateYoutubeOAuthCallbackInput } from "@/lib/oauth-callback-validation";
 import { buildOAuthErrorRedirectPath } from "@/lib/oauth-redirects";
 import { decodeYoutubeOAuthPending } from "@/lib/oauth-temp-cookie";
 import { completeYoutubeOAuthCallback } from "@/lib/youtube-oauth";
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
-  const appOrigin = resolveRequestAppOrigin(request);
-  const userId = await getCurrentAppUserId();
-  if (!userId) {
-    return NextResponse.redirect(new URL(buildOAuthCallbackLoginPath("youtube"), appOrigin));
-  }
-
-  const callbackQuery = parseYoutubeOAuthCallbackQuery(requestUrl);
+  const context = await resolveOAuthCallbackRouteContext(request, "youtube");
+  if (context.authRedirect) return context.authRedirect;
+  const callbackQuery = parseYoutubeOAuthCallbackQuery(context.requestUrl);
   const { returnedState, code } = callbackQuery;
 
   const cookieStore = await cookies();
@@ -41,22 +33,25 @@ export async function GET(request: Request) {
     code,
     expectedState,
   });
-  if (!validation.ok) {
-    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", getOAuthCallbackErrorMessage("youtube", "invalid_callback")), appOrigin));
+  if (!validation.ok && validation.reason === "invalid_callback") {
+    return NextResponse.redirect(new URL(resolveOAuthCallbackRedirectPath({ provider: "youtube", reason: "invalid_callback" }), context.appOrigin));
+  }
+  if (!validation.ok && validation.reason === "state_mismatch") {
+    return NextResponse.redirect(new URL(resolveOAuthCallbackRedirectPath({ provider: "youtube", reason: "state_mismatch" }), context.appOrigin));
   }
 
   try {
     await completeYoutubeOAuthCallback({
       code,
-      origin: appOrigin,
+      origin: context.appOrigin,
     });
 
     revalidatePath("/");
     revalidatePath("/settings");
 
-    return NextResponse.redirect(new URL(buildOAuthCallbackSuccessPath(nextPath, "youtube"), appOrigin));
+    return NextResponse.redirect(new URL(resolveOAuthCallbackRedirectPath({ provider: "youtube", reason: "success", nextPath }), context.appOrigin));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to finish YouTube OAuth.";
-    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", message), appOrigin));
+    return NextResponse.redirect(new URL(buildOAuthErrorRedirectPath("youtube", message), context.appOrigin));
   }
 }

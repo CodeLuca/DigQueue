@@ -1,11 +1,18 @@
 import { and, eq } from "drizzle-orm";
-import { queueItems, releases, tracks } from "@/db/schema";
+import { queueItems, tracks } from "@/db/schema";
 import { db } from "@/lib/db";
-import { deriveReleaseListenedFromTracks } from "@/lib/release-listened";
+import { refreshReleaseListenedForUser } from "@/lib/release-listened-state";
 
 export async function findQueueItemForUser(userId: string, queueItemId: number) {
   return db.query.queueItems.findFirst({
     where: and(eq(queueItems.id, queueItemId), eq(queueItems.userId, userId)),
+  });
+}
+
+export async function findQueueTrackForUser(userId: string, trackId: number) {
+  return db.query.tracks.findFirst({
+    where: and(eq(tracks.id, trackId), eq(tracks.userId, userId)),
+    columns: { id: true, releaseId: true, listened: true, saved: true },
   });
 }
 
@@ -25,9 +32,5 @@ export async function markTrackListenedForUser(userId: string, trackId: number) 
 }
 
 export async function refreshReleaseListenedFromTracks(userId: string, releaseId: number) {
-  const releaseTracks = await db.query.tracks.findMany({
-    where: and(eq(tracks.releaseId, releaseId), eq(tracks.userId, userId)),
-  });
-  const listened = deriveReleaseListenedFromTracks(releaseTracks);
-  await db.update(releases).set({ listened }).where(and(eq(releases.id, releaseId), eq(releases.userId, userId)));
+  await refreshReleaseListenedForUser(userId, [releaseId]);
 }

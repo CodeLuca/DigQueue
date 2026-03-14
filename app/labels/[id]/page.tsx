@@ -2,17 +2,18 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import Image from "next/image";
-import { RefreshCcw } from "lucide-react";
 import { notFound } from "next/navigation";
-import { refreshLabelMetadataAction } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
+import { DiscogsLink } from "@/components/discogs-link";
+import { ExternalActionLink } from "@/components/external-action-link";
 import { ProcessingToggle } from "@/components/processing-toggle";
+import { SourceRefreshButton } from "@/components/source-refresh-button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { getLabelDetail } from "@/lib/queries";
-import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
+import { getSourceViewModel } from "@/lib/source-view";
 
 export default async function LabelPage({
   params,
@@ -37,32 +38,18 @@ export default async function LabelPage({
       return [];
     }
   })();
-  const visibleLastError = getVisibleLabelError(data.label.lastError);
-  const normalizedStatus =
-    !data.label.active && data.label.status === "processing"
-      ? "paused"
-      : data.label.status === "error" && isTransientLabelError(data.label.lastError)
-        ? "processing"
-        : data.label.status;
-  const safeTotalPages = Math.max(1, data.label.totalPages);
-  const scannedPages = Math.min(safeTotalPages, Math.max(0, data.label.currentPage - 1));
-  const hasMorePages = data.label.currentPage <= safeTotalPages;
-  const progressState = data.label.active
-    ? normalizedStatus === "processing"
-      ? hasMorePages
-        ? `Scanning Discogs pages (${scannedPages}/${safeTotalPages})`
-        : "Loading remaining release details and playable sources"
-      : normalizedStatus === "queued"
-        ? "Waiting in ingestion queue"
-        : normalizedStatus === "error"
-          ? "Stopped by error"
-          : normalizedStatus === "complete"
-            ? "Complete"
-            : normalizedStatus
-    : "Inactive";
+  const sourceView = getSourceViewModel({
+    active: Boolean(data.label.active),
+    status: data.label.status,
+    lastError: data.label.lastError,
+    currentPage: data.label.currentPage,
+    totalPages: data.label.totalPages,
+  });
+  const { scannedPages, totalPages: safeTotalPages } = sourceView.progressPages;
 
   return (
     <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
+      <ClientRouteRefreshBridge />
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">{data.label.name}</h1>
@@ -70,7 +57,7 @@ export default async function LabelPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge>{data.label.active ? "active" : "inactive"}</Badge>
-          <Badge>{progressState}</Badge>
+          <Badge>{sourceView.progressState}</Badge>
           <ProcessingToggle
             key={`${data.label.id}-${data.label.active ? "1" : "0"}-${data.label.status}`}
             labelId={data.label.id}
@@ -107,9 +94,9 @@ export default async function LabelPage({
             </div>
           </div>
 
-          {visibleLastError ? (
+          {sourceView.visibleError ? (
             <p className="rounded-md border border-red-400/40 bg-red-500/10 p-2 text-sm text-red-200">
-              Last sync error: {visibleLastError}
+              Last sync error: {sourceView.visibleError}
             </p>
           ) : null}
           <div>
@@ -122,14 +109,8 @@ export default async function LabelPage({
             <Progress value={matchedPct} className="mt-1" />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <a href={toDiscogsWebUrl(data.label.discogsUrl, "")} target="_blank" rel="noreferrer" className="text-sm text-[var(--color-accent)] hover:underline">Open on Discogs</a>
-            <form action={refreshLabelMetadataAction}>
-              <input type="hidden" name="labelId" value={data.label.id} />
-              <Button type="submit" size="sm" variant="ghost">
-                <RefreshCcw className="mr-1 h-3.5 w-3.5" />
-                Refresh info
-              </Button>
-            </form>
+            <DiscogsLink discogsUrl={data.label.discogsUrl} title="Open label on Discogs" variant="textButton" />
+            <SourceRefreshButton labelId={data.label.id} compactLabel />
           </div>
         </CardContent>
       </Card>
@@ -172,14 +153,13 @@ export default async function LabelPage({
                     {release.processingError ? <p className="line-clamp-2 text-xs text-red-300">{release.processingError}</p> : null}
                   </div>
                 </div>
-                <a
+                <ExternalActionLink
                   href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${release.artist} ${release.title} ${release.catno || ""}`)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs hover:bg-[var(--color-surface2)]"
+                  variant="compactButton"
+                  title="Search this release on YouTube"
                 >
                   YouTube
-                </a>
+                </ExternalActionLink>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-1">
                 {release.detailsFetched ? <Badge>tracks</Badge> : null}

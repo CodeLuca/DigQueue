@@ -1,87 +1,44 @@
 export const dynamic = "force-dynamic";
 
-import { and, eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { labels } from "@/db/schema";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
-import { db } from "@/lib/db";
+import { requireSourceMutationRoute } from "@/lib/api-source-route";
+import { parseMutationBody } from "@/lib/api-mutation";
+import { errorJson, notFoundJson, okJson } from "@/lib/api-response";
+import { buildSourceActiveMutationResponse } from "@/lib/source-state-contract";
+import { updateSourceActiveForUser } from "@/lib/source-status-actions";
 
 const schema = z.object({ active: z.boolean() });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const source = await requireSourceMutationRoute(params, {
     bucket: "labels/active",
     limit: 60,
     windowSeconds: 60,
+    invalidMessage: "Invalid label id",
   });
-  if (rateLimited) return rateLimited;
+  if (source.response) return source.response;
 
-  const { id } = await params;
-  const labelId = Number(id);
-  if (!Number.isFinite(labelId) || labelId <= 0) {
-    return NextResponse.json({ error: "Invalid label id" }, { status: 400 });
-  }
-
-  const payload = schema.safeParse(await request.json());
-  if (!payload.success) {
-    return NextResponse.json({ error: payload.error.flatten() }, { status: 400 });
-  }
+  const payload = await parseMutationBody(request, schema);
+  if (payload.response) return payload.response;
 
   try {
-    const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), eq(labels.userId, userId)) });
-    if (!label) {
-      return NextResponse.json({ error: "Label not found" }, { status: 404 });
+    const result = await updateSourceActiveForUser({
+      userId: source.userId,
+      sourceId: source.sourceId,
+      active: payload.data.active,
+    });
+    if (!result.found) {
+      return notFoundJson("Label not found");
     }
-
-    const now = new Date();
-    const nextStatus = payload.data.active
-      ? label.status === "complete"
-        ? "complete"
-        : "queued"
-      : label.status === "complete"
-        ? "complete"
-        : "paused";
-
-    await db
-      .update(labels)
-      .set({
-        active: payload.data.active,
-        status: nextStatus,
-        updatedAt: now,
-        lastError: payload.data.active ? null : label.lastError,
-      })
-      .where(and(eq(labels.id, labelId), eq(labels.userId, userId)));
-
-    return NextResponse.json({ ok: true, active: payload.data.active, status: nextStatus });
+    return okJson(buildSourceActiveMutationResponse({
+      sourceId: source.sourceId,
+      active: result.active,
+      status: result.status,
+      fallback: result.fallback,
+    }));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("no such column") && message.includes("last_error")) {
-      const label = await db.query.labels.findFirst({ where: and(eq(labels.id, labelId), eq(labels.userId, userId)) });
-      if (!label) {
-        return NextResponse.json({ error: "Label not found" }, { status: 404 });
-      }
-      const nextStatus = payload.data.active
-        ? label.status === "complete"
-          ? "complete"
-          : "queued"
-        : label.status === "complete"
-          ? "complete"
-          : "paused";
-      await db
-        .update(labels)
-        .set({
-          active: payload.data.active,
-          status: nextStatus,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(labels.id, labelId), eq(labels.userId, userId)));
-      return NextResponse.json({ ok: true, active: payload.data.active, status: nextStatus, fallback: "legacy-last-error" });
-    }
-
-    return NextResponse.json(
+    return errorJson(
       {
         error: "Failed to toggle label activation",
         detail: message,

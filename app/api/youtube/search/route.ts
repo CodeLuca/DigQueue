@@ -2,9 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { guardMutationRateLimit } from "@/lib/api-guard";
-import { requireCurrentAppUserId } from "@/lib/app-user";
-import { buildYoutubeQuery, scoreYoutubeMatch, searchYoutube } from "@/lib/youtube";
+import { requireMutationUser, parseMutationBody } from "@/lib/api-mutation";
+import { errorJson } from "@/lib/api-response";
+import { buildYoutubeQuery } from "@/lib/youtube";
+import { collectYoutubeSearchMatches } from "@/lib/youtube-match-search";
 
 const inputSchema = z.object({
   primaryArtist: z.string().optional(),
@@ -14,33 +15,24 @@ const inputSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentAppUserId();
-  const rateLimited = await guardMutationRateLimit(userId, {
+  const auth = await requireMutationUser({
     bucket: "youtube/search",
     limit: 30,
     windowSeconds: 60,
   });
-  if (rateLimited) return rateLimited;
+  if (auth.response) return auth.response;
 
-  const parsed = inputSchema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  const parsed = await parseMutationBody(request, inputSchema);
+  if (parsed.response) return parsed.response;
 
   try {
     const query = buildYoutubeQuery(parsed.data);
-    const items = await searchYoutube(query);
-    const matches = items.map((item) => ({
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      score: scoreYoutubeMatch(query, item.snippet.title),
-    }));
+    const matches = await collectYoutubeSearchMatches([query], { limit: 5 });
 
     return NextResponse.json({ query, matches });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
+    return errorJson(
       {
         error: "YouTube search failed",
         detail: message,

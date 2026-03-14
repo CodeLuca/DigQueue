@@ -1,5 +1,5 @@
-import { relations } from "drizzle-orm";
-import { bigint, boolean, customType, doublePrecision, integer, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { bigint, boolean, customType, doublePrecision, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 const timestampMs = customType<{ data: Date; driverData: number }>({
   dataType() {
@@ -13,100 +13,160 @@ const timestampMs = customType<{ data: Date; driverData: number }>({
   },
 });
 
-export const labels = pgTable("labels", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
-  userId: uuid("user_id"),
-  entityKind: text("entity_kind").notNull().default("label"),
-  externalDiscogsId: bigint("external_discogs_id", { mode: "number" }),
-  name: text("name").notNull(),
-  discogsUrl: text("discogs_url").notNull(),
-  blurb: text("blurb"),
-  imageUrl: text("image_url"),
-  notableReleasesJson: text("notable_releases_json").notNull().default("[]"),
-  sourceType: text("source_type").notNull().default("workspace"),
-  active: boolean("active").notNull().default(false),
-  status: text("status").notNull().default("queued"),
-  currentPage: integer("current_page").notNull().default(1),
-  totalPages: integer("total_pages").notNull().default(1),
-  retryCount: integer("retry_count").notNull().default(0),
-  lastError: text("last_error"),
-  addedAt: timestampMs("added_at").notNull(),
-  updatedAt: timestampMs("updated_at").notNull(),
-});
+export const labels = pgTable(
+  "labels",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey(),
+    userId: uuid("user_id"),
+    entityKind: text("entity_kind").notNull().default("label"),
+    externalDiscogsId: bigint("external_discogs_id", { mode: "number" }),
+    name: text("name").notNull(),
+    discogsUrl: text("discogs_url").notNull(),
+    blurb: text("blurb"),
+    imageUrl: text("image_url"),
+    notableReleasesJson: text("notable_releases_json").notNull().default("[]"),
+    sourceType: text("source_type").notNull().default("workspace"),
+    active: boolean("active").notNull().default(false),
+    status: text("status").notNull().default("queued"),
+    currentPage: integer("current_page").notNull().default(1),
+    totalPages: integer("total_pages").notNull().default(1),
+    retryCount: integer("retry_count").notNull().default(0),
+    lastError: text("last_error"),
+    addedAt: timestampMs("added_at").notNull(),
+    updatedAt: timestampMs("updated_at").notNull(),
+  },
+  (table) => ({
+    userSourceUnique: uniqueIndex("labels_user_entity_external_uq").on(table.userId, table.entityKind, table.externalDiscogsId),
+  }),
+);
 
-export const releases = pgTable("releases", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
-  userId: uuid("user_id"),
-  labelId: bigint("label_id", { mode: "number" }).notNull().references(() => labels.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  artist: text("artist").notNull().default("Unknown Artist"),
-  year: integer("year"),
-  catno: text("catno"),
-  discogsUrl: text("discogs_url").notNull(),
-  thumbUrl: text("thumb_url"),
-  detailsFetched: boolean("details_fetched").notNull().default(false),
-  youtubeMatched: boolean("youtube_matched").notNull().default(false),
-  listened: boolean("listened").notNull().default(false),
-  wishlist: boolean("wishlist").notNull().default(false),
-  matchConfidence: doublePrecision("match_confidence").notNull().default(0),
-  processingError: text("processing_error"),
-  fetchedAt: timestampMs("fetched_at").notNull(),
-  releaseOrder: integer("release_order").notNull().default(0),
-  importSource: text("import_source").notNull().default("label"),
-});
+export const releases = pgTable(
+  "releases",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey(),
+    userId: uuid("user_id"),
+    labelId: bigint("label_id", { mode: "number" }).notNull().references(() => labels.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    artist: text("artist").notNull().default("Unknown Artist"),
+    year: integer("year"),
+    catno: text("catno"),
+    discogsUrl: text("discogs_url").notNull(),
+    thumbUrl: text("thumb_url"),
+    detailsFetched: boolean("details_fetched").notNull().default(false),
+    youtubeMatched: boolean("youtube_matched").notNull().default(false),
+    listened: boolean("listened").notNull().default(false),
+    wishlist: boolean("wishlist").notNull().default(false),
+    matchConfidence: doublePrecision("match_confidence").notNull().default(0),
+    processingError: text("processing_error"),
+    fetchedAt: timestampMs("fetched_at").notNull(),
+    releaseOrder: integer("release_order").notNull().default(0),
+    importSource: text("import_source").notNull().default("label"),
+  },
+  (table) => ({
+    userDiscogsUrlUnique: uniqueIndex("releases_user_discogs_url_uq")
+      .on(table.userId, table.discogsUrl)
+      .where(sql`${table.userId} is not null and coalesce(${table.discogsUrl}, '') <> ''`),
+  }),
+);
 
-export const tracks = pgTable("tracks", {
-  id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
-  userId: uuid("user_id"),
-  releaseId: bigint("release_id", { mode: "number" }).notNull().references(() => releases.id, { onDelete: "cascade" }),
-  position: text("position").notNull(),
-  title: text("title").notNull(),
-  duration: text("duration"),
-  artistsText: text("artists_text"),
-  listened: boolean("listened").notNull().default(false),
-  saved: boolean("saved").notNull().default(false),
-  wishlist: boolean("wishlist").notNull().default(false),
-  createdAt: timestampMs("created_at").notNull(),
-});
+export const tracks = pgTable(
+  "tracks",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+    userId: uuid("user_id"),
+    releaseId: bigint("release_id", { mode: "number" }).notNull().references(() => releases.id, { onDelete: "cascade" }),
+    position: text("position").notNull(),
+    title: text("title").notNull(),
+    duration: text("duration"),
+    artistsText: text("artists_text"),
+    listened: boolean("listened").notNull().default(false),
+    saved: boolean("saved").notNull().default(false),
+    wishlist: boolean("wishlist").notNull().default(false),
+    createdAt: timestampMs("created_at").notNull(),
+  },
+  (table) => ({
+    userReleasePositionTitleUnique: uniqueIndex("tracks_user_release_pos_title_uq")
+      .on(
+        table.userId,
+        table.releaseId,
+        sql`(coalesce(nullif(trim(${table.position}), ''), '__'))`,
+        sql`(lower(trim(${table.title})))`,
+      )
+      .where(sql`${table.userId} is not null`),
+  }),
+);
 
-export const youtubeMatches = pgTable("youtube_matches", {
-  id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
-  userId: uuid("user_id"),
-  trackId: bigint("track_id", { mode: "number" }).notNull().references(() => tracks.id, { onDelete: "cascade" }),
-  videoId: text("video_id").notNull(),
-  title: text("title").notNull(),
-  channelTitle: text("channel_title").notNull(),
-  score: doublePrecision("score").notNull().default(0),
-  embeddable: boolean("embeddable").notNull().default(true),
-  chosen: boolean("chosen").notNull().default(false),
-  fetchedAt: timestampMs("fetched_at").notNull(),
-});
+export const youtubeMatches = pgTable(
+  "youtube_matches",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+    userId: uuid("user_id"),
+    trackId: bigint("track_id", { mode: "number" }).notNull().references(() => tracks.id, { onDelete: "cascade" }),
+    videoId: text("video_id").notNull(),
+    title: text("title").notNull(),
+    channelTitle: text("channel_title").notNull(),
+    score: doublePrecision("score").notNull().default(0),
+    embeddable: boolean("embeddable").notNull().default(true),
+    chosen: boolean("chosen").notNull().default(false),
+    fetchedAt: timestampMs("fetched_at").notNull(),
+  },
+  (table) => ({
+    userTrackVideoUnique: uniqueIndex("youtube_matches_user_track_video_uq")
+      .on(table.userId, table.trackId, table.videoId)
+      .where(sql`${table.userId} is not null`),
+    userTrackChosenUnique: uniqueIndex("youtube_matches_user_track_chosen_uq")
+      .on(table.userId, table.trackId)
+      .where(sql`${table.userId} is not null and ${table.chosen} = true`),
+  }),
+);
 
-export const queueItems = pgTable("queue_items", {
-  id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
-  userId: uuid("user_id"),
-  youtubeVideoId: text("youtube_video_id").notNull(),
-  trackId: bigint("track_id", { mode: "number" }).references(() => tracks.id, { onDelete: "set null" }),
-  releaseId: bigint("release_id", { mode: "number" }).references(() => releases.id, { onDelete: "set null" }),
-  labelId: bigint("label_id", { mode: "number" }).references(() => labels.id, { onDelete: "set null" }),
-  source: text("source").notNull().default("track"),
-  priority: integer("priority").notNull().default(0),
-  bumpedAt: timestampMs("bumped_at"),
-  status: text("status").notNull().default("pending"),
-  addedAt: timestampMs("added_at").notNull(),
-});
+export const queueItems = pgTable(
+  "queue_items",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+    userId: uuid("user_id"),
+    youtubeVideoId: text("youtube_video_id").notNull(),
+    trackId: bigint("track_id", { mode: "number" }).references(() => tracks.id, { onDelete: "set null" }),
+    releaseId: bigint("release_id", { mode: "number" }).references(() => releases.id, { onDelete: "set null" }),
+    labelId: bigint("label_id", { mode: "number" }).references(() => labels.id, { onDelete: "set null" }),
+    source: text("source").notNull().default("track"),
+    priority: integer("priority").notNull().default(0),
+    bumpedAt: timestampMs("bumped_at"),
+    status: text("status").notNull().default("pending"),
+    addedAt: timestampMs("added_at").notNull(),
+  },
+  (table) => ({
+    userPendingTrackUnique: uniqueIndex("queue_items_user_pending_track_uq")
+      .on(table.userId, table.trackId)
+      .where(sql`${table.userId} is not null and ${table.trackId} is not null and ${table.status} = 'pending'`),
+    userPendingReleaseUnique: uniqueIndex("queue_items_user_pending_release_uq")
+      .on(table.userId, table.releaseId)
+      .where(sql`${table.userId} is not null and ${table.trackId} is null and ${table.releaseId} is not null and ${table.status} = 'pending'`),
+  }),
+);
 
 export const feedbackEvents = pgTable("feedback_events", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
   userId: uuid("user_id"),
   trackId: bigint("track_id", { mode: "number" }).references(() => tracks.id, { onDelete: "set null" }),
   releaseId: bigint("release_id", { mode: "number" }).references(() => releases.id, { onDelete: "set null" }),
+  externalDiscogsReleaseId: bigint("external_discogs_release_id", { mode: "number" }),
   labelId: bigint("label_id", { mode: "number" }).references(() => labels.id, { onDelete: "set null" }),
   eventType: text("event_type").notNull(),
   eventValue: doublePrecision("event_value").notNull().default(1),
   source: text("source").notNull().default("app"),
   createdAt: timestampMs("created_at").notNull(),
-});
+}, (table) => ({
+  userTrackDismissUnique: uniqueIndex("feedback_events_user_track_dismiss_uq")
+    .on(table.userId, table.eventType, table.trackId)
+    .where(sql`${table.userId} is not null and ${table.eventType} = 'dismiss' and ${table.trackId} is not null`),
+  userReleaseDismissUnique: uniqueIndex("feedback_events_user_release_dismiss_uq")
+    .on(table.userId, table.eventType, table.releaseId)
+    .where(sql`${table.userId} is not null and ${table.eventType} = 'dismiss' and ${table.trackId} is null and ${table.releaseId} is not null`),
+  userExternalReleaseDismissUnique: uniqueIndex("feedback_events_user_external_release_dismiss_uq")
+    .on(table.userId, table.eventType, table.externalDiscogsReleaseId)
+    .where(sql`${table.userId} is not null and ${table.eventType} = 'dismiss' and ${table.trackId} is null and ${table.releaseId} is null and ${table.externalDiscogsReleaseId} is not null`),
+}));
 
 export const releaseSignals = pgTable("release_signals", {
   releaseId: bigint("release_id", { mode: "number" }).primaryKey().references(() => releases.id, { onDelete: "cascade" }),
@@ -136,27 +196,39 @@ export const sourceReleases = pgTable(
   }),
 );
 
-export const apiCache = pgTable("api_cache", {
-  key: text("key").primaryKey(),
-  userId: uuid("user_id"),
-  responseJson: text("response_json").notNull(),
-  fetchedAt: timestampMs("fetched_at").notNull(),
-  expiresAt: timestampMs("expires_at").notNull(),
-});
+export const apiCache = pgTable(
+  "api_cache",
+  {
+    key: text("key").notNull(),
+    userId: uuid("user_id"),
+    responseJson: text("response_json").notNull(),
+    fetchedAt: timestampMs("fetched_at").notNull(),
+    expiresAt: timestampMs("expires_at").notNull(),
+  },
+  (table) => ({
+    userKeyUnique: uniqueIndex("api_cache_user_key_uq").on(table.userId, table.key),
+  }),
+);
 
-export const appSecrets = pgTable("app_secrets", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
-  userId: uuid("user_id"),
-  discogsToken: text("discogs_token"),
-  youtubeApiKey: text("youtube_api_key"),
-  youtubeOauthRefreshToken: text("youtube_oauth_refresh_token"),
-  youtubeOauthAccessToken: text("youtube_oauth_access_token"),
-  youtubeOauthExpiresAt: bigint("youtube_oauth_expires_at", { mode: "number" }),
-  youtubeOauthScope: text("youtube_oauth_scope"),
-  youtubeOauthChannelId: text("youtube_oauth_channel_id"),
-  youtubeOauthChannelTitle: text("youtube_oauth_channel_title"),
-  updatedAt: timestampMs("updated_at").notNull(),
-});
+export const appSecrets = pgTable(
+  "app_secrets",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey(),
+    userId: uuid("user_id"),
+    discogsToken: text("discogs_token"),
+    youtubeApiKey: text("youtube_api_key"),
+    youtubeOauthRefreshToken: text("youtube_oauth_refresh_token"),
+    youtubeOauthAccessToken: text("youtube_oauth_access_token"),
+    youtubeOauthExpiresAt: bigint("youtube_oauth_expires_at", { mode: "number" }),
+    youtubeOauthScope: text("youtube_oauth_scope"),
+    youtubeOauthChannelId: text("youtube_oauth_channel_id"),
+    youtubeOauthChannelTitle: text("youtube_oauth_channel_title"),
+    updatedAt: timestampMs("updated_at").notNull(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("app_secrets_user_id_uq").on(table.userId),
+  }),
+);
 
 export const workerLocks = pgTable("worker_locks", {
   lockKey: text("lock_key").primaryKey(),

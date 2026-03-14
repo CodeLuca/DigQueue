@@ -1,14 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Image from "next/image";
 import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { enqueueTrackForClient } from "@/lib/client-queue";
-import { PLAY_ITEM_EVENT } from "@/lib/client-events";
-import { toDiscogsWebUrl } from "@/lib/discogs-links";
-import { QUEUE_ERROR_NO_MATCH, QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED } from "@/lib/queue-errors";
-import { setYouTubeQuotaExceededInSession } from "@/lib/youtube-quota-client";
+import type { Dispatch, SetStateAction } from "react";
+import { DiscogsLink } from "@/components/discogs-link";
+import { MutationActionButton } from "@/components/mutation-action-button";
+import { RecommendationCardShell } from "@/components/recommendation-card-shell";
+import { SegmentedControlButton } from "@/components/segmented-control-button";
+import {
+  getAddSourceFromReleaseActionLabels,
+  getDiscogsWishlistActionLabels,
+  getTrackSaveActionLabels,
+  playNowInMiniPlayerLabel,
+  playNowAriaLabel,
+  queueTrackNextLabel,
+  queueTrackNextTitle,
+  releaseDiscogsLinkTitle,
+  recommendationDismissLabel,
+  recommendationReviewLabel,
+} from "@/lib/library-action-labels";
+import {
+  useExternalRecommendationActions,
+  useLibraryRecommendationActions,
+} from "@/lib/use-recommendation-actions";
+import { useRecommendationFeedState } from "@/lib/use-recommendation-feed-state";
 
 type RecommendationItem = {
   id: number;
@@ -34,70 +48,6 @@ type ExternalRecommendationItem = {
   reason: string;
 };
 
-type QueueApiItem = {
-  id: number;
-  youtubeVideoId: string;
-  track?: { id: number; title: string } | null;
-  release?: { title: string } | null;
-  label?: { name: string } | null;
-};
-
-async function markReviewed(trackId: number) {
-  const response = await fetch("/api/tracks/todo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ trackIds: [trackId], field: "listened", mode: "set", value: true }),
-  });
-  if (!response.ok) throw new Error("Unable to mark reviewed.");
-}
-
-async function toggleTrackSaved(trackId: number) {
-  const response = await fetch("/api/tracks/todo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ trackIds: [trackId], field: "saved", mode: "toggle" }),
-  });
-  if (!response.ok) throw new Error("Unable to save track.");
-}
-
-async function toggleReleaseWishlist(releaseId: number) {
-  const response = await fetch("/api/releases/wishlist", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ releaseId, mode: "toggle" }),
-  });
-  if (!response.ok) throw new Error("Unable to update record wishlist.");
-  const body = (await response.json().catch(() => null)) as { wishlist?: boolean } | null;
-  return Boolean(body?.wishlist);
-}
-
-async function addLabelFromRelease(releaseId: number) {
-  const response = await fetch("/api/labels/from-release", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ releaseId }),
-  });
-  if (!response.ok) throw new Error("Unable to add label from release.");
-}
-
-async function addDiscogsWant(releaseId: number) {
-  const response = await fetch("/api/releases/wishlist", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ releaseId, mode: "set", value: true }),
-  });
-  if (!response.ok) throw new Error("Unable to add record to Discogs wishlist.");
-}
-
-async function dismissRecommendation(input: { trackId?: number; releaseId?: number }) {
-  const response = await fetch("/api/recommendations/feedback", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ eventType: "dismiss", ...input }),
-  });
-  if (!response.ok) throw new Error("Unable to dismiss recommendation.");
-}
-
 export function RecommendationsPanel({
   initialItems,
   externalItems: initialExternalItems,
@@ -105,161 +55,17 @@ export function RecommendationsPanel({
   initialItems: RecommendationItem[];
   externalItems: ExternalRecommendationItem[];
 }) {
-  const [items, setItems] = useState(initialItems);
-  const [externalItems, setExternalItems] = useState(initialExternalItems);
-  const [loadingTrackId, setLoadingTrackId] = useState<number | null>(null);
-  const [loadingReleaseId, setLoadingReleaseId] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [view, setView] = useState<"all" | "in_library" | "outside_library">("all");
-
-  const canShow = useMemo(() => items.length > 0 || externalItems.length > 0, [externalItems.length, items.length]);
-  const visibleLibraryItems = useMemo(() => (view === "outside_library" ? [] : items), [items, view]);
-  const visibleExternalItems = useMemo(() => (view === "in_library" ? [] : externalItems), [externalItems, view]);
-  const viewButtonClass = (active: boolean) =>
-    `inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
-      active
-        ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-        : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-    }`;
-
-  const removeItem = (trackId: number) => setItems((prev) => prev.filter((item) => item.id !== trackId));
-  const removeExternalItem = (releaseId: number) => setExternalItems((prev) => prev.filter((item) => item.releaseId !== releaseId));
-
-  const onQueue = async (trackId: number, playNow: boolean) => {
-    setLoadingTrackId(trackId);
-    setFeedback(null);
-    try {
-      const queued = await enqueueTrackForClient<QueueApiItem>({ trackId, queueMode: "next" });
-      if (playNow) {
-        // Always route through bottom mini-player and replace current playback.
-        window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: queued }));
-      }
-      removeItem(trackId);
-      setFeedback(playNow ? "Playing in bottom player." : "Queued next.");
-    } catch (error) {
-      if (error instanceof Error && error.message === QUEUE_ERROR_NO_MATCH) {
-        setFeedback("No playable match available yet. Open release and run matching.");
-      } else if (error instanceof Error && error.message === QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED) {
-        setYouTubeQuotaExceededInSession();
-        setFeedback("YouTube quota reached. Queue/play is temporarily disabled.");
-      } else {
-        setFeedback(error instanceof Error ? error.message : "Unable to queue recommendation.");
-      }
-    } finally {
-      setLoadingTrackId(null);
-    }
-  };
-
-  const onReviewed = async (trackId: number) => {
-    setLoadingTrackId(trackId);
-    setFeedback(null);
-    try {
-      await markReviewed(trackId);
-      removeItem(trackId);
-      setFeedback("Marked as reviewed.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to mark reviewed.");
-    } finally {
-      setLoadingTrackId(null);
-    }
-  };
-
-  const onSave = async (trackId: number) => {
-    setLoadingTrackId(trackId);
-    setFeedback(null);
-    try {
-      await toggleTrackSaved(trackId);
-      setItems((prev) => prev.map((item) => (item.id === trackId ? { ...item, saved: !Boolean(item.saved) } : item)));
-      setFeedback("Track saved.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to save track.");
-    } finally {
-      setLoadingTrackId(null);
-    }
-  };
-
-  const onAddRecordWishlist = async (trackId: number, releaseId: number) => {
-    setLoadingTrackId(trackId);
-    setFeedback(null);
-    try {
-      const nextWishlist = await toggleReleaseWishlist(releaseId);
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === trackId
-            ? {
-                ...item,
-                release: {
-                  ...(item.release ?? {}),
-                  wishlist: nextWishlist,
-                },
-              }
-            : item,
-        ),
-      );
-      setFeedback(nextWishlist ? "Added to Discogs wishlist." : "Unable to add to Discogs wishlist.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to update record wishlist.");
-    } finally {
-      setLoadingTrackId(null);
-    }
-  };
-
-  const onDismissTrack = async (trackId: number, releaseId: number) => {
-    setLoadingTrackId(trackId);
-    setFeedback(null);
-    try {
-      await dismissRecommendation({ trackId, releaseId });
-      removeItem(trackId);
-      setFeedback("Dismissed.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to dismiss recommendation.");
-    } finally {
-      setLoadingTrackId(null);
-    }
-  };
-
-  const onExternalAddLabel = async (releaseId: number) => {
-    setLoadingReleaseId(releaseId);
-    setFeedback(null);
-    try {
-      await addLabelFromRelease(releaseId);
-      removeExternalItem(releaseId);
-      setFeedback("Label added and activated.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to add label.");
-    } finally {
-      setLoadingReleaseId(null);
-    }
-  };
-
-  const onExternalWant = async (releaseId: number) => {
-    setLoadingReleaseId(releaseId);
-    setFeedback(null);
-    try {
-      await addDiscogsWant(releaseId);
-      removeExternalItem(releaseId);
-      setFeedback("Added to Discogs wishlist.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to add record to Discogs wishlist.");
-    } finally {
-      setLoadingReleaseId(null);
-    }
-  };
-
-  const onExternalDismiss = async (releaseId: number) => {
-    setLoadingReleaseId(releaseId);
-    setFeedback(null);
-    try {
-      await dismissRecommendation({ releaseId });
-      removeExternalItem(releaseId);
-      setFeedback("Dismissed.");
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to dismiss recommendation.");
-    } finally {
-      setLoadingReleaseId(null);
-    }
-  };
-
+  const {
+    canShow,
+    externalItems,
+    items,
+    setExternalItems,
+    setItems,
+    setView,
+    view,
+    visibleExternalItems,
+    visibleLibraryItems,
+  } = useRecommendationFeedState(initialItems, initialExternalItems);
   if (!canShow) {
     return <p className="text-sm text-[var(--color-muted)]">No fresh recommendations right now. Process more labels or play more tracks.</p>;
   }
@@ -267,220 +73,277 @@ export function RecommendationsPanel({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Recommendation Views</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Views</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <button type="button" className={viewButtonClass(view === "all")} onClick={() => setView("all")}>
+          <SegmentedControlButton active={view === "all"} onClick={() => setView("all")}>
             All ({items.length + externalItems.length})
-          </button>
-          <button type="button" className={viewButtonClass(view === "in_library")} onClick={() => setView("in_library")}>
+          </SegmentedControlButton>
+          <SegmentedControlButton active={view === "in_library"} onClick={() => setView("in_library")}>
             In Library ({items.length})
-          </button>
-          <button type="button" className={viewButtonClass(view === "outside_library")} onClick={() => setView("outside_library")}>
+          </SegmentedControlButton>
+          <SegmentedControlButton active={view === "outside_library"} onClick={() => setView("outside_library")}>
             Outside Library ({externalItems.length})
-          </button>
+          </SegmentedControlButton>
         </div>
       </div>
       {visibleLibraryItems.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">In Library</p> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-      {visibleLibraryItems.map((track) => {
-        const loading = loadingTrackId === track.id;
-        const release = (track.release ?? {}) as {
-          title?: string | null;
-          artist?: string | null;
-          thumbUrl?: string | null;
-          wishlist?: boolean | null;
-          label?: { name?: string | null } | null;
-        };
-        return (
-          <div key={track.id} className="rounded-md border border-[var(--color-border)] p-3">
-            <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex min-w-0 items-start gap-2">
-                {release.thumbUrl ? (
-                  <Image
-                    src={release.thumbUrl}
-                    alt={`${release.title ?? track.title} artwork`}
-                    width={48}
-                    height={48}
-                    className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] object-cover"
-                  />
-                ) : (
-                  <div className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-surface)]" aria-hidden />
-                )}
-                <div className="min-w-0">
-                  <p className="line-clamp-1 text-sm font-medium">{track.title}</p>
-                  <p className="line-clamp-1 text-xs text-[var(--color-muted)]">
-                    {release.artist ?? "Unknown artist"} • {release.label?.name ?? "Unknown label"} • {release.title ?? `Release #${track.releaseId}`}
-                  </p>
-                </div>
-              </div>
-              <p className="text-[11px] text-[var(--color-muted)]">Score {track.score.toFixed(1)}</p>
-            </div>
-            {track.reason ? <p className="mt-1 text-xs text-[var(--color-muted)]">{track.reason}</p> : null}
-            <div className="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
-                disabled={loading}
-                onClick={() => void onQueue(track.id, true)}
-                title="Play this recommended track now"
-                aria-label="Play track now"
-              >
-                <Play className="h-3.5 w-3.5" />
-                Play Now
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full justify-center sm:w-auto sm:justify-start"
-                disabled={loading}
-                onClick={() => void onQueue(track.id, false)}
-                title="Add this track to the front of your queue"
-                aria-label="Queue track next"
-              >
-                Queue Next
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full justify-center sm:w-auto sm:justify-start"
-                disabled={loading}
-                onClick={() => void onReviewed(track.id)}
-                title="Mark this track as reviewed"
-              >
-                Reviewed
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={track.saved ? "secondary" : "outline"}
-                className="w-full justify-center sm:w-auto sm:justify-start"
-                disabled={loading || Boolean(track.saved)}
-                onClick={() => void onSave(track.id)}
-                title="Save track locally (not Discogs wantlist)"
-                aria-label={track.saved ? "Track saved locally" : "Save track locally"}
-              >
-                <HeartPlus className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={release.wishlist ? "secondary" : "outline"}
-                className="w-full justify-center sm:w-auto sm:justify-start"
-                disabled={loading || Boolean(release.wishlist)}
-                onClick={() => void onAddRecordWishlist(track.id, track.releaseId)}
-                title="Add release to Discogs wishlist"
-                aria-label={release.wishlist ? "Already in Discogs wishlist" : "Add to Discogs wishlist"}
-              >
-                <BookmarkPlus className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
-                disabled={loading}
-                onClick={() => void onDismissTrack(track.id, track.releaseId)}
-                title="Dismiss recommendation"
-                aria-label="Dismiss recommendation"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        );
-      })}
+        {visibleLibraryItems.map((track) => (
+          <LibraryRecommendationCard key={track.id} track={track} setItems={setItems} />
+        ))}
       </div>
 
       {visibleExternalItems.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Outside Library</p> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        {visibleExternalItems.map((item) => {
-          const loading = loadingReleaseId === item.releaseId;
-          return (
-            <div key={item.releaseId} className="rounded-md border border-[var(--color-border)] p-3">
-            <div className="mb-1 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 items-start gap-2">
-                  {item.thumbUrl ? (
-                    <Image
-                      src={item.thumbUrl}
-                      alt={`${item.title} artwork`}
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] object-cover"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-surface)]" aria-hidden />
-                  )}
-                  <div className="min-w-0">
-                    <p className="line-clamp-1 text-sm font-medium">{item.title}</p>
-                    <p className="line-clamp-1 text-xs text-[var(--color-muted)]">
-                      {item.artist} • {item.labelName ?? "Unknown label"}
-                      {typeof item.year === "number" ? ` • ${item.year}` : ""}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-[11px] text-[var(--color-muted)]">Score {item.score.toFixed(1)}</p>
-              </div>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">{item.reason}</p>
-              <div className="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="w-full justify-center sm:w-auto sm:justify-start"
-                  disabled={loading}
-                  onClick={() => void onExternalAddLabel(item.releaseId)}
-                  title="Create and activate label from this release"
-                  aria-label="Add label from release"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="w-full justify-center sm:w-auto sm:justify-start"
-                  disabled={loading}
-                  onClick={() => void onExternalWant(item.releaseId)}
-                  title="Add record to Discogs wishlist"
-                  aria-label="Add record to Discogs wishlist"
-                >
-                  <BookmarkPlus className="h-3.5 w-3.5" />
-                </Button>
-                <a
-                  href={toDiscogsWebUrl(item.discogsUrl, "")}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--color-border)] px-2.5 text-xs text-[var(--color-text)] transition-colors duration-150 hover:bg-[var(--color-surface2)]/80 sm:justify-start"
-                  title="Open release on Discogs"
-                  aria-label="Open release on Discogs"
-                >
-                  Discogs
-                </a>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
-                  disabled={loading}
-                  onClick={() => void onExternalDismiss(item.releaseId)}
-                  title="Dismiss recommendation"
-                  aria-label="Dismiss recommendation"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+        {visibleExternalItems.map((item) => (
+          <ExternalRecommendationCard
+            key={item.releaseId}
+            item={item}
+            setExternalItems={setExternalItems}
+          />
+        ))}
       </div>
       {visibleLibraryItems.length === 0 && visibleExternalItems.length === 0 ? (
         <p className="text-sm text-[var(--color-muted)]">No recommendations in this view.</p>
       ) : null}
-      {feedback ? <p className="text-xs text-[var(--color-muted)]">{feedback}</p> : null}
     </div>
+  );
+}
+
+function LibraryRecommendationCard({
+  track,
+  setItems,
+}: {
+  track: RecommendationItem;
+  setItems: Dispatch<SetStateAction<RecommendationItem[]>>;
+}) {
+  const {
+    dismissMessage,
+    dismissPending,
+    loading,
+    onAddRecordWishlist,
+    onDismissTrack,
+    onReviewed,
+    onSave,
+    playbackDisabled,
+    playbackFeedback: feedback,
+    playbackPending,
+    playNow,
+    queueNext,
+    reviewMessage,
+    reviewedPending,
+    saveMessage,
+    savePending,
+    wishlistMessage,
+    wishlistPending,
+  } = useLibraryRecommendationActions(track, setItems);
+  const release = (track.release ?? {}) as {
+    title?: string | null;
+    artist?: string | null;
+    thumbUrl?: string | null;
+    wishlist?: boolean | null;
+    label?: { name?: string | null } | null;
+  };
+  const trackSaveLabels = getTrackSaveActionLabels(Boolean(track.saved));
+  const wishlistLabels = getDiscogsWishlistActionLabels(Boolean(release.wishlist));
+
+  return (
+    <RecommendationCardShell
+      artworkAlt={`${release.title ?? track.title} artwork`}
+      artworkUrl={release.thumbUrl}
+      title={track.title}
+      meta={
+        <>
+          {release.artist ?? "Unknown artist"} • {release.label?.name ?? "Unknown label"} • {release.title ?? `Release #${track.releaseId}`}
+        </>
+      }
+      score={track.score}
+      reason={track.reason}
+    >
+      <MutationActionButton
+        preset="playback"
+        size="sm"
+        variant="secondary"
+        className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+        disabled={loading || playbackDisabled}
+        onClick={() => void playNow()}
+        title={playNowInMiniPlayerLabel()}
+        ariaLabel={playNowAriaLabel()}
+        pending={playbackPending}
+        pendingChildren="..."
+      >
+        <Play className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Play Now</span>
+        <span className="sm:hidden">Play</span>
+      </MutationActionButton>
+      <MutationActionButton
+        preset="playback"
+        size="sm"
+        variant="outline"
+        className="w-full justify-center sm:w-auto sm:justify-start"
+        disabled={loading || playbackDisabled}
+        onClick={() => void queueNext()}
+        title={queueTrackNextTitle()}
+        ariaLabel={queueTrackNextLabel()}
+        pending={playbackPending}
+        pendingChildren="..."
+        message={feedback}
+      >
+        <span className="hidden sm:inline">Queue Next</span>
+        <span className="sm:hidden">Queue</span>
+      </MutationActionButton>
+        <MutationActionButton
+          preset="recommendation"
+          size="sm"
+          variant="outline"
+          className="w-full justify-center sm:w-auto sm:justify-start"
+          disabled={loading}
+          onClick={() => void onReviewed()}
+          title={recommendationReviewLabel()}
+          pending={reviewedPending}
+          pendingChildren="..."
+          message={reviewMessage}
+        >
+          <span className="hidden sm:inline">Reviewed</span>
+          <span className="sm:hidden">Review</span>
+        </MutationActionButton>
+        <MutationActionButton
+          preset="recommendation"
+          size="sm"
+          variant={track.saved ? "secondary" : "outline"}
+          className="w-full justify-center sm:w-auto sm:justify-start"
+          disabled={loading || Boolean(track.saved)}
+          onClick={() => void onSave()}
+          title={trackSaveLabels.title}
+          ariaLabel={trackSaveLabels.ariaLabel}
+          pending={savePending}
+          pendingChildren="..."
+          message={saveMessage}
+        >
+          <HeartPlus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">{trackSaveLabels.buttonLabel}</span>
+        </MutationActionButton>
+        <MutationActionButton
+          preset="recommendation"
+          size="sm"
+          variant={release.wishlist ? "secondary" : "outline"}
+          className="w-full justify-center sm:w-auto sm:justify-start"
+          disabled={loading || Boolean(release.wishlist)}
+          onClick={() => void onAddRecordWishlist()}
+          title={wishlistLabels.title}
+          ariaLabel={wishlistLabels.ariaLabel}
+          pending={wishlistPending}
+          pendingChildren="..."
+          message={wishlistMessage}
+        >
+          <BookmarkPlus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">{wishlistLabels.buttonLabel}</span>
+        </MutationActionButton>
+        <MutationActionButton
+          preset="recommendation"
+          size="sm"
+          variant="ghost"
+          className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+          disabled={loading}
+          onClick={() => void onDismissTrack()}
+          title={recommendationDismissLabel()}
+          ariaLabel={recommendationDismissLabel()}
+          pending={dismissPending}
+          pendingChildren="..."
+          message={dismissMessage}
+        >
+          <X className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Dismiss</span>
+        </MutationActionButton>
+    </RecommendationCardShell>
+  );
+}
+
+function ExternalRecommendationCard({
+  item,
+  setExternalItems,
+}: {
+  item: ExternalRecommendationItem;
+  setExternalItems: Dispatch<SetStateAction<ExternalRecommendationItem[]>>;
+}) {
+  const {
+    addLabelMessage,
+    addLabelPending,
+    dismissMessage,
+    dismissPending,
+    loading,
+    onAddLabel,
+    onDismiss,
+    onWant,
+    wantMessage,
+    wantPending,
+  } = useExternalRecommendationActions(item, setExternalItems);
+  const addSourceLabels = getAddSourceFromReleaseActionLabels();
+  const wishlistLabels = getDiscogsWishlistActionLabels(false);
+
+  return (
+    <RecommendationCardShell
+      artworkAlt={`${item.title} artwork`}
+      artworkUrl={item.thumbUrl}
+      title={item.title}
+      meta={
+        <>
+          {item.artist} • {item.labelName ?? "Unknown label"}
+          {typeof item.year === "number" ? ` • ${item.year}` : ""}
+        </>
+      }
+      score={item.score}
+      reason={item.reason}
+    >
+      <MutationActionButton
+        preset="recommendation"
+        size="sm"
+        variant="outline"
+        className="w-full justify-center sm:w-auto sm:justify-start"
+        disabled={loading}
+        onClick={() => void onAddLabel()}
+        title={addSourceLabels.title}
+        ariaLabel={addSourceLabels.ariaLabel}
+        pending={addLabelPending}
+        pendingChildren="..."
+        message={addLabelMessage}
+      >
+        <Plus className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">{addSourceLabels.buttonLabel}</span>
+      </MutationActionButton>
+      <MutationActionButton
+        preset="recommendation"
+        size="sm"
+        variant="outline"
+        className="w-full justify-center sm:w-auto sm:justify-start"
+        disabled={loading}
+        onClick={() => void onWant()}
+        title={wishlistLabels.title}
+        ariaLabel={wishlistLabels.ariaLabel}
+        pending={wantPending}
+        pendingChildren="..."
+        message={wantMessage}
+      >
+        <BookmarkPlus className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">{wishlistLabels.buttonLabel}</span>
+      </MutationActionButton>
+      <DiscogsLink discogsUrl={item.discogsUrl} title={releaseDiscogsLinkTitle()} variant="textButton" />
+      <MutationActionButton
+        preset="recommendation"
+        size="sm"
+        variant="ghost"
+        className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+        disabled={loading}
+        onClick={() => void onDismiss()}
+        title={recommendationDismissLabel()}
+        ariaLabel={recommendationDismissLabel()}
+        pending={dismissPending}
+        pendingChildren="..."
+        message={dismissMessage}
+      >
+        <X className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Dismiss</span>
+      </MutationActionButton>
+    </RecommendationCardShell>
   );
 }

@@ -6,13 +6,23 @@ import {
   fetchDiscogsArtistReleases,
   fetchDiscogsLabelReleases,
   fetchDiscogsRelease,
-  setDiscogsReleaseWishlist,
 } from "@/lib/discogs";
-import { toStoredDiscogsId } from "@/lib/discogs-id";
+import { ensureTrackForUser } from "@/lib/library-upsert";
+import { updateReleaseWishlistForUser } from "@/lib/release-wishlist-state";
 import { captureReleaseSignals } from "@/lib/release-signals";
-import { logFeedbackEvent } from "@/lib/recommendations";
+import { applyTrackListenedMutationsForUser, applyTrackSavedMutationsForUser } from "@/lib/release-listened-state";
+import { enqueuePendingReleaseForUser } from "@/lib/release-queue-enqueue";
+import { persistReleaseUnderSourceForUser } from "@/lib/source-release-materialization";
+import { toSourceKind } from "@/lib/source-kind";
 import { clearSyncTelemetry, writeSyncTelemetry } from "@/lib/sync-telemetry";
+import { enqueuePendingTrackForUser } from "@/lib/track-queue-enqueue";
+import { planTrackTodoMutation } from "@/lib/track-todo-mutations";
 import { getBandcampTrackVideosForRelease, getDiscogsTrackVideos } from "@/lib/track-video-sources";
+import {
+  ensurePendingTrackQueueItem,
+  replaceTrackYoutubeMatches,
+  selectTrackYoutubeMatch,
+} from "@/lib/track-youtube-matches";
 import { isYoutubeFatalConfigError, searchYoutube } from "@/lib/youtube";
 
 const NEXT_QUEUE_CANDIDATE_LIMIT = 120;
@@ -90,52 +100,30 @@ export async function ensureSourceReleasePage(sourceId: number, userId: string) 
   if (source.currentPage > source.totalPages) return;
 
   const pageData =
-    source.entityKind === "artist"
+    toSourceKind(source.entityKind) === "artist"
       ? await fetchDiscogsArtistReleases(sourceId, source.currentPage, 100)
       : await fetchDiscogsLabelReleases(sourceId, source.currentPage, 100);
   const now = new Date();
 
   for (const [index, release] of pageData.releases.entries()) {
-    const storedReleaseId = toStoredDiscogsId(userId, release.id, "release");
-    const existingRelease = await db.query.releases.findFirst({ where: and(eq(releases.id, storedReleaseId), scope.releases) });
-    const releaseLabelId = existingRelease?.labelId ?? sourceId;
-    await db
-      .insert(releases)
-      .values({
-        id: storedReleaseId,
-        userId,
-        labelId: releaseLabelId,
-        title: release.title,
-        artist: release.artist || "Unknown Artist",
-        year: release.year || null,
-        catno: release.catno || null,
-        discogsUrl: `https://www.discogs.com/release/${release.id}`,
-        thumbUrl: release.thumb || null,
-        fetchedAt: now,
-        releaseOrder: index + (source.currentPage - 1) * 100,
-      })
-      .onConflictDoNothing();
-
-    const persistedRelease = await db.query.releases.findFirst({
-      where: and(eq(releases.id, storedReleaseId), scope.releases),
-      columns: { id: true },
-    });
-    if (!persistedRelease) {
-      // If a transient write failure happened on the release row, skip source mapping this cycle.
-      continue;
-    }
-
     try {
-      await db
-        .insert(sourceReleases)
-        .values({
-          sourceId,
-          releaseId: storedReleaseId,
-          userId,
-          releaseOrder: index + (source.currentPage - 1) * 100,
-          discoveredAt: now,
-        })
-        .onConflictDoNothing();
+      await persistReleaseUnderSourceForUser({
+        userId,
+        sourceId,
+        releaseOrder: index + (source.currentPage - 1) * 100,
+        discoveredAt: now,
+        externalDiscogsReleaseId: release.id,
+        release: {
+          title: release.title,
+          artist: release.artist || "Unknown Artist",
+          year: release.year || null,
+          catno: release.catno || null,
+          discogsUrl: `https://www.discogs.com/release/${release.id}`,
+          thumbUrl: release.thumb || null,
+          fetchedAt: now,
+          importSource: toSourceKind(source.entityKind),
+        },
+      });
     } catch (error) {
       if (isTransientDatabaseError(error)) {
         continue;
@@ -196,15 +184,13 @@ async function finalizeReleaseQueueing(params: {
   });
   if (existingReleaseQueueItem) return;
 
-  await db.insert(queueItems).values({
+  await enqueuePendingReleaseForUser({
     userId: params.userId,
     youtubeVideoId: topReleaseCandidateVideoId,
-    trackId: null,
     releaseId: params.releaseId,
     labelId: params.labelId,
-    source: "release_fallback",
-    status: "pending",
-    addedAt: new Date(),
+    queueSource: "release_fallback",
+    feedbackSource: "release_fallback",
   });
 }
 
@@ -288,22 +274,46 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
   const source = await db.query.labels.findFirst({ where: and(eq(labels.id, sourceId), scope.labels) });
   if (!source) throw new Error("Source not found.");
   if (!source.active) return { done: false, message: "Source inactive." };
+  const sourceKind = toSourceKind(source.entityKind);
+  const sourceTelemetryMeta = {
+    sourceId,
+    sourceName: source.name,
+    sourceKind,
+  } as const;
+  const updateProcessingSourceState = async (
+    values: {
+      status: "processing" | "complete" | "error";
+      lastError: string | null;
+      retryCount?: number;
+    },
+  ) =>
+    db
+      .update(labels)
+      .set({
+        status: values.status,
+        lastError: values.lastError,
+        updatedAt: new Date(),
+        ...(typeof values.retryCount === "number" ? { retryCount: values.retryCount } : {}),
+      })
+      .where(and(eq(labels.id, sourceId), scope.labels));
+  const writeSourceSyncTelemetry = (input: Omit<Parameters<typeof writeSyncTelemetry>[1], "sourceId" | "sourceName" | "sourceKind" | "updatedAt">) =>
+    writeSyncTelemetry(userId, {
+      ...sourceTelemetryMeta,
+      ...input,
+      updatedAt: Date.now(),
+    });
 
   try {
     if (source.status !== "processing") {
-      await db
-        .update(labels)
-        .set({ status: "processing", lastError: null, updatedAt: new Date() })
-        .where(and(eq(labels.id, sourceId), scope.labels));
+      await updateProcessingSourceState({
+        status: "processing",
+        lastError: null,
+      });
     }
 
-    await writeSyncTelemetry(userId, {
-      sourceId,
-      sourceName: source.name,
-      sourceKind: source.entityKind === "artist" ? "artist" : "label",
+    await writeSourceSyncTelemetry({
       phase: "loading_release_page",
       message: "Loading next release page",
-      updatedAt: Date.now(),
     });
     await ensureSourceReleasePage(sourceId, userId);
 
@@ -318,37 +328,50 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
     if (!nextRelease) {
       const refreshedSource = await db.query.labels.findFirst({ where: and(eq(labels.id, sourceId), scope.labels) });
       if (refreshedSource && refreshedSource.currentPage > refreshedSource.totalPages) {
-        await db.update(labels).set({ status: "complete", updatedAt: new Date(), lastError: null }).where(and(eq(labels.id, sourceId), scope.labels));
-        await writeSyncTelemetry(userId, {
-          sourceId,
-          sourceName: source.name,
-          sourceKind: source.entityKind === "artist" ? "artist" : "label",
+        await updateProcessingSourceState({
+          status: "complete",
+          lastError: null,
+        });
+        await writeSourceSyncTelemetry({
           phase: "complete",
           message: "Source processing complete",
-          updatedAt: Date.now(),
         });
         return { done: true, message: "Source processing complete." };
       }
-      await writeSyncTelemetry(userId, {
-        sourceId,
-        sourceName: source.name,
-        sourceKind: source.entityKind === "artist" ? "artist" : "label",
+      await writeSourceSyncTelemetry({
         phase: "loading_release_page",
         message: "Fetching next release page",
-        updatedAt: Date.now(),
       });
       return { done: false, message: "Fetching next release page..." };
     }
 
-    await writeSyncTelemetry(userId, {
-      sourceId,
-      sourceName: source.name,
-      sourceKind: source.entityKind === "artist" ? "artist" : "label",
-      phase: "processing_release",
+    const releaseTelemetryMeta = {
       releaseId: nextRelease.id,
       releaseTitle: nextRelease.title,
+    } as const;
+    const writeReleaseSyncTelemetry = (
+      input: Omit<
+        Parameters<typeof writeSourceSyncTelemetry>[0],
+        "releaseId" | "releaseTitle"
+      >,
+    ) =>
+      writeSourceSyncTelemetry({
+        ...releaseTelemetryMeta,
+        ...input,
+      });
+    const writeTrackMatchTelemetry = (track: { id: number; title: string }, trackIndex: number, trackTotal: number) =>
+      writeReleaseSyncTelemetry({
+        phase: "matching_track",
+        trackId: track.id,
+        trackTitle: track.title,
+        trackIndex,
+        trackTotal,
+        message: `Matching track ${trackIndex}/${trackTotal}`,
+      });
+
+    await writeReleaseSyncTelemetry({
+      phase: "processing_release",
       message: `Processing release: ${nextRelease.title}`,
-      updatedAt: Date.now(),
     });
     const releaseDetails = await fetchDiscogsRelease(nextRelease.id);
     try {
@@ -362,7 +385,7 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
 
     const trackRows = releaseDetails.tracklist.filter((item) => item.title?.trim());
     for (const track of trackRows) {
-      await db.insert(tracks).values({
+      await ensureTrackForUser({
         userId,
         releaseId: nextRelease.id,
         position: track.position || "",
@@ -389,20 +412,7 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
     let matchedCount = 0;
 
     for (const [trackIndex, track] of releaseTracks.entries()) {
-      await writeSyncTelemetry(userId, {
-        sourceId,
-        sourceName: source.name,
-        sourceKind: source.entityKind === "artist" ? "artist" : "label",
-        phase: "matching_track",
-        releaseId: nextRelease.id,
-        releaseTitle: nextRelease.title,
-        trackId: track.id,
-        trackTitle: track.title,
-        trackIndex: trackIndex + 1,
-        trackTotal: releaseTracks.length,
-        message: `Matching track ${trackIndex + 1}/${releaseTracks.length}`,
-        updatedAt: Date.now(),
-      });
+        await writeTrackMatchTelemetry(track, trackIndex + 1, releaseTracks.length);
       try {
         const seededMatchesRaw = [
           ...(discogsTrackMatches.get(track.id) ?? []),
@@ -413,20 +423,14 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
         );
 
         if (seededMatches.length > 0) {
-          await db.delete(youtubeMatches).where(and(eq(youtubeMatches.trackId, track.id), scope.youtubeMatches));
-          for (const [index, match] of seededMatches.entries()) {
-            await db.insert(youtubeMatches).values({
-              userId,
-              trackId: track.id,
-              videoId: match.videoId,
-              title: match.title,
-              channelTitle: match.channelTitle,
-              score: match.score,
-              embeddable: true,
-              chosen: index === 0,
-              fetchedAt: new Date(),
-            });
-          }
+          await replaceTrackYoutubeMatches(userId, track.id, seededMatches.map((match, index) => ({
+            videoId: match.videoId,
+            title: match.title,
+            channelTitle: match.channelTitle,
+            score: match.score,
+            embeddable: true,
+            chosen: index === 0,
+          })));
 
           matchedCount += 1;
           const chosenVideoId = seededMatches[0]?.videoId;
@@ -441,15 +445,13 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
           });
 
           if (!existing) {
-            await db.insert(queueItems).values({
+            await ensurePendingTrackQueueItem({
               userId,
               youtubeVideoId: chosenVideoId,
               trackId: track.id,
               releaseId: nextRelease.id,
               labelId: sourceId,
               source: seededMatches[0]?.source === "bandcamp" ? "bandcamp_track_video" : "discogs_track_video",
-              status: "pending",
-              addedAt: new Date(),
             });
           }
           continue;
@@ -489,68 +491,42 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
       })
       .where(and(eq(releases.id, nextRelease.id), scope.releases));
 
-    await db
-      .update(labels)
-      .set({
-        status: "processing",
-        updatedAt: new Date(),
-        lastError: null,
-      })
-      .where(and(eq(labels.id, sourceId), scope.labels));
+    await updateProcessingSourceState({
+      status: "processing",
+      lastError: null,
+    });
 
-    await writeSyncTelemetry(userId, {
-      sourceId,
-      sourceName: source.name,
-      sourceKind: source.entityKind === "artist" ? "artist" : "label",
+    await writeReleaseSyncTelemetry({
       phase: "queued",
-      releaseId: nextRelease.id,
-      releaseTitle: nextRelease.title,
       trackTotal: releaseTracks.length,
       message: `Processed ${nextRelease.title}`,
-      updatedAt: Date.now(),
     });
     return { done: false, message: `Processed ${nextRelease.title}` };
   } catch (error) {
     const message = safeErrorMessage(error);
     console.error(`[source-sync] source=${sourceId} name="${source.name}" status=${source.status} error=${message}`);
     if (isTransientDatabaseError(error)) {
-      await db
-        .update(labels)
-        .set({
-          status: "processing",
-          lastError: null,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(labels.id, sourceId), scope.labels));
+      await updateProcessingSourceState({
+        status: "processing",
+        lastError: null,
+      });
 
-      await writeSyncTelemetry(userId, {
-        sourceId,
-        sourceName: source.name,
-        sourceKind: source.entityKind === "artist" ? "artist" : "label",
+      await writeSourceSyncTelemetry({
         phase: "processing_release",
         message: "Transient database contention, retrying",
-        updatedAt: Date.now(),
       });
       return { done: false, message: "Temporary database contention. Retrying…" };
     }
 
-    await db
-      .update(labels)
-      .set({
-        status: "error",
-        retryCount: source.retryCount + 1,
-        lastError: message,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(labels.id, sourceId), scope.labels));
+    await updateProcessingSourceState({
+      status: "error",
+      lastError: message,
+      retryCount: source.retryCount + 1,
+    });
 
-    await writeSyncTelemetry(userId, {
-      sourceId,
-      sourceName: source.name,
-      sourceKind: source.entityKind === "artist" ? "artist" : "label",
+    await writeSourceSyncTelemetry({
       phase: "error",
       message,
-      updatedAt: Date.now(),
     });
     return { done: false, message: `Error: ${message}` };
   } finally {
@@ -570,38 +546,28 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
 
 export async function chooseTrackMatch(trackId: number, youtubeMatchId: number, userId: string) {
   const scope = userScope(userId);
-  const match = await db.query.youtubeMatches.findFirst({ where: and(eq(youtubeMatches.id, youtubeMatchId), scope.youtubeMatches) });
+  const match = await selectTrackYoutubeMatch(userId, trackId, youtubeMatchId, { embeddableOnly: true });
   if (!match) throw new Error("Match not found");
-
-  await db.update(youtubeMatches).set({ chosen: false }).where(and(eq(youtubeMatches.trackId, trackId), scope.youtubeMatches));
-  await db.update(youtubeMatches).set({ chosen: true }).where(and(eq(youtubeMatches.id, youtubeMatchId), scope.youtubeMatches));
 
   const track = await db.query.tracks.findFirst({ where: and(eq(tracks.id, trackId), scope.tracks) });
   if (!track) return;
 
   const release = await db.query.releases.findFirst({ where: and(eq(releases.id, track.releaseId), scope.releases) });
-
-  const existing = await db.query.queueItems.findFirst({ where: and(eq(queueItems.trackId, trackId), eq(queueItems.status, "pending"), scope.queueItems) });
-  if (!existing) {
-    await db.insert(queueItems).values({
-      userId,
-      youtubeVideoId: match.videoId,
-      trackId,
-      releaseId: track.releaseId,
-      labelId: release?.labelId ?? null,
-      source: "manual_override",
-      status: "pending",
-      addedAt: new Date(),
-    });
-    await logFeedbackEvent({
-      eventType: "queued",
-      source: "manual_override",
-      trackId,
-      releaseId: track.releaseId,
-      labelId: release?.labelId ?? null,
-      userId,
-    });
-  }
+  const existing = await db.query.queueItems.findFirst({
+    where: and(eq(queueItems.trackId, trackId), eq(queueItems.status, "pending"), scope.queueItems),
+    columns: { priority: true, bumpedAt: true },
+  });
+  await enqueuePendingTrackForUser({
+    userId,
+    youtubeVideoId: match.videoId,
+    trackId,
+    releaseId: track.releaseId,
+    labelId: release?.labelId ?? null,
+    queueSource: "manual_override",
+    feedbackSource: "manual_override",
+    priority: existing?.priority ?? 0,
+    bumpedAt: existing?.bumpedAt ?? null,
+  });
 }
 
 export async function nextQueueItem(
@@ -664,44 +630,37 @@ export async function toggleTrackTodo(trackId: number, field: "listened" | "save
   const scope = userScope(userId);
   const track = await db.query.tracks.findFirst({ where: and(eq(tracks.id, trackId), scope.tracks) });
   if (!track) return;
+  const mutation = planTrackTodoMutation(track, field, "toggle");
 
   if (field === "listened") {
-    const nextValue = !track.listened;
-    await db.update(tracks).set({ listened: nextValue }).where(and(eq(tracks.id, trackId), scope.tracks));
-    if (nextValue) {
-      await db
-        .update(queueItems)
-        .set({ status: "played" })
-        .where(and(eq(queueItems.trackId, trackId), eq(queueItems.status, "pending"), scope.queueItems));
-      await logFeedbackEvent({ eventType: "listened", source: "toggle_track_todo", trackId, releaseId: track.releaseId, userId });
-    }
-  } else {
-    const nextSaved = !track.saved;
-    await db
-      .update(tracks)
-      .set({ saved: nextSaved })
-      .where(and(eq(tracks.id, trackId), scope.tracks));
-    await logFeedbackEvent({
-      eventType: nextSaved ? "saved_add" : "saved_remove",
-      source: "toggle_track_todo",
-      trackId,
-      releaseId: track.releaseId,
+    await applyTrackListenedMutationsForUser({
       userId,
+      source: "toggle_track_todo",
+      mutations: [mutation],
+    });
+  } else {
+    await applyTrackSavedMutationsForUser({
+      userId,
+      source: "toggle_track_todo",
+      mutations: [mutation],
     });
   }
 }
 
 export async function toggleReleaseWishlist(releaseId: number, userId: string) {
-  const scope = userScope(userId);
-  const release = await db.query.releases.findFirst({ where: and(eq(releases.id, releaseId), scope.releases) });
-  if (!release) return;
-  const nextWishlist = !release.wishlist;
-  await db.update(releases).set({ wishlist: nextWishlist }).where(and(eq(releases.id, releaseId), scope.releases));
-  try {
-    await setDiscogsReleaseWishlist(releaseId, nextWishlist);
-  } catch {
-    // Keep local state even if external sync fails.
-  }
+  const result = await updateReleaseWishlistForUser({
+    userId,
+    requestedReleaseId: releaseId,
+    mode: "toggle",
+    feedbackSource: "action_toggle_release",
+  });
+  return {
+    nextWishlist: result.nextWishlist,
+    affectedReleaseIds: result.affectedReleaseIds,
+    primaryLocalReleaseId: result.primaryLocalReleaseId,
+    primaryLabelId: result.primaryLabelId,
+    externalDiscogsReleaseId: result.externalDiscogsReleaseId,
+  };
 }
 
 export async function upNext(userId: string, limit = 20) {

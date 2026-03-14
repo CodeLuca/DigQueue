@@ -15,25 +15,21 @@ import {
   PlayCircle,
   RefreshCcw,
 } from "lucide-react";
-import {
-  addSourceAction,
-  clearStaleWorkerLocksAction,
-  pauseAndClearSpecificSourcesAction,
-  pauseAllActiveSourcesAction,
-  pullDiscogsWantsAction,
-  refreshLabelMetadataAction,
-  refreshSpecificSourcesMetadataAction,
-  startSyncAction,
-  retryErroredLabelsAction,
-  retrySpecificSourcesAction,
-  retryLabelAction,
-} from "@/app/actions";
+import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { DiscogsLink } from "@/components/discogs-link";
 import { LabelDeleteButton } from "@/components/label-delete-button";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
-import { FormSubmitButton } from "@/components/form-submit-button";
+import { ManualWishlistSyncButton } from "@/components/manual-wishlist-sync-button";
+import { ExternalLinkRow } from "@/components/external-link-row";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
+import { SegmentedControlLink } from "@/components/segmented-control-button";
+import { SourceRemediationButton } from "@/components/source-remediation-button";
+import { SourceIntakeForm } from "@/components/source-intake-form";
+import { SourceRefreshButton } from "@/components/source-refresh-button";
+import { SourceRetryButton } from "@/components/source-retry-button";
+import { SourceSyncControlButton } from "@/components/source-sync-control-button";
 import { SyncSavedToDiscogsButton } from "@/components/sync-saved-to-discogs-button";
 import { SourceSyncStatus } from "@/components/source-sync-status";
 import { YoutubePlaylistExportButton } from "@/components/youtube-playlist-export-button";
@@ -45,40 +41,20 @@ import { Input } from "@/components/ui/input";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
-import { toDiscogsWebUrl } from "@/lib/discogs-links";
 import { getDiscogsWantsSyncStatus } from "@/lib/discogs-wants-sync";
+import { buildOnboardingHealth } from "@/lib/onboarding-health";
 import { getDashboardData, getPlayedReviewedData, getToListenData, getWishlistData } from "@/lib/queries";
+import { resolveSourceDisplayName } from "@/lib/source-display";
+import { getSourceKindLabel, toSourceKind } from "@/lib/source-kind";
 import {
   getFailureCategoryMeta,
   groupSourceFailuresByCategory,
   summarizeFailureProviders,
   summarizeFailureSourceKinds,
 } from "@/lib/source-failures";
-import { readSyncTelemetry } from "@/lib/sync-telemetry";
-import { getVisibleLabelError, isTransientLabelError } from "@/lib/utils";
+import { getEffectiveSourceStatus, getSourceViewModel, getSourceVisibleError } from "@/lib/source-view";
 import { getYoutubeOAuthConnectionStatus } from "@/lib/youtube-oauth";
-
-function normalizeLabelStatus(active: boolean, status: string, lastError: string | null) {
-  if (!active && status === "processing") return "paused";
-  if (status === "error" && isTransientLabelError(lastError)) return "processing";
-  return status;
-}
-
-function getDisplaySourceName(name: string, discogsUrl: string, kind: "label" | "artist") {
-  const trimmedName = (name || "").trim();
-  if (trimmedName && !/^https?:\/\//i.test(trimmedName)) return trimmedName;
-  try {
-    const parsed = new URL(discogsUrl);
-    const match = parsed.pathname.match(/\/(?:label|artist)\/\d+-([^/?#]+)/i);
-    if (match?.[1]) {
-      const slug = decodeURIComponent(match[1]).replace(/[-_]+/g, " ").trim();
-      if (slug) return slug;
-    }
-  } catch {
-    // Fall through to generic fallback.
-  }
-  return kind === "artist" ? "Artist source" : "Label source";
-}
+import { buildDiscogsConnectPath } from "@/lib/auth-provider-paths";
 
 export default async function HomePage({
   searchParams,
@@ -96,10 +72,29 @@ export default async function HomePage({
     remScope?: string;
     remAffected?: string;
     remFailed?: string;
+    remCategory?: string;
+    remSourceCount?: string;
+    remSourcePreview?: string;
   }>;
 }) {
-  const userId = await requireCurrentAppUserId();
-  const { listenLabel, tab, labelState, sourceKind, labelQuery, libraryView, notice, source, remAction, remScope, remAffected, remFailed } = await searchParams;
+  await requireCurrentAppUserId();
+  const {
+    listenLabel,
+    tab,
+    labelState,
+    sourceKind,
+    labelQuery,
+    libraryView,
+    notice,
+    source,
+    remAction,
+    remScope,
+    remAffected,
+    remFailed,
+    remCategory,
+    remSourceCount,
+    remSourcePreview,
+  } = await searchParams;
   const tabIds = ["step-1", "step-2", "library", "recommendations"] as const;
   type TabId = (typeof tabIds)[number];
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
@@ -163,46 +158,19 @@ export default async function HomePage({
   const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
   const showWishlistHeaderPill = hasDiscogs && activeTab === "recommendations";
   const hasAnySources = data.labels.length > 0;
-  const showOnboarding = !hasDiscogs || !hasAnySources;
-  const onboardingPrimaryHref = !hasDiscogs ? "/connect-discogs?next=/" : "/?tab=step-1";
-  const onboardingPrimaryLabel = !hasDiscogs ? "Connect Discogs" : "Open Sources";
 
   const isLabelsTab = activeTab === "step-1";
   const canProcess = hasDiscogs;
   const useSimpleSourcesView = data.labels.length <= 3 && !normalizedLabelQuery && selectedLabelState === "all" && selectedSourceKind === "all";
   const activeLabels = data.labels.filter((label) => label.active);
-  const processingSourceNames = activeLabels
-    .filter((label) => {
-      const normalized = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
-      const effective = label.tracksFullyLoaded ? "complete" : normalized;
-      return effective === "processing";
-    })
-    .map((label) => label.name)
-    .slice(0, 3);
-  const processingSourceProgress = activeLabels
-    .filter((label) => {
-      const normalized = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
-      const effective = label.tracksFullyLoaded ? "complete" : normalized;
-      return effective === "processing";
-    })
-    .map((label) => {
-      const totalPages = Math.max(1, Number(label.totalPages ?? 1));
-      const currentPage = Math.min(totalPages, Math.max(1, Number(label.currentPage ?? 1)));
-      return {
-        id: label.id,
-        name: label.name,
-        currentPage,
-        totalPages,
-        fetchedReleaseCount: label.fetchedReleaseCount,
-        loadedReleaseCount: label.loadedReleaseCount,
-      };
-    })
-    .slice(0, 4);
-  const syncTelemetry = await readSyncTelemetry(userId).catch(() => null);
   const activeStatusCounts = activeLabels.reduce(
     (acc, label) => {
-      const normalized = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
-      const effective = label.tracksFullyLoaded ? "complete" : normalized;
+      const effective = getEffectiveSourceStatus({
+        active: Boolean(label.active),
+        status: label.status,
+        lastError: label.lastError,
+        tracksFullyLoaded: label.tracksFullyLoaded,
+      });
       if (effective === "queued") acc.queued += 1;
       else if (effective === "processing") acc.processing += 1;
       else if (effective === "error") acc.error += 1;
@@ -215,13 +183,23 @@ export default async function HomePage({
   );
   const queuedSources = activeLabels
     .filter((label) => {
-      const normalized = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
-      const effective = label.tracksFullyLoaded ? "complete" : normalized;
-      return effective === "queued";
+      return getEffectiveSourceStatus({
+        active: Boolean(label.active),
+        status: label.status,
+        lastError: label.lastError,
+        tracksFullyLoaded: label.tracksFullyLoaded,
+      }) === "queued";
     })
     .sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime());
   const nextQueuedSource = queuedSources[0] ?? null;
-  const queuedPreviewNames = queuedSources.slice(0, 3).map((label) => getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label"));
+  const queuedPreviewNames = queuedSources.slice(0, 3).map((label) =>
+    resolveSourceDisplayName({
+      name: label.name,
+      discogsUrl: label.discogsUrl,
+      kind: toSourceKind(label.entityKind),
+      externalDiscogsId: label.externalDiscogsId,
+    }),
+  );
   const pausedSourceCount = data.labels.filter((label) => !label.active && label.status === "paused").length;
   const retryableActiveSourceCount = activeLabels.filter((label) => label.status === "error").length;
   const showIngestionPanelOpen =
@@ -284,7 +262,9 @@ export default async function HomePage({
   })();
   const remediationAffectedCount = Number(remAffected);
   const remediationFailedCount = Number(remFailed);
+  const remediationSourceCount = Number(remSourceCount);
   const remediationHasFailures = Number.isFinite(remediationFailedCount) && remediationFailedCount > 0;
+  const remediationHasSources = Number.isFinite(remediationSourceCount) && remediationSourceCount > 0;
   const showRemediationSummary =
     activeTab === "step-2" &&
     Boolean(remAction) &&
@@ -307,15 +287,12 @@ export default async function HomePage({
   );
   const totalSavedCount = libraryRows.length;
   const playableSavedCount = libraryRows.filter((row) => row.saved && Boolean(row.youtubeVideoId)).length;
-  const youtubeOAuth =
-    activeTab === "library"
-      ? await getYoutubeOAuthConnectionStatus()
-      : { configured: false, connected: false, channelId: null, channelTitle: null, scope: null };
+  const youtubeOAuth = await getYoutubeOAuthConnectionStatus();
   const historyCount = historyRows.length;
   const reviewedCount = reviewedRows.length;
   const needsReviewCount = needsReviewRows.length;
   const totalWishlistedRecords = data.metrics.wishlistedRecords;
-  const failureGroups = groupSourceFailuresByCategory(data.erroredLabels, (label) => getVisibleLabelError(label.lastError) || "Unknown source failure.");
+  const failureGroups = groupSourceFailuresByCategory(data.erroredLabels, (label) => getSourceVisibleError(label.lastError) || "Unknown source failure.");
   const failureCategorySummary = failureGroups.map((group) => ({
     category: group.category,
     count: group.items.length,
@@ -323,32 +300,101 @@ export default async function HomePage({
   }));
   const failureKindSummary = summarizeFailureSourceKinds(
     data.erroredLabels,
-    (label) => (label.entityKind === "artist" ? "artist" : "label"),
+    (label) => toSourceKind(label.entityKind),
   );
   const failureProviderSummary = summarizeFailureProviders(
     data.erroredLabels,
-    (label) => getVisibleLabelError(label.lastError) || "",
+    (label) => getSourceVisibleError(label.lastError) || "",
   );
+  const activeSourceCount = data.labels.filter((label) => label.active).length;
+  const onboardingHealth = buildOnboardingHealth({
+    discogsConnected: hasDiscogs,
+    youtubeOAuthConfigured: youtubeOAuth.configured,
+    youtubeOAuthConnected: youtubeOAuth.connected,
+    sourceCount: data.labels.length,
+    activeSourceCount,
+    erroredSourceCount: data.metrics.labelsErrored,
+    queueCount: data.queueCount,
+  });
+  const showOnboarding = onboardingHealth.tone !== "ready";
+  const onboardingToneClass =
+    onboardingHealth.tone === "blocked"
+      ? "border-rose-500/60 bg-rose-500/10 text-rose-200"
+      : "border-amber-500/60 bg-amber-500/10 text-amber-200";
+  const listeningEmptyState = !hasDiscogs
+    ? {
+        title: "Connect Discogs to start listening",
+        detail: "DigQueue needs Discogs personal OAuth before it can ingest sources and build the queue.",
+        actionHref: buildDiscogsConnectPath("/"),
+        actionLabel: "Connect Discogs",
+      }
+    : activeLabels.length === 0
+      ? {
+          title: "Add or resume an active source",
+          detail: "Listening Station is empty because there are no active sources feeding the queue right now.",
+          actionHref: "/?tab=step-1",
+          actionLabel: "Open Sources",
+        }
+      : (listenData?.rows?.length ?? 0) === 0
+        ? {
+            title: "Run sync to load tracks",
+            detail: "Your sources exist, but no playable tracks are loaded yet. Start or resume sync, then return here.",
+            actionHref: "/?tab=step-1",
+            actionLabel: "Check source sync",
+          }
+        : undefined;
+  const libraryItemsEmptyState = !hasDiscogs
+    ? {
+        title: "Connect Discogs to fill Library",
+        detail: "Library imports and wishlist sync depend on Discogs personal OAuth.",
+        actionHref: buildDiscogsConnectPath("/"),
+        actionLabel: "Connect Discogs",
+      }
+    : totalSavedCount === 0 && totalWishlistedRecords === 0
+      ? {
+          title: "Library is empty for now",
+          detail: "Save tracks while listening or import recent Discogs wants to give Library something to work with.",
+          actionHref: "/?tab=step-2",
+          actionLabel: "Open Listening Station",
+        }
+      : undefined;
+  const reviewedEmptyState =
+    selectedLibraryView === "reviewed"
+      ? {
+          title: "No reviewed tracks yet",
+          detail: "Use the single-check or double-check actions while listening, and reviewed items will land here.",
+          actionHref: "/?tab=step-2",
+          actionLabel: "Start reviewing",
+        }
+      : selectedLibraryView === "needs-review"
+        ? {
+            title: "Nothing needs review right now",
+            detail: "You have cleared the current backlog. Keep listening and come back when more played tracks need a decision.",
+            actionHref: "/?tab=step-2",
+            actionLabel: "Open Listening Station",
+          }
+        : {
+            title: "No history yet",
+            detail: "Play a few tracks from Listening Station and your play history will show up here.",
+            actionHref: "/?tab=step-2",
+            actionLabel: "Start listening",
+          };
   const renderSourceCard = (label: (typeof data.labels)[number]) => {
-    const displayName = getDisplaySourceName(label.name, label.discogsUrl, label.entityKind === "artist" ? "artist" : "label");
-    const visibleLastError = getVisibleLabelError(label.lastError);
-    const normalizedStatusRaw = normalizeLabelStatus(Boolean(label.active), label.status, label.lastError);
-    const normalizedStatus = label.tracksFullyLoaded ? "complete" : normalizedStatusRaw;
+    const displayName = resolveSourceDisplayName({
+      name: label.name,
+      discogsUrl: label.discogsUrl,
+      kind: toSourceKind(label.entityKind),
+      externalDiscogsId: label.externalDiscogsId,
+    });
+    const sourceView = getSourceViewModel({
+      active: Boolean(label.active),
+      status: label.status,
+      lastError: label.lastError,
+      tracksFullyLoaded: label.tracksFullyLoaded,
+    });
     const totalLoadedReleases = Math.max(0, label.loadedReleaseCount);
     const fetchedReleases = Math.max(0, label.fetchedReleaseCount);
     const progressPct = totalLoadedReleases > 0 ? Math.min(100, Math.round((fetchedReleases / totalLoadedReleases) * 100)) : 0;
-    const statusLabel =
-      normalizedStatus === "processing"
-        ? "Processing"
-        : normalizedStatus === "queued"
-          ? "Queued"
-          : normalizedStatus === "error"
-            ? "Error"
-            : normalizedStatus === "paused"
-              ? "Paused"
-              : normalizedStatus === "complete"
-                ? "Complete"
-                : normalizedStatus;
     const needsSourceInfoRefresh = !label.imageUrl || !label.blurb || label.notableReleasesJson === "[]";
     return (
       <div
@@ -378,56 +424,40 @@ export default async function HomePage({
             <div className="min-w-0">
               <Link href={`/labels/${label.id}`} className="line-clamp-1 text-sm font-medium hover:text-[var(--color-accent)]">{displayName}</Link>
               <p className="mt-1 text-xs text-[var(--color-muted)]">
-                {fetchedReleases}/{totalLoadedReleases} releases • {progressPct}% • {label.loadedTrackCount} tracks
+                {fetchedReleases}/{totalLoadedReleases} rel • {progressPct}% • {label.loadedTrackCount} tracks
               </p>
               <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface)]">
                 <div
-                  className={`h-full transition-all ${normalizedStatus === "error" ? "bg-rose-400/80" : "bg-emerald-400/80"}`}
+                  className={`h-full transition-all ${sourceView.effectiveStatus === "error" ? "bg-rose-400/80" : "bg-emerald-400/80"}`}
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <Badge className="border-[var(--color-border)] text-[10px] uppercase">{label.entityKind === "artist" ? "Artist" : "Label"}</Badge>
+            <Badge className="border-[var(--color-border)] text-[10px] uppercase">{getSourceKindLabel(label.entityKind)}</Badge>
             {label.active ? (
               <Badge className="border-emerald-500/70 bg-emerald-500/15 text-emerald-200">ACTIVE</Badge>
             ) : (
               <Badge className="border-zinc-600/40 text-zinc-400">inactive</Badge>
             )}
-            <Badge className={normalizedStatus === "error" ? "border-rose-500/60 text-rose-200" : ""}>{statusLabel}</Badge>
+            <Badge className={sourceView.effectiveStatus === "error" ? "border-rose-500/60 text-rose-200" : ""}>{sourceView.statusLabel}</Badge>
           </div>
         </div>
-        {visibleLastError ? <p className="mt-2 line-clamp-2 text-xs text-red-300">Error: {visibleLastError}</p> : null}
+        {sourceView.visibleError ? <p className="mt-2 line-clamp-2 text-xs text-red-300">Error: {sourceView.visibleError}</p> : null}
         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <a
-              className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-              href={toDiscogsWebUrl(label.discogsUrl, "")}
-              target="_blank"
-              rel="noreferrer"
-              title="Open on Discogs"
-              aria-label="Open on Discogs"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            <DiscogsLink discogsUrl={label.discogsUrl} title="Open on Discogs" />
             {!label.tracksFullyLoaded ? (
-              <form action={retryLabelAction}>
-                <input type="hidden" name="labelId" value={label.id} />
-                <FormSubmitButton
-                  type="submit"
-                  size="sm"
-                  variant="outline"
-                  disabled={!canProcess || normalizedStatus === "processing"}
-                  pendingText="Syncing..."
-                  title="Sync this source now"
-                >
-                  {normalizedStatus === "processing" ? "Syncing..." : normalizedStatus === "queued" ? "Queued..." : "Sync now"}
-                </FormSubmitButton>
-              </form>
+              <SourceRetryButton
+                labelId={label.id}
+                canProcess={canProcess}
+                processing={sourceView.effectiveStatus === "processing"}
+                queued={sourceView.effectiveStatus === "queued"}
+              />
             ) : null}
             <p className="text-xs text-[var(--color-muted)]">
-              Updated {new Date(label.updatedAt).toLocaleDateString()} • Retries {label.retryCount}
+              Updated {new Date(label.updatedAt).toLocaleDateString()} • Retry {label.retryCount}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -444,15 +474,7 @@ export default async function HomePage({
           <summary className="cursor-pointer select-none text-[11px] uppercase tracking-[0.06em] text-[var(--color-muted)]">Details</summary>
           <p className="mt-2 line-clamp-2">{label.summaryText}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {needsSourceInfoRefresh ? (
-              <form action={refreshLabelMetadataAction}>
-                <input type="hidden" name="labelId" value={label.id} />
-                <FormSubmitButton type="submit" size="sm" variant="ghost" pendingText="Refreshing..." title="Refresh this source profile, image, and notable releases">
-                  <RefreshCcw className="mr-1 h-3.5 w-3.5" />
-                  Refresh source info
-                </FormSubmitButton>
-              </form>
-            ) : null}
+            {needsSourceInfoRefresh ? <SourceRefreshButton labelId={label.id} /> : null}
             <LabelDeleteButton labelId={label.id} labelName={label.name} />
           </div>
           {label.notableReleasesJson !== "[]" ? (
@@ -512,6 +534,7 @@ export default async function HomePage({
   const activeGuide = tabGuide[activeTab];
   return (
     <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-4 sm:px-4 md:px-8 md:py-6">
+      <ClientRouteRefreshBridge />
       <KeyboardShortcuts />
 
       <header className={`mb-5 rounded-xl border border-[var(--color-border)] p-4 reveal ${activeGuide.shellClass}`}>
@@ -543,12 +566,24 @@ export default async function HomePage({
       {showOnboarding ? (
         <section className="mb-5 reveal reveal-delay-1">
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Quick Start</p>
-            <p className="mt-1 text-sm">
-              {!hasDiscogs
-                ? "Connect Discogs first. After that, add or pull sources and start listening."
-                : "You are connected. Add your first source (or import recent wishlist records) to start building the queue."}
-            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">What To Do Next</p>
+                <div className="mt-2">
+                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${onboardingToneClass}`}>
+                    {onboardingHealth.label}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm font-medium">{onboardingHealth.title}</p>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">{onboardingHealth.summary}</p>
+              </div>
+              <div className="grid gap-1 text-xs text-[var(--color-muted)] sm:text-right">
+                <p>Discogs: <span className="mono">{hasDiscogs ? "connected" : "not connected"}</span></p>
+                <p>Sources: <span className="mono">{data.labels.length}</span></p>
+                <p>Active: <span className="mono">{activeSourceCount}</span></p>
+                <p>Queue-ready: <span className="mono">{data.queueCount}</span></p>
+              </div>
+            </div>
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge className={hasDiscogs ? "border-emerald-600/60 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
                 Discogs {hasDiscogs ? "Connected" : "Not Connected"}
@@ -556,22 +591,23 @@ export default async function HomePage({
               <Badge className={hasAnySources ? "border-emerald-600/60 text-emerald-300" : "border-amber-600/50 text-amber-300"}>
                 Sources {hasAnySources ? `${data.labels.length} Loaded` : "None Yet"}
               </Badge>
+              <Badge className={data.metrics.labelsErrored > 0 ? "border-amber-600/50 text-amber-300" : "border-emerald-600/60 text-emerald-300"}>
+                Errors {data.metrics.labelsErrored}
+              </Badge>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Link href={onboardingPrimaryHref}>
-                <Button type="button">{onboardingPrimaryLabel}</Button>
-              </Link>
+              {onboardingHealth.nextSteps.map((step, index) => (
+                <Link key={step.href + step.label} href={step.href}>
+                  <Button type="button" variant={index === 0 ? "default" : "outline"}>{step.label}</Button>
+                </Link>
+              ))}
               {hasDiscogs && !hasAnySources ? (
-                <form action={pullDiscogsWantsAction}>
-                  <FormSubmitButton
-                    type="submit"
-                    variant="outline"
-                    pendingText="Importing..."
-                    title="Imports your most recent 200 Discogs wants into Library. Does not auto-activate sources."
-                  >
-                    Import recent wishlist records
-                  </FormSubmitButton>
-                </form>
+                <ManualWishlistSyncButton enabled importLabel />
+              ) : null}
+              {onboardingHealth.optionalStep ? (
+                <Link href={onboardingHealth.optionalStep.href}>
+                  <Button type="button" variant="ghost">{onboardingHealth.optionalStep.label}</Button>
+                </Link>
               ) : null}
               <Link href="/how-to-use">
                 <Button type="button" variant="ghost">How to use</Button>
@@ -666,7 +702,7 @@ export default async function HomePage({
                       ? "YouTube key is blocked. Processing still works via Discogs release videos where available."
                       : "Connect Discogs to enable ingestion. YouTube is an optional fallback for releases without Discogs videos."}
                   </p>
-                  <Link href="/connect-discogs?next=/" className="mt-2 inline-block text-xs text-[var(--color-accent)] hover:underline">Connect Discogs</Link>
+                  <Link href={buildDiscogsConnectPath("/")} className="mt-2 inline-block text-xs text-[var(--color-accent)] hover:underline">Connect Discogs</Link>
                 </div>
               ) : null}
               {notice ? (
@@ -676,13 +712,10 @@ export default async function HomePage({
                 </div>
               ) : null}
 
-              <form action={addSourceAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input id="label-input" name="source" placeholder="Paste Discogs source URL, ID, or name (label or artist)" required />
-                <FormSubmitButton type="submit" pendingText="Adding...">Add Source</FormSubmitButton>
-              </form>
+              <SourceIntakeForm />
               <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5 text-xs text-[var(--color-muted)]">
-                <p><span className="font-medium text-[var(--color-text)]">Label source:</span> pull from a label catalog for tighter stylistic consistency.</p>
-                <p className="mt-1"><span className="font-medium text-[var(--color-text)]">Artist source:</span> follow a producer across multiple labels/releases for broader discovery.</p>
+                <p><span className="font-medium text-[var(--color-text)]">Label:</span> tighter label-led digging.</p>
+                <p className="mt-1"><span className="font-medium text-[var(--color-text)]">Artist:</span> broader cross-label discovery.</p>
               </div>
               <details className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5" open={showIngestionPanelOpen}>
                 <summary className="cursor-pointer list-none">
@@ -713,45 +746,30 @@ export default async function HomePage({
                 </summary>
                 <div className="mt-2 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {activeStatusCounts.processing > 0 || activeStatusCounts.queued > 0 ? (
-                    <form action={pauseAllActiveSourcesAction}>
-                      <FormSubmitButton
-                        type="submit"
-                        size="sm"
-                        variant="secondary"
-                        pendingText="Pausing..."
-                        title="Pause source sync."
-                        disabled={!canProcess || activeLabels.length <= 0}
-                      >
-                        Pause sync
-                      </FormSubmitButton>
-                    </form>
+                    <SourceSyncControlButton
+                      action="pause"
+                      compact
+                      variant="secondary"
+                      title="Pause source sync."
+                      disabled={!canProcess || activeLabels.length <= 0}
+                    />
                   ) : (
-                    <form action={startSyncAction}>
-                      <FormSubmitButton
-                        type="submit"
-                        size="sm"
-                        variant="secondary"
-                        pendingText="Starting..."
-                        title="Resume paused sources and queue active sources."
-                        disabled={!canProcess || (activeLabels.length <= 0 && pausedSourceCount <= 0)}
-                      >
-                        Start sync
-                      </FormSubmitButton>
-                    </form>
+                    <SourceSyncControlButton
+                      action="start"
+                      compact
+                      variant="secondary"
+                      title="Resume paused sources and queue active sources."
+                      disabled={!canProcess || (activeLabels.length <= 0 && pausedSourceCount <= 0)}
+                    />
                   )}
                   {activeStatusCounts.error > 0 ? (
-                    <form action={retryErroredLabelsAction}>
-                      <FormSubmitButton
-                        type="submit"
-                        size="sm"
-                        variant="outline"
-                        pendingText="Retrying..."
-                        title="Move errored sources back to queue."
-                        disabled={!canProcess}
-                      >
-                        Retry errors
-                      </FormSubmitButton>
-                    </form>
+                    <SourceSyncControlButton
+                      action="retry_errors"
+                      compact
+                      variant="outline"
+                      title="Move errored sources back to queue."
+                      disabled={!canProcess}
+                    />
                   ) : null}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
@@ -760,120 +778,34 @@ export default async function HomePage({
                 </div>
                 {nextQueuedSource && activeStatusCounts.processing === 0 ? (
                   <p className="mt-2 text-xs text-[var(--color-muted)]">
-                    Next in queue: {getDisplaySourceName(nextQueuedSource.name, nextQueuedSource.discogsUrl, nextQueuedSource.entityKind === "artist" ? "artist" : "label")} (1/{activeStatusCounts.queued})
-                    {queuedPreviewNames.length > 1 ? ` - Then: ${queuedPreviewNames.slice(1).join(", ")}` : ""}
+                    Next: {resolveSourceDisplayName({
+                      name: nextQueuedSource.name,
+                      discogsUrl: nextQueuedSource.discogsUrl,
+                      kind: toSourceKind(nextQueuedSource.entityKind),
+                      externalDiscogsId: nextQueuedSource.externalDiscogsId,
+                    })} (1/{activeStatusCounts.queued})
+                    {queuedPreviewNames.length > 1 ? ` • Then ${queuedPreviewNames.slice(1).join(", ")}` : ""}
                   </p>
                 ) : null}
-                <div className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/70 p-2.5 text-xs">
-                  {syncTelemetry?.sourceName ? (
-                    <p className="text-[var(--color-text)]">
-                      Working on: <span className="font-medium">{syncTelemetry.sourceName}</span>
-                    </p>
-                  ) : null}
-                  {syncTelemetry?.releaseTitle ? (
-                    <p className="mt-1 text-[var(--color-muted)]">Release: {syncTelemetry.releaseTitle}</p>
-                  ) : null}
-                  {syncTelemetry?.trackTitle ? (
-                    <p className="mt-1 text-[var(--color-muted)]">
-                      Track: {syncTelemetry.trackTitle}
-                      {typeof syncTelemetry.trackIndex === "number" && typeof syncTelemetry.trackTotal === "number"
-                        ? ` (${syncTelemetry.trackIndex}/${syncTelemetry.trackTotal})`
-                        : ""}
-                    </p>
-                  ) : null}
-                  {processingSourceProgress.length > 0 ? (
-                    <div className="mt-2 space-y-1">
-                      {processingSourceProgress.map((source) => (
-                        <p key={source.id} className="text-[var(--color-muted)]">
-                          {source.name}: {source.fetchedReleaseCount}/{source.loadedReleaseCount} releases
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <details className="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]/40 p-2.5 text-xs">
-                  <summary className="cursor-pointer select-none text-[var(--color-text)]">
-                    Technical details
-                  </summary>
-                  <div className="mt-2">
-                    {processingSourceNames.length > 0 ? (
-                      <p className="text-[var(--color-muted)]">Currently processing: {processingSourceNames.join(", ")}</p>
-                    ) : null}
-                    {processingSourceProgress.length > 0 ? (
-                      <div className="mt-2 space-y-1">
-                        {processingSourceProgress.map((source) => (
-                          <p key={source.id} className="text-[var(--color-muted)]">
-                            {source.name}: page {source.currentPage}/{source.totalPages}, releases {source.fetchedReleaseCount}/{source.loadedReleaseCount} fetched
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-                    {syncTelemetry ? (
-                      <div className="mt-2 space-y-1">
-                        <p className="text-[var(--color-text)]">
-                          Now syncing: {syncTelemetry.sourceName} ({syncTelemetry.sourceKind})
-                        </p>
-                        {syncTelemetry.message ? (
-                          <p className="text-[var(--color-muted)]">{syncTelemetry.message}</p>
-                        ) : null}
-                        {syncTelemetry.releaseTitle ? (
-                          <p className="text-[var(--color-muted)]">Release: {syncTelemetry.releaseTitle}</p>
-                        ) : null}
-                        {syncTelemetry.trackTitle ? (
-                          <p className="text-[var(--color-muted)]">
-                            Track now: {syncTelemetry.trackTitle}
-                            {typeof syncTelemetry.trackIndex === "number" && typeof syncTelemetry.trackTotal === "number"
-                              ? ` (${syncTelemetry.trackIndex}/${syncTelemetry.trackTotal})`
-                              : ""}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
-                </details>
                 <SourceSyncStatus initialProcessingCount={activeStatusCounts.processing} />
                 {!hasDiscogs ? <p className="mt-1 text-xs text-[var(--color-muted)]">Connect Discogs to enable wishlist sync status.</p> : null}
               </details>
               <details className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3" open={!useSimpleSourcesView}>
                 <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">
-                  Advanced options
+                  Filters
                 </summary>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div className="min-w-0">
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Link
-                        href={filterHref("all")}
-                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
-                          selectedLabelState === "all"
-                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                        }`}
-                        title="Show all loaded sources"
-                      >
+                      <SegmentedControlLink active={selectedLabelState === "all"} href={filterHref("all")} title="Show all loaded sources">
                         All ({queriedLabels.length})
-                      </Link>
-                      <Link
-                        href={filterHref("active")}
-                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
-                          selectedLabelState === "active"
-                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                        }`}
-                        title="Show only active sources used for listening"
-                      >
+                      </SegmentedControlLink>
+                      <SegmentedControlLink active={selectedLabelState === "active"} href={filterHref("active")} title="Show only active sources used for listening">
                         Active ({activeFilteredCount})
-                      </Link>
-                      <Link
-                        href={filterHref("inactive")}
-                        className={`inline-flex min-h-9 items-center rounded-md border px-3 py-1.5 text-sm ${
-                          selectedLabelState === "inactive"
-                            ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                            : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                        }`}
-                        title="Show sources currently excluded from processing"
-                      >
+                      </SegmentedControlLink>
+                      <SegmentedControlLink active={selectedLabelState === "inactive"} href={filterHref("inactive")} title="Show sources currently excluded from processing">
                         Inactive ({inactiveFilteredCount})
-                      </Link>
+                      </SegmentedControlLink>
                       <Badge>Label sources {labelSources.length}</Badge>
                       <Badge>Artist sources {artistSources.length}</Badge>
                     </div>
@@ -885,10 +817,13 @@ export default async function HomePage({
                       <Input
                         name="labelQuery"
                         defaultValue={labelQuery || ""}
-                        placeholder="Search sources by name, summary, release tags"
+                        placeholder="Search name, summary, tags"
                         className="w-full sm:max-w-sm"
                       />
-                      <Button type="submit" size="sm" variant="outline">Search</Button>
+                      <Button type="submit" size="sm" variant="outline">
+                        <span className="hidden sm:inline">Search</span>
+                        <span className="sm:hidden">Go</span>
+                      </Button>
                       {normalizedLabelQuery ? (
                         <Link
                           href={clearSearchHref}
@@ -973,11 +908,11 @@ export default async function HomePage({
                           : "border-amber-500/40 bg-amber-500/10 text-amber-100"
                       }`}
                     >
-                      Action{" "}
+                      Ran{" "}
                       <span className={remediationChanged ? "font-medium text-emerald-50" : "font-medium text-amber-50"}>
                         {remAction}
                       </span>{" "}
-                      on{" "}
+                      for{" "}
                       <span className={remediationChanged ? "font-medium text-emerald-50" : "font-medium text-amber-50"}>
                         {remScope}
                       </span>{" "}
@@ -994,6 +929,18 @@ export default async function HomePage({
                         {remediationAffectedCount}
                       </span>{" "}
                       item{remediationAffectedCount === 1 ? "" : "s"}
+                      {remCategory ? (
+                        <>
+                          {" "}for <span className="font-medium uppercase tracking-[0.08em] text-[var(--color-text)]">{remCategory}</span>
+                        </>
+                      ) : null}
+                      {remediationHasSources && remSourcePreview ? (
+                        <>
+                          {" "}across <span className="font-medium text-[var(--color-text)]">{remediationSourceCount}</span> source
+                          {remediationSourceCount === 1 ? "" : "s"}{" "}
+                          (<span className="text-[var(--color-text)]">{remSourcePreview}</span>)
+                        </>
+                      ) : null}
                       {remediationHasFailures ? (
                         <>
                           {" "}with{" "}
@@ -1006,22 +953,21 @@ export default async function HomePage({
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
                     <p className="inline-flex items-center gap-1">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      Failure Center: {data.erroredLabels.length} active {data.erroredLabels.length === 1 ? "source errored" : "sources errored"}.
+                      Failure Center: {data.erroredLabels.length} active error{data.erroredLabels.length === 1 ? "" : "s"}.
                     </p>
-                    <form action={retryErroredLabelsAction}>
-                      <input type="hidden" name="next" value={failureCenterNextHref} />
-                      <FormSubmitButton
-                        type="submit"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-[11px]"
-                        pendingText="Clearing..."
-                        title="Clear error state on all active errored sources; does not run processing"
-                      >
-                        <RefreshCcw className="h-3 w-3" />
-                        Clear all flags
-                      </FormSubmitButton>
-                    </form>
+                    <SourceRemediationButton
+                      action="retry_all_errors"
+                      nextPath={failureCenterNextHref}
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-[11px]"
+                      pendingText="Clearing..."
+                      title="Clear error state on all active errored sources; does not run processing"
+                    >
+                      <RefreshCcw className="h-3 w-3" />
+                      <span className="hidden sm:inline">Clear all flags</span>
+                      <span className="sm:hidden">Clear flags</span>
+                    </SourceRemediationButton>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
@@ -1047,7 +993,7 @@ export default async function HomePage({
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-[10px] text-[var(--color-muted)]">Failures are grouped by likely root cause with a recommended action.</p>
+                  <p className="text-[10px] text-[var(--color-muted)]">Grouped by likely root cause with a recommended action.</p>
                   <div className="space-y-2">
                     {failureGroups.map((group, index) => {
                       const meta = getFailureCategoryMeta(group.category);
@@ -1062,92 +1008,136 @@ export default async function HomePage({
                               <Badge className={meta.className}>{meta.label}</Badge>
                               {group.items.length} source{group.items.length === 1 ? "" : "s"}
                             </span>
-                            <span className="text-[11px] text-[var(--color-muted)]">{meta.hint}</span>
+                            <span className="hidden text-[11px] text-[var(--color-muted)] sm:inline">{meta.hint}</span>
                           </summary>
                           <div className="space-y-2 border-t border-[color-mix(in_oklab,var(--color-border)_55%,transparent)] px-2 py-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="hidden text-[11px] text-[var(--color-muted)] sm:block">{meta.hint}</p>
                               <div className="flex flex-wrap items-center gap-2">
-                                <form action={retrySpecificSourcesAction}>
-                                  <input type="hidden" name="next" value={failureCenterNextHref} />
-                                  <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
-                                  <FormSubmitButton
-                                    type="submit"
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2 text-[11px]"
-                                    pendingText="Retrying..."
-                                    title="Queue all sources in this failure category for retry."
-                                  >
-                                    Retry group
-                                  </FormSubmitButton>
-                                </form>
+                                <SourceRemediationButton
+                                  action="retry_specific"
+                                  nextPath={failureCenterNextHref}
+                                  category={group.category}
+                                  sourceIds={group.items.map((item) => item.label.id)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-[11px]"
+                                  pendingText="Retrying..."
+                                  title="Queue all sources in this failure category for retry."
+                                >
+                                  <span className="hidden sm:inline">Retry group</span>
+                                  <span className="sm:hidden">Retry</span>
+                                </SourceRemediationButton>
                                 {meta.href ? (
                                   <Link href={meta.href} className="text-[11px] text-[var(--color-accent)] hover:underline">
                                     {meta.hrefLabel}
                                   </Link>
                                 ) : null}
                                 {group.category === "database" ? (
-                                  <form action={clearStaleWorkerLocksAction}>
-                                    <input type="hidden" name="next" value={failureCenterNextHref} />
-                                    <FormSubmitButton
-                                      type="submit"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 px-2 text-[11px]"
-                                      pendingText="Clearing..."
-                                      title="Clear expired worker locks in the database."
-                                    >
-                                      Clear stale locks
-                                    </FormSubmitButton>
-                                  </form>
+                                  <SourceRemediationButton
+                                    action="clear_stale_locks"
+                                    nextPath={failureCenterNextHref}
+                                    category={group.category}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    pendingText="Clearing..."
+                                    title="Clear expired worker locks in the database."
+                                  >
+                                    <span className="hidden sm:inline">Clear stale locks</span>
+                                    <span className="sm:hidden">Clear locks</span>
+                                  </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "rate_limit" ? (
-                                  <form action={pauseAllActiveSourcesAction}>
-                                    <input type="hidden" name="next" value={failureCenterNextHref} />
-                                    <FormSubmitButton
-                                      type="submit"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 px-2 text-[11px]"
-                                      pendingText="Pausing..."
-                                      title="Pause all active sources to let rate limits cool down."
-                                    >
-                                      Pause all sources
-                                    </FormSubmitButton>
-                                  </form>
+                                  <SourceRemediationButton
+                                    action="pause_all_active"
+                                    nextPath={failureCenterNextHref}
+                                    category={group.category}
+                                    actionLabel="pause sources for cooldown"
+                                    scopeLabel="all active sources during rate-limit recovery"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    pendingText="Pausing..."
+                                    confirmMessage={`Pause all active sources to let rate limits cool down? This will affect ${activeSourceCount} source${activeSourceCount === 1 ? "" : "s"}.`}
+                                    title="Pause all active sources to let rate limits cool down."
+                                  >
+                                    <span className="hidden sm:inline">Pause all sources</span>
+                                    <span className="sm:hidden">Pause all</span>
+                                  </SourceRemediationButton>
+                                ) : null}
+                                {group.category === "auth" ? (
+                                  <SourceRemediationButton
+                                    action="pause_and_clear_specific"
+                                    nextPath={failureCenterNextHref}
+                                    category={group.category}
+                                    actionLabel="pause auth-blocked sources"
+                                    scopeLabel="selected auth-failure group"
+                                    sourceIds={group.items.map((item) => item.label.id)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    pendingText="Pausing..."
+                                    confirmMessage={`Pause and clear auth errors for ${group.items.length} blocked source${group.items.length === 1 ? "" : "s"} while you reconnect Discogs?`}
+                                    title="Pause these auth-blocked sources and clear their current error flags."
+                                  >
+                                    <span className="hidden sm:inline">Pause blocked sources</span>
+                                    <span className="sm:hidden">Pause blocked</span>
+                                  </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "provider" ? (
-                                  <form action={pauseAndClearSpecificSourcesAction}>
-                                    <input type="hidden" name="next" value={failureCenterNextHref} />
-                                    <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
-                                    <FormSubmitButton
-                                      type="submit"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 px-2 text-[11px]"
-                                      pendingText="Pausing..."
-                                      title="Pause active sources and clear transient provider error flags."
-                                    >
-                                      Cool down + clear errors
-                                    </FormSubmitButton>
-                                  </form>
+                                  <SourceRemediationButton
+                                    action="pause_and_clear_specific"
+                                    nextPath={failureCenterNextHref}
+                                    category={group.category}
+                                    actionLabel="cool down + clear provider errors"
+                                    scopeLabel="selected provider-failure group"
+                                    sourceIds={group.items.map((item) => item.label.id)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    pendingText="Pausing..."
+                                    confirmMessage={`Pause ${group.items.length} provider-failed source${group.items.length === 1 ? "" : "s"} and clear their transient errors?`}
+                                    title="Pause active sources and clear transient provider error flags."
+                                  >
+                                    <span className="hidden sm:inline">Cool down + clear errors</span>
+                                    <span className="sm:hidden">Cool down</span>
+                                  </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "data" ? (
-                                  <form action={refreshSpecificSourcesMetadataAction}>
-                                    <input type="hidden" name="next" value={failureCenterNextHref} />
-                                    <input type="hidden" name="sourceIds" value={group.items.map((item) => item.label.id).join(",")} />
-                                    <FormSubmitButton
-                                      type="submit"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 px-2 text-[11px]"
-                                      pendingText="Refreshing..."
-                                      title="Refresh metadata for sources in this data-failure group."
-                                    >
-                                      Refresh metadata
-                                    </FormSubmitButton>
-                                  </form>
+                                  <SourceRemediationButton
+                                    action="refresh_specific_metadata"
+                                    nextPath={failureCenterNextHref}
+                                    category={group.category}
+                                    sourceIds={group.items.map((item) => item.label.id)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    pendingText="Refreshing..."
+                                    title="Refresh metadata for sources in this data-failure group."
+                                  >
+                                    <span className="hidden sm:inline">Refresh metadata</span>
+                                    <span className="sm:hidden">Refresh</span>
+                                  </SourceRemediationButton>
+                                ) : null}
+                                {group.category === "unknown" ? (
+                                  <SourceRemediationButton
+                                    action="pause_and_clear_specific"
+                                    nextPath={failureCenterNextHref}
+                                    category={group.category}
+                                    actionLabel="pause + clear unknown failures"
+                                    scopeLabel="selected unknown-failure group"
+                                    sourceIds={group.items.map((item) => item.label.id)}
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px]"
+                                    pendingText="Pausing..."
+                                    confirmMessage={`Pause ${group.items.length} unclassified source${group.items.length === 1 ? "" : "s"} and clear current flags so they stop retrying while you inspect them?`}
+                                    title="Pause these sources and clear their current unknown error flags."
+                                  >
+                                    <span className="hidden sm:inline">Pause + clear flags</span>
+                                    <span className="sm:hidden">Pause + clear</span>
+                                  </SourceRemediationButton>
                                 ) : null}
                               </div>
                             </div>
@@ -1169,20 +1159,15 @@ export default async function HomePage({
                                         <ExternalLink className="h-3 w-3" />
                                       </Button>
                                     </Link>
-                                    <form action={retryLabelAction}>
-                                      <input type="hidden" name="next" value={failureCenterNextHref} />
-                                      <input type="hidden" name="labelId" value={label.id} />
-                                      <FormSubmitButton
-                                        type="submit"
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-7 px-2 text-[11px]"
-                                        pendingText="Retrying now..."
-                                        title="Run one immediate processing step for this source"
-                                      >
-                                        Retry
-                                      </FormSubmitButton>
-                                    </form>
+                                    <SourceRetryButton
+                                      labelId={label.id}
+                                      canProcess={true}
+                                      compactLabel
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[11px]"
+                                      title="Run one immediate processing step for this source"
+                                    />
                                   </div>
                                 </div>
                               ))}
@@ -1198,12 +1183,6 @@ export default async function HomePage({
                 </div>
               ) : null}
 
-              {activeLabels.length > 0 && (listenData?.rows?.length ?? 0) === 0 ? (
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-100">
-                  No tracks are loaded yet. Open <Link href="/?tab=step-1" className="underline underline-offset-2">Sources</Link> and run <span className="font-semibold">Keep sync moving</span> to fetch releases and tracks.
-                </div>
-              ) : null}
-
               <ListenInboxClient
                 initialRows={listenData?.rows ?? []}
                 initialSelectedLabelId={Number.isFinite(selectedListenLabelId) ? selectedListenLabelId : undefined}
@@ -1212,6 +1191,7 @@ export default async function HomePage({
                   name: label.name,
                   discogsUrl: label.discogsUrl,
                 }))}
+                emptyState={listeningEmptyState}
                 defaultHideAlreadyPlayed={false}
               />
             </CardContent>
@@ -1226,55 +1206,43 @@ export default async function HomePage({
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Library Views</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Link
+                <SegmentedControlLink
+                  active={selectedLibraryView === "library"}
                   href={libraryViewHref("library")}
-                  className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
-                    selectedLibraryView === "library"
-                      ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                      : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                  }`}
+                  className="gap-1.5"
                   title="Saved tracks and wishlisted records"
                 >
                   <Bookmark className="h-4 w-4" />
                   Library
-                </Link>
-                <Link
+                </SegmentedControlLink>
+                <SegmentedControlLink
+                  active={selectedLibraryView === "history"}
                   href={libraryViewHref("history")}
-                  className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
-                    selectedLibraryView === "history"
-                      ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                      : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                  }`}
+                  className="gap-1.5"
                   title="Tracks that have been played"
                 >
                   <History className="h-4 w-4" />
                   History
-                </Link>
-                <Link
+                </SegmentedControlLink>
+                <SegmentedControlLink
+                  active={selectedLibraryView === "reviewed"}
                   href={libraryViewHref("reviewed")}
-                  className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
-                    selectedLibraryView === "reviewed"
-                      ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                      : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                  }`}
+                  className="gap-1.5"
                   title="Tracks marked reviewed"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   Reviewed
-                </Link>
-                <Link
+                </SegmentedControlLink>
+                <SegmentedControlLink
+                  active={selectedLibraryView === "needs-review"}
                   href={libraryViewHref("needs-review")}
-                  className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm ${
-                    selectedLibraryView === "needs-review"
-                      ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_20%,var(--color-surface)_80%)] text-[var(--color-text)]"
-                      : "border-[var(--color-border)] text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                  }`}
+                  className="gap-1.5"
                   title="Played tracks still waiting for review"
                 >
                   <AlertTriangle className="h-4 w-4" />
                   Needs Review
-                </Link>
-              </div>
+                </SegmentedControlLink>
+                </div>
                 <div className="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {showLibraryItemsSection ? <Badge>Saved Tracks {totalSavedCount}</Badge> : null}
                   <Badge>Wishlisted Records {totalWishlistedRecords}</Badge>
@@ -1287,31 +1255,9 @@ export default async function HomePage({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Actions</p>
                 {showLibraryItemsSection && hasDiscogs ? (
                   <div className="mt-1.5 flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <form action={pullDiscogsWantsAction}>
-                    <FormSubmitButton
-                      type="submit"
-                      size="sm"
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      pendingText="Importing..."
-                      title="Imports your most recent 200 Discogs wants into Library. Does not auto-activate sources."
-                    >
-                      Import Recent Wants (200)
-                    </FormSubmitButton>
-                  </form>
+                  <ManualWishlistSyncButton enabled={hasDiscogs} importLabel className="w-full sm:w-auto" />
                   <SyncSavedToDiscogsButton enabled={hasDiscogs} />
-                  <form action={pullDiscogsWantsAction}>
-                    <FormSubmitButton
-                      type="submit"
-                      size="sm"
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      pendingText="Syncing..."
-                      title="Trigger a manual Discogs wants sync now instead of waiting for the 1-minute auto check."
-                    >
-                      Run sync now
-                    </FormSubmitButton>
-                  </form>
+                  <ManualWishlistSyncButton enabled={hasDiscogs} compact className="w-full sm:w-auto" />
                   </div>
                 ) : showLibraryItemsSection ? (
                   <p className="mt-1.5 text-xs text-[var(--color-muted)]">Connect Discogs to sync wants.</p>
@@ -1333,7 +1279,7 @@ export default async function HomePage({
             <Card>
               <CardHeader>
                 <CardTitle>Library Items</CardTitle>
-                <p className="text-xs text-[var(--color-muted)]">Use filters to separate saved tracks and wishlisted-record items.</p>
+                <p className="text-xs text-[var(--color-muted)]">Use filters to split saved tracks from wishlisted records.</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 <ListenInboxClient
@@ -1344,6 +1290,7 @@ export default async function HomePage({
                     name: label.name,
                     discogsUrl: label.discogsUrl,
                   }))}
+                  emptyState={libraryItemsEmptyState}
                   showQueueFilters={false}
                   showWishlistSourceFilter
                 />
@@ -1353,7 +1300,7 @@ export default async function HomePage({
                   youtubeConnected={youtubeOAuth.connected}
                   eligibleSavedCount={playableSavedCount}
                   channelTitle={youtubeOAuth.channelTitle}
-                  connectHref="/api/youtube/oauth/start?next=/?tab=library&libraryView=library"
+                  connectNextPath="/?tab=library&libraryView=library"
                 />
 
                 {bandcampWishlist.enabled ? (
@@ -1372,18 +1319,16 @@ export default async function HomePage({
                     {bandcampWishlist.items.length > 0 ? (
                       <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1">
                         {bandcampWishlist.items.map((item) => (
-                          <a
+                          <ExternalLinkRow
                             key={`${item.type}-${item.id}-${item.url}`}
                             href={item.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block rounded-md border border-[var(--color-border)] p-2 hover:bg-[var(--color-surface)]"
-                          >
-                            <p className="line-clamp-1 text-sm font-medium">{item.title}</p>
-                            <p className="text-xs text-[var(--color-muted)]">
+                            title={item.title}
+                            meta={
+                              <>
                               {item.bandName} • {item.type}
-                            </p>
-                          </a>
+                              </>
+                            }
+                          />
                         ))}
                       </div>
                     ) : (
@@ -1410,13 +1355,13 @@ export default async function HomePage({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Loaded Sources Activity</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Activity</p>
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
                   {selectedLibraryView === "reviewed"
-                    ? "Tracks you explicitly marked reviewed."
+                    ? "Tracks you marked reviewed."
                     : selectedLibraryView === "needs-review"
-                      ? "Tracks that were played but still are not marked reviewed."
-                      : "Tracks that have been played at least once."}
+                      ? "Played tracks still waiting for review."
+                      : "Tracks played at least once."}
                 </p>
               </div>
 
@@ -1451,6 +1396,7 @@ export default async function HomePage({
                   name: label.name,
                   discogsUrl: label.discogsUrl,
                 }))}
+                emptyState={reviewedEmptyState}
                 defaultHideReviewed={false}
                 defaultHideAlreadyPlayed={false}
               />

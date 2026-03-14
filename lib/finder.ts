@@ -2,18 +2,8 @@ import { and, eq, gt } from "drizzle-orm";
 import { apiCache, releases } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
-import { toDiscogsWebUrl } from "@/lib/discogs-links";
-
-type LinkConfidence = "high" | "medium" | "low";
-
-type FinderCandidate = {
-  provider: "bandcamp" | "juno" | "hardwax" | "phonica" | "discogs";
-  url: string;
-  title: string;
-  confidence: LinkConfidence;
-  score: number;
-  reason: string;
-};
+import { buildReleaseExternalLinks } from "@/lib/release-external-links";
+import { buildFinderLinksResponse, type FinderCandidate } from "@/lib/release-data-contract";
 
 function tokenize(value: string) {
   return value
@@ -57,7 +47,7 @@ async function setCache(key: string, data: unknown, ttlSeconds: number, userId: 
   await db
     .insert(apiCache)
     .values({ key, userId, responseJson: JSON.stringify(data), fetchedAt: now, expiresAt })
-    .onConflictDoUpdate({ target: apiCache.key, set: { responseJson: JSON.stringify(data), fetchedAt: now, expiresAt } });
+    .onConflictDoUpdate({ target: [apiCache.userId, apiCache.key], set: { responseJson: JSON.stringify(data), fetchedAt: now, expiresAt } });
 }
 
 async function searchBandcamp(query: string, userId: string) {
@@ -128,42 +118,24 @@ export async function findReleaseLinks(releaseId: number) {
       confidence: index === 0 && item.score >= 6 ? "high" : item.confidence,
     }));
 
-  const fallbackProviders: FinderCandidate[] = [
-    {
-      provider: "discogs",
-      url: toDiscogsWebUrl(release.discogsUrl, ""),
-      title: "Open on Discogs",
-      confidence: "high",
-      score: 100,
-      reason: "Authoritative source record",
-    },
-    {
-      provider: "juno",
-      url: `https://www.juno.co.uk/search/?q[all][]=${encodeURIComponent(baseQuery)}`,
-      title: "Search on Juno",
-      confidence: "medium",
-      score: 50,
-      reason: "Store fallback",
-    },
-    {
-      provider: "hardwax",
-      url: `https://www.hardwax.com/?search=${encodeURIComponent(baseQuery)}`,
-      title: "Search on Hardwax",
-      confidence: "medium",
-      score: 45,
-      reason: "Store fallback",
-    },
-    {
-      provider: "phonica",
-      url: `https://www.phonicarecords.com/search?search=${encodeURIComponent(baseQuery)}`,
-      title: "Search on Phonica",
-      confidence: "medium",
-      score: 45,
-      reason: "Store fallback",
-    },
-  ];
+  const fallbackProviders: FinderCandidate[] = buildReleaseExternalLinks({
+    artist: release.artist,
+    title: release.title,
+    label: release.label?.name,
+    catno: release.catno,
+    discogsUrl: release.discogsUrl,
+  })
+    .filter((link) => link.provider !== "bandcamp_search")
+    .map((link) => ({
+      provider: link.provider,
+      url: link.url,
+      title: link.title,
+      confidence: link.provider === "discogs" ? "high" : "medium",
+      score: link.provider === "discogs" ? 100 : link.provider === "juno" ? 50 : 45,
+      reason: link.provider === "discogs" ? "Authoritative source record" : "Store fallback",
+    }));
 
-  return {
+  return buildFinderLinksResponse({
     release: {
       id: release.id,
       title: release.title,
@@ -174,5 +146,5 @@ export async function findReleaseLinks(releaseId: number) {
     bandcamp: rankedBandcamp,
     fallback: fallbackProviders,
     bestBandcamp: rankedBandcamp[0] ?? null,
-  };
+  });
 }

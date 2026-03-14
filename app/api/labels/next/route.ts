@@ -1,53 +1,37 @@
 export const dynamic = "force-dynamic";
 
 import { and, asc, eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
 import { labels } from "@/db/schema";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { runUserJsonRoute } from "@/lib/api-user-route";
 import { db } from "@/lib/db";
+import { resolveSourceNextBlocker } from "@/lib/source-next-blocker";
+import { selectNextSourceId } from "@/lib/source-next-processing";
+import { buildSourceStatusCounts } from "@/lib/source-next-state";
 
 export async function GET() {
-  const userId = await requireCurrentAppUserId();
-  const activeLabels = await db.query.labels.findMany({
-    where: and(eq(labels.userId, userId), eq(labels.active, true)),
-    columns: { id: true, status: true, lastError: true, updatedAt: true },
-    orderBy: [asc(labels.updatedAt)],
-  });
+  return runUserJsonRoute(
+    async (userId) => {
+      const activeLabels = await db.query.labels.findMany({
+        where: and(eq(labels.userId, userId), eq(labels.active, true)),
+        columns: { id: true, status: true, lastError: true, updatedAt: true },
+        orderBy: [asc(labels.updatedAt)],
+      });
 
-  const counts = {
-    queued: 0,
-    processing: 0,
-    error: 0,
-    paused: 0,
-    complete: 0,
-    other: 0,
-  };
+      const counts = buildSourceStatusCounts(activeLabels.map((label) => label.status));
+      const nextLabelId = selectNextSourceId(activeLabels);
 
-  for (const label of activeLabels) {
-    if (label.status === "queued") counts.queued += 1;
-    else if (label.status === "processing") counts.processing += 1;
-    else if (label.status === "error") counts.error += 1;
-    else if (label.status === "paused") counts.paused += 1;
-    else if (label.status === "complete") counts.complete += 1;
-    else counts.other += 1;
-  }
-
-  const nextProcessing = activeLabels.find((label) => label.status === "processing");
-  const nextQueued = activeLabels.find((label) => label.status === "queued");
-  const nextLabelId = nextProcessing?.id ?? nextQueued?.id ?? null;
-
-  return NextResponse.json({
-    nextLabelId,
-    nextSourceId: nextLabelId,
-    counts,
-    activeCount: activeLabels.length,
-    blocker:
-      nextLabelId !== null
-        ? null
-        : counts.error > 0
-          ? "Only errored labels remain. Retry or clear errors to continue."
-          : activeLabels.length === 0
-            ? "No active labels."
-            : "No queued/processing labels.",
-  });
+      return {
+        nextLabelId,
+        nextSourceId: nextLabelId,
+        counts,
+        activeCount: activeLabels.length,
+        blocker: resolveSourceNextBlocker({
+          nextSourceId: nextLabelId,
+          errorCount: counts.error,
+          activeCount: activeLabels.length,
+        }),
+      };
+    },
+    { errorMessage: "Unable to load next source state." },
+  );
 }

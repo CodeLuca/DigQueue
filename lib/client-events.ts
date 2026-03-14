@@ -1,5 +1,11 @@
 export const TRACK_TODO_UPDATED_EVENT = "digqueue:track-todo-updated";
 export const RELEASE_WISHLIST_UPDATED_EVENT = "digqueue:release-wishlist-updated";
+export const RECOMMENDATION_DISMISSED_EVENT = "digqueue:recommendation-dismissed";
+export const QUEUE_TRACK_ENQUEUED_EVENT = "digqueue:queue-track-enqueued";
+export const QUEUE_STATE_MUTATED_EVENT = "digqueue:queue-state-mutated";
+export const SOURCE_STATE_MUTATED_EVENT = "digqueue:source-state-mutated";
+export const TRACK_MATCH_UPDATED_EVENT = "digqueue:track-match-updated";
+export const WISHLIST_SYNC_MUTATED_EVENT = "digqueue:wishlist-sync-mutated";
 export const LISTENING_SCOPE_EVENT = "digqueue:listening-scope";
 export const PLAYBACK_MODE_EVENT = "digqueue:playback-mode";
 export const PLAYBACK_MODE_STORAGE_KEY = "digqueue:playback-mode";

@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { appSecrets } from "@/db/schema";
 import { requireCurrentAppUserId } from "@/lib/app-user";
 import { db } from "@/lib/db";
@@ -115,6 +115,7 @@ async function setLegacyApiKeysRow(input: {
     returning id
   `);
   if (updated.length > 0) {
+    await collapseDuplicateAppSecretsRows(input.userId);
     cache = null;
     return;
   }
@@ -127,6 +128,7 @@ async function setLegacyApiKeysRow(input: {
         insert into app_secrets (id, user_id, discogs_token, youtube_api_key, updated_at)
         values (${secretRowId}, ${input.userId}::uuid, ${input.discogsToken}, ${input.youtubeApiKey}, ${input.nowMs})
       `);
+      await collapseDuplicateAppSecretsRows(input.userId);
       cache = null;
       return;
     } catch (error) {
@@ -136,6 +138,25 @@ async function setLegacyApiKeysRow(input: {
   }
 
   throw new Error("Unable to persist API keys.");
+}
+
+async function collapseDuplicateAppSecretsRows(userId: string) {
+  await db.execute(sql`
+    with ranked as (
+      select
+        id,
+        row_number() over (
+          partition by user_id
+          order by updated_at desc nulls last, id desc
+        ) as rn
+      from app_secrets
+      where user_id = ${userId}::uuid
+    )
+    delete from app_secrets as target
+    using ranked
+    where target.id = ranked.id
+      and ranked.rn > 1
+  `);
 }
 
 export async function getApiKeys(options?: { strict?: boolean }): Promise<ApiKeys> {
@@ -158,6 +179,7 @@ export async function getApiKeys(options?: { strict?: boolean }): Promise<ApiKey
   try {
     row = (await db.query.appSecrets.findFirst({
       where: sql`${appSecrets.userId} = ${userId}::uuid`,
+      orderBy: [desc(appSecrets.updatedAt), desc(appSecrets.id)],
     })) ?? null;
   } catch (error) {
     if (isMissingAppSecretsOauthColumnError(error)) {
@@ -251,6 +273,7 @@ export async function setApiKeys(input: {
       try {
         const existing = await db.query.appSecrets.findFirst({
           where: sql`${appSecrets.userId} = ${userId}::uuid`,
+          orderBy: [desc(appSecrets.updatedAt), desc(appSecrets.id)],
         });
         if (existing) {
           await db
@@ -267,6 +290,7 @@ export async function setApiKeys(input: {
               updatedAt: now,
             })
             .where(sql`${appSecrets.userId} = ${userId}::uuid`);
+          await collapseDuplicateAppSecretsRows(userId);
           cache = null;
           return;
         }
@@ -288,6 +312,7 @@ export async function setApiKeys(input: {
               youtubeOauthChannelTitle,
               updatedAt: now,
             });
+            await collapseDuplicateAppSecretsRows(userId);
             cache = null;
             return;
           } catch (error) {

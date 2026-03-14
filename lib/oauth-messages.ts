@@ -5,7 +5,7 @@ export function getInvalidOAuthCallbackMessage(provider: OAuthProvider) {
 }
 
 export function getOAuthStateMismatchMessage(provider: OAuthProvider) {
-  return provider === "discogs" ? "Discogs OAuth state mismatch." : "OAuth state mismatch.";
+  return provider === "discogs" ? "Discogs OAuth state mismatch." : "YouTube OAuth state mismatch.";
 }
 
 export function getOAuthCallbackErrorMessage(

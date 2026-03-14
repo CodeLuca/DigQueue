@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { completePasswordResetAction } from "@/app/auth-actions";
+import { ResetPasswordForm } from "@/components/reset-password-form";
 
 const tertiaryLinkClass =
   "text-sm text-[color:color-mix(in_oklab,var(--color-muted)_82%,var(--color-accent)_18%)] transition-colors hover:text-[var(--color-accent)] hover:underline underline-offset-4";
@@ -25,31 +24,7 @@ export default async function ResetPasswordPage({
         {notice ? <p className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{notice}</p> : null}
 
         <div className="mt-6 grid grid-cols-1 gap-3">
-          <form action={completePasswordResetAction} className="space-y-2">
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              placeholder="New password (min 6 characters)"
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-            />
-            <input
-              name="confirmPassword"
-              type="password"
-              required
-              minLength={6}
-              placeholder="Confirm new password"
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/40"
-            />
-            <button
-              type="submit"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-[#f2cd8a] bg-[#e7b566] px-4 py-2.5 text-sm font-extrabold !text-black shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition hover:bg-[#f0c57c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2cd8a]/80"
-            >
-              Update password
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </form>
+          <ResetPasswordForm />
           <Link href="/login" className={tertiaryLinkClass}>
             Back to login
           </Link>

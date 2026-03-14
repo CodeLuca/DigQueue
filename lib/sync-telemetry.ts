@@ -31,7 +31,7 @@ export async function writeSyncTelemetry(userId: string, telemetry: SyncTelemetr
         expiresAt: new Date(now + TTL_MS),
       })
       .onConflictDoUpdate({
-        target: apiCache.key,
+        target: [apiCache.userId, apiCache.key],
         set: {
           userId,
           responseJson: payload,
@@ -96,7 +96,7 @@ export async function appendSyncRunEvent(userId: string, event: SyncRunEvent) {
         expiresAt: new Date(now + RUN_HISTORY_TTL_MS),
       })
       .onConflictDoUpdate({
-        target: apiCache.key,
+        target: [apiCache.userId, apiCache.key],
         set: {
           userId,
           responseJson: JSON.stringify(next),

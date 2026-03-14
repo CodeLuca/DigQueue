@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { Button, type ButtonProps } from "@/components/ui/button";
 
-type FormSubmitButtonProps = ButtonProps & {
+export type FormSubmitButtonProps = ButtonProps & {
   pendingText?: string;
 };
 

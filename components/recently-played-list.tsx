@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import Image from "next/image";
-import { ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { enqueueTrackForClient } from "@/lib/client-queue";
-import { PLAY_ITEM_EVENT } from "@/lib/client-events";
-import { toDiscogsWebUrl } from "@/lib/discogs-links";
-import { QUEUE_ERROR_NO_MATCH, QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED } from "@/lib/queue-errors";
-import { setYouTubeQuotaExceededInSession } from "@/lib/youtube-quota-client";
+import { useMemo, useState } from "react";
+import { DiscogsLink } from "@/components/discogs-link";
+import { MediaActionRow } from "@/components/media-action-row";
+import { MutationActionButton } from "@/components/mutation-action-button";
+import { SegmentedControlButton } from "@/components/segmented-control-button";
+import {
+  replayTrackAriaLabel,
+  replayTrackTitle,
+} from "@/lib/library-action-labels";
+import { useReplayTrackButtonAction } from "@/lib/use-playback-button-actions";
 
 type RecentlyPlayedItem = {
   id: number;
@@ -18,24 +19,9 @@ type RecentlyPlayedItem = {
   label?: { id?: number; name: string } | null;
 };
 
-type QueueApiItem = {
-  id: number;
-  youtubeVideoId: string;
-  track?: { id: number; title: string } | null;
-  release?: { title: string } | null;
-  label?: { name: string } | null;
-};
-
 export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
   const [filter, setFilter] = useState<"all" | "wantlist" | "reviewed-no-wantlist">("all");
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [loadingId, setLoadingId] = useState<number | null>(null);
-  const filterButtonClass = (active: boolean) =>
-    `inline-flex min-h-8 items-center rounded-md border px-2 py-1 font-medium transition ${
-      active
-        ? "border-[var(--color-accent)] bg-[color-mix(in_oklab,var(--color-accent)_24%,var(--color-surface2)_76%)] text-[var(--color-text)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]"
-        : "border-[var(--color-border)] bg-[var(--color-surface)]/55 text-[var(--color-muted)] opacity-90 hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]"
-    }`;
+  const { disabled: replayDisabled, feedback, isPending, replay } = useReplayTrackButtonAction();
 
   const counts = useMemo(() => {
     let wantlist = 0;
@@ -63,59 +49,20 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
     });
   }, [filter, items]);
 
-  const playAgain = useCallback(async (item: RecentlyPlayedItem) => {
-    if (!item.trackId) {
-      setFeedback("Track unavailable for replay.");
-      return;
-    }
-    setLoadingId(item.id);
-    try {
-      const queued = await enqueueTrackForClient<QueueApiItem>({ trackId: item.trackId, queueMode: "next" });
-      window.dispatchEvent(new CustomEvent(PLAY_ITEM_EVENT, { detail: queued }));
-      setFeedback("Playing again.");
-    } catch (error) {
-      if (error instanceof Error && error.message === QUEUE_ERROR_NO_MATCH) {
-        setFeedback("No playable video match found for this track.");
-      } else if (error instanceof Error && error.message === QUEUE_ERROR_YOUTUBE_QUOTA_EXCEEDED) {
-        setYouTubeQuotaExceededInSession();
-        setFeedback("YouTube quota reached. Replay is temporarily disabled.");
-      } else {
-        setFeedback(error instanceof Error ? error.message : "Unable to play track.");
-      }
-    } finally {
-      setLoadingId(null);
-    }
-  }, []);
-
   return (
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
       <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-sm font-medium">Recently Played ({filteredItems.length})</p>
         <div className="grid w-full grid-cols-1 gap-1.5 text-xs sm:flex sm:w-auto sm:flex-wrap">
-          <button
-            type="button"
-            className={`${filterButtonClass(filter === "all")} justify-center sm:justify-start`}
-            onClick={() => setFilter("all")}
-            aria-pressed={filter === "all"}
-          >
+          <SegmentedControlButton active={filter === "all"} onClick={() => setFilter("all")} tone="compact" className="justify-center sm:justify-start">
             All ({counts.all})
-          </button>
-          <button
-            type="button"
-            className={`${filterButtonClass(filter === "wantlist")} justify-center sm:justify-start`}
-            onClick={() => setFilter("wantlist")}
-            aria-pressed={filter === "wantlist"}
-          >
+          </SegmentedControlButton>
+          <SegmentedControlButton active={filter === "wantlist"} onClick={() => setFilter("wantlist")} tone="compact" className="justify-center sm:justify-start">
             Added to Want List ({counts.wantlist})
-          </button>
-          <button
-            type="button"
-            className={`${filterButtonClass(filter === "reviewed-no-wantlist")} justify-center sm:justify-start`}
-            onClick={() => setFilter("reviewed-no-wantlist")}
-            aria-pressed={filter === "reviewed-no-wantlist"}
-          >
+          </SegmentedControlButton>
+          <SegmentedControlButton active={filter === "reviewed-no-wantlist"} onClick={() => setFilter("reviewed-no-wantlist")} tone="compact" className="justify-center sm:justify-start">
             Reviewed Not Added ({counts.reviewedNoWantlist})
-          </button>
+          </SegmentedControlButton>
         </div>
       </div>
       <div className="space-y-2">
@@ -124,57 +71,39 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
           const trackArtist = item.track?.artistsText || item.release?.artist || "Unknown artist";
           const releaseTitle = item.release?.title || "Unknown release";
           const labelName = item.label?.name || "Unknown label";
-          const discogsHref = toDiscogsWebUrl(item.release?.discogsUrl ?? "", "");
           return (
             <div key={item.id} className="rounded-md border border-[var(--color-border)] px-2 py-1.5">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 items-start gap-2">
-                  {item.release?.thumbUrl ? (
-                    <Image
-                      src={item.release.thumbUrl}
-                      alt={`${releaseTitle} artwork`}
-                      width={40}
-                      height={40}
-                      className="h-10 w-10 shrink-0 rounded border border-[var(--color-border)] object-cover"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-surface)]" aria-hidden />
-                  )}
-                  <div className="min-w-0">
-                    <p className="line-clamp-1 text-sm">{trackTitle}</p>
-                    <p className="line-clamp-1 text-xs text-[var(--color-muted)]">
-                      {trackArtist}
-                      {" • "}
-                      {labelName}
-                      {" • "}
-                      {releaseTitle}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-                  <Button
-                    type="button"
+              <MediaActionRow
+                artworkAlt={`${releaseTitle} artwork`}
+                artworkUrl={item.release?.thumbUrl}
+                title={trackTitle}
+                meta={
+                  <>
+                    {trackArtist}
+                    {" • "}
+                    {labelName}
+                    {" • "}
+                    {releaseTitle}
+                  </>
+                }
+                actions={<div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+                  <MutationActionButton
+                    preset="playback"
                     size="sm"
                     variant="outline"
                     className="w-full justify-center sm:w-auto sm:justify-start"
-                    disabled={!item.trackId || loadingId === item.id}
-                    onClick={() => void playAgain(item)}
-                    title="Play this track now in the mini-player"
+                    disabled={!item.trackId || replayDisabled}
+                    onClick={() => void replay(item.id, item.trackId)}
+                    title={replayTrackTitle()}
+                    ariaLabel={replayTrackAriaLabel()}
+                    pending={isPending(item.id)}
+                    pendingChildren="..."
                   >
-                    {loadingId === item.id ? "..." : "Play Again"}
-                  </Button>
-                  <a
-                    className="rounded-md border border-[var(--color-border)] p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]"
-                    href={discogsHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Open on Discogs"
-                    aria-label="Open on Discogs"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-              </div>
+                    Play Again
+                  </MutationActionButton>
+                  <DiscogsLink discogsUrl={item.release?.discogsUrl ?? ""} />
+                </div>}
+              />
             </div>
           );
         })}

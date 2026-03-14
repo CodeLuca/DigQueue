@@ -1,25 +1,22 @@
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
-import { z } from "zod";
+import { handlePublicIntRoute } from "@/lib/api-public-int-route";
 import { fetchDiscogsRelease, fetchDiscogsReleaseMarketStats, fetchDiscogsReleasePriceSuggestions } from "@/lib/discogs";
-
-const paramsSchema = z.object({ id: z.coerce.number().int().positive() });
+import { buildReleaseDetailsResponse } from "@/lib/release-data-contract";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const parsed = paramsSchema.safeParse(await params);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid release id" }, { status: 400 });
-  }
-  try {
-    const [release, marketStats, priceSuggestions] = await Promise.all([
-      fetchDiscogsRelease(parsed.data.id),
-      fetchDiscogsReleaseMarketStats(parsed.data.id).catch(() => null),
-      fetchDiscogsReleasePriceSuggestions(parsed.data.id).catch(() => null),
-    ]);
-    return NextResponse.json({ ...release, marketStats, priceSuggestions });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load Discogs release.";
-    return NextResponse.json({ error: message }, { status: 502 });
-  }
+  return handlePublicIntRoute({
+    params,
+    invalidMessage: "Invalid release id",
+    fallbackErrorMessage: "Unable to load Discogs release.",
+    errorStatus: 502,
+    load: async (releaseId) => {
+      const [release, marketStats, priceSuggestions] = await Promise.all([
+        fetchDiscogsRelease(releaseId),
+        fetchDiscogsReleaseMarketStats(releaseId).catch(() => null),
+        fetchDiscogsReleasePriceSuggestions(releaseId).catch(() => null),
+      ]);
+      return buildReleaseDetailsResponse({ ...release, marketStats, priceSuggestions });
+    },
+  });
 }

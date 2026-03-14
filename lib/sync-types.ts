@@ -16,6 +16,7 @@ export type SyncTelemetry = {
 export type SyncRunEvent = {
   sourceId: number | null;
   sourceName: string;
+  sourceKind?: "label" | "artist";
   outcome: "ok" | "error" | "skipped";
   message?: string;
   error?: string;
