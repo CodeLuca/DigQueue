@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AuthStartLink } from "@/components/auth-start-link";
 import { HighlightActionLink } from "@/components/highlight-action";
+import { SupportPanel } from "@/components/support-panel";
 import { getCurrentAppUserId } from "@/lib/app-user";
 
 export default async function ConnectDiscogsPage({
@@ -26,13 +27,14 @@ export default async function ConnectDiscogsPage({
           </p>
         ) : null}
 
-        <div className="mt-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4">
-          <p className="text-sm font-medium">What will happen</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--color-muted)]">
-            <li>Click <span className="mono">Connect Discogs</span>.</li>
-            <li>Approve access on Discogs.</li>
-            <li>You are redirected back and DigQueue starts wishlist sync.</li>
-          </ol>
+        <div className="mt-6">
+          <SupportPanel title="What will happen">
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-[var(--color-muted)]">
+              <li>Click <span className="mono">Connect Discogs</span>.</li>
+              <li>Approve access on Discogs.</li>
+              <li>You are redirected back and DigQueue starts wishlist sync.</li>
+            </ol>
+          </SupportPanel>
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
