@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsRequiredNotice } from "@/components/discogs-required-notice";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { DiscogsLink } from "@/components/discogs-link";
 import { LabelDeleteButton } from "@/components/label-delete-button";
@@ -598,13 +599,18 @@ export default async function HomePage({
 
       {hasYoutubeBlockedError ? (
         <section className="mb-5 reveal reveal-delay-1">
-          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
-            <p className="font-medium">YouTube key is blocked for search.list.</p>
-            <p className="mt-1">Open Settings and use the YouTube Block Fix Assistant to resolve it in order.</p>
-            <Link href="/settings#youtube-fix" className="mt-2 inline-block text-xs text-[var(--color-accent)] hover:underline">
-              Open YouTube Block Fix Assistant
-            </Link>
-          </div>
+          <FeedbackBanner
+            tone="warning"
+            className="p-3"
+            title="YouTube key is blocked for search.list."
+            action={(
+              <Link href="/settings#youtube-fix" className="inline-block text-xs text-[var(--color-accent)] hover:underline">
+                Open YouTube Block Fix Assistant
+              </Link>
+            )}
+          >
+            <p>Open Settings and use the YouTube Block Fix Assistant to resolve it in order.</p>
+          </FeedbackBanner>
         </section>
       ) : null}
 
@@ -617,20 +623,18 @@ export default async function HomePage({
             <CardContent className="space-y-4">
               {!canProcess ? (
                 hasYoutubeBlockedError ? (
-                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                    <p className="text-amber-200">
-                      YouTube key is blocked. Processing still works via Discogs release videos where available.
-                    </p>
-                  </div>
+                  <FeedbackBanner tone="warning" className="p-3">
+                    YouTube key is blocked. Processing still works via Discogs release videos where available.
+                  </FeedbackBanner>
                 ) : (
                   <DiscogsRequiredNotice context="ingestion" />
                 )
               ) : null}
               {notice ? (
-                <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                <FeedbackBanner tone="success" className="p-3">
                   {notice}
                   {source ? <span className="ml-1 text-emerald-100">- {source}</span> : null}
-                </div>
+                </FeedbackBanner>
               ) : null}
 
               <SourceIntakeForm />

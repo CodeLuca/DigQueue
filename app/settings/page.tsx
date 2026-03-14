@@ -4,6 +4,7 @@ import { Disc3, ExternalLink } from "lucide-react";
 import { AuthStartLink } from "@/components/auth-start-link";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsConnectLink } from "@/components/discogs-connect-link";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { IntegrationDisconnectButton } from "@/components/integration-disconnect-button";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { PlaybackModeSettings } from "@/components/playback-mode-settings";
@@ -44,14 +45,14 @@ export default async function SettingsPage({
       </header>
 
       {params.discogs === "connected" ? (
-        <div className="mb-4 rounded-lg border border-emerald-500/50 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.08))] p-3 text-sm text-emerald-200">
+        <FeedbackBanner tone="success" emphasis="gradient" className="mb-4 rounded-lg py-3">
           Discogs personal OAuth connected successfully.
-        </div>
+        </FeedbackBanner>
       ) : null}
       {discogsError ? (
-        <div className="mb-4 rounded-lg border border-rose-500/50 bg-[linear-gradient(135deg,rgba(244,63,94,0.16),rgba(244,63,94,0.06))] p-3 text-sm text-rose-200">
+        <FeedbackBanner tone="error" emphasis="gradient" className="mb-4 rounded-lg py-3">
           Discogs connect failed: {discogsError}
-        </div>
+        </FeedbackBanner>
       ) : null}
       <SettingsSectionCard
         title="Integrations"

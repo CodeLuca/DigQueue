@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 
 const tertiaryLinkClass =
@@ -20,8 +21,8 @@ export default async function ResetPasswordPage({
           Choose a new password for your account.
         </p>
 
-        {error ? <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p> : null}
-        {notice ? <p className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{notice}</p> : null}
+        {error ? <FeedbackBanner tone="error" className="mt-3">{error}</FeedbackBanner> : null}
+        {notice ? <FeedbackBanner tone="success" className="mt-3">{notice}</FeedbackBanner> : null}
 
         <div className="mt-6 grid grid-cols-1 gap-3">
           <ResetPasswordForm />

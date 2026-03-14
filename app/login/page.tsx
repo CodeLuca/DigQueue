@@ -1,5 +1,6 @@
 import { Chrome } from "lucide-react";
 import { AuthStartLink } from "@/components/auth-start-link";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { LoginPasswordForm } from "@/components/login-password-form";
 import { PasswordResetRequestForm } from "@/components/password-reset-request-form";
 import { RegisterPasswordForm } from "@/components/register-password-form";
@@ -30,8 +31,8 @@ export default async function LoginPage({
         <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)] md:text-base">
           Use one page for sign in and sign up, with Google available in both flows.
         </p>
-        {error ? <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p> : null}
-        {notice ? <p className="mt-3 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{notice}</p> : null}
+        {error ? <FeedbackBanner tone="error" className="mt-3">{error}</FeedbackBanner> : null}
+        {notice ? <FeedbackBanner tone="success" className="mt-3">{notice}</FeedbackBanner> : null}
 
         <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
           <div className={`space-y-3 rounded-xl border p-3 md:p-4 ${startInRegisterMode ? "border-[var(--color-border)]" : "border-[var(--color-accent)]/65 bg-[color-mix(in_oklab,var(--color-accent)_7%,var(--color-surface)_93%)]"}`}>

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AuthStartLink } from "@/components/auth-start-link";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { HighlightActionLink } from "@/components/highlight-action";
 import { SupportPanel } from "@/components/support-panel";
 import { getCurrentAppUserId } from "@/lib/app-user";
@@ -22,9 +23,9 @@ export default async function ConnectDiscogsPage({
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Connect your Discogs account</h1>
         <p className="mt-3 max-w-2xl text-sm text-[var(--color-muted)]">Authenticate once, then DigQueue can pull wants and sync wishlist actions for your Discogs account.</p>
         {!userId ? (
-          <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <FeedbackBanner tone="error" className="mt-3">
             Login is required before connecting Discogs.
-          </p>
+          </FeedbackBanner>
         ) : null}
 
         <div className="mt-6">
