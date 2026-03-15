@@ -30,6 +30,7 @@ import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { ExternalLinkRow } from "@/components/external-link-row";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { RecommendationsPanel } from "@/components/recommendations-panel";
+import { ResponsiveLabel } from "@/components/responsive-label";
 import { SegmentedControlLink } from "@/components/segmented-control-button";
 import { SourceRemediationButton } from "@/components/source-remediation-button";
 import { SourceIntakeForm } from "@/components/source-intake-form";
@@ -758,8 +759,7 @@ export default async function HomePage({
                         className="w-full sm:max-w-sm"
                       />
                       <Button type="submit" size="sm" variant="outline">
-                        <span className="hidden sm:inline">Search</span>
-                        <span className="sm:hidden">Go</span>
+                        <ResponsiveLabel compact="Go" full="Search" />
                       </Button>
                       {normalizedLabelQuery ? (
                         <Link
@@ -892,8 +892,7 @@ export default async function HomePage({
                       title="Clear error state on all active errored sources; does not run processing"
                     >
                       <RefreshCcw className="h-3 w-3" />
-                      <span className="hidden sm:inline">Clear all flags</span>
-                      <span className="sm:hidden">Clear flags</span>
+                      <ResponsiveLabel compact="Clear flags" full="Clear all flags" />
                     </SourceRemediationButton>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -952,8 +951,7 @@ export default async function HomePage({
                                   pendingText="Retrying..."
                                   title="Queue all sources in this failure category for retry."
                                 >
-                                  <span className="hidden sm:inline">Retry group</span>
-                                  <span className="sm:hidden">Retry</span>
+                                  <ResponsiveLabel compact="Retry" full="Retry group" />
                                 </SourceRemediationButton>
                                 {meta.href ? (
                                   <ActionLink href={meta.href} variant="textLink" className="text-[11px]">
@@ -971,8 +969,7 @@ export default async function HomePage({
                                     pendingText="Clearing..."
                                     title="Clear expired worker locks in the database."
                                   >
-                                    <span className="hidden sm:inline">Clear stale locks</span>
-                                    <span className="sm:hidden">Clear locks</span>
+                                    <ResponsiveLabel compact="Clear locks" full="Clear stale locks" />
                                   </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "rate_limit" ? (
@@ -989,8 +986,7 @@ export default async function HomePage({
                                     confirmMessage={`Pause all active sources to let rate limits cool down? This will affect ${activeSourceCount} source${activeSourceCount === 1 ? "" : "s"}.`}
                                     title="Pause all active sources to let rate limits cool down."
                                   >
-                                    <span className="hidden sm:inline">Pause all sources</span>
-                                    <span className="sm:hidden">Pause all</span>
+                                    <ResponsiveLabel compact="Pause all" full="Pause all sources" />
                                   </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "auth" ? (
@@ -1008,8 +1004,7 @@ export default async function HomePage({
                                     confirmMessage={`Pause and clear auth errors for ${group.items.length} blocked source${group.items.length === 1 ? "" : "s"} while you reconnect Discogs?`}
                                     title="Pause these auth-blocked sources and clear their current error flags."
                                   >
-                                    <span className="hidden sm:inline">Pause blocked sources</span>
-                                    <span className="sm:hidden">Pause blocked</span>
+                                    <ResponsiveLabel compact="Pause blocked" full="Pause blocked sources" />
                                   </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "provider" ? (
@@ -1027,8 +1022,7 @@ export default async function HomePage({
                                     confirmMessage={`Pause ${group.items.length} provider-failed source${group.items.length === 1 ? "" : "s"} and clear their transient errors?`}
                                     title="Pause active sources and clear transient provider error flags."
                                   >
-                                    <span className="hidden sm:inline">Cool down + clear errors</span>
-                                    <span className="sm:hidden">Cool down</span>
+                                    <ResponsiveLabel compact="Cool down" full="Cool down + clear errors" />
                                   </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "data" ? (
@@ -1043,8 +1037,7 @@ export default async function HomePage({
                                     pendingText="Refreshing..."
                                     title="Refresh metadata for sources in this data-failure group."
                                   >
-                                    <span className="hidden sm:inline">Refresh metadata</span>
-                                    <span className="sm:hidden">Refresh</span>
+                                    <ResponsiveLabel compact="Refresh" full="Refresh metadata" />
                                   </SourceRemediationButton>
                                 ) : null}
                                 {group.category === "unknown" ? (
@@ -1062,8 +1055,7 @@ export default async function HomePage({
                                     confirmMessage={`Pause ${group.items.length} unclassified source${group.items.length === 1 ? "" : "s"} and clear current flags so they stop retrying while you inspect them?`}
                                     title="Pause these sources and clear their current unknown error flags."
                                   >
-                                    <span className="hidden sm:inline">Pause + clear flags</span>
-                                    <span className="sm:hidden">Pause + clear</span>
+                                    <ResponsiveLabel compact="Pause + clear" full="Pause + clear flags" />
                                   </SourceRemediationButton>
                                 ) : null}
                               </div>

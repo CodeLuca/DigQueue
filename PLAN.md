@@ -331,6 +331,7 @@
     - Consolidated sync telemetry note rows so throughput stats, breakdown lines, recent run history, and recent-success text now share one source-sync-note primitive instead of repeating the same muted 10px paragraph styling throughout the operations surface.
     - Consolidated sync health alerts so the source-sync status panel now renders warning and critical alert pills through one source-sync-health-alert primitive instead of keeping severity styling inline.
     - Consolidated responsive short/long labels so the source-sync status panel plus core source-management/navigation controls now share one responsive-label primitive instead of repeating paired `hidden sm:inline` / `sm:hidden` spans inline.
+    - Extended responsive-label coverage across the dashboard source filters and failure-center remediation controls so the main operations surface now uses the same short/long label helper instead of keeping another cluster of inline mobile/desktop text swaps.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 
