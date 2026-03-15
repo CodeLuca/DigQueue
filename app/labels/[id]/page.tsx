@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ButtonLink } from "@/components/button-link";
+import { ActionRow } from "@/components/action-row";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsLink } from "@/components/discogs-link";
 import { EmptyStateNote } from "@/components/empty-state-note";
@@ -112,10 +113,10 @@ export default async function LabelPage({
             <p className="text-sm">Releases matched: {data.progress.matched}/{data.progress.total}</p>
             <Progress value={matchedPct} className="mt-1" />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <ActionRow>
             <DiscogsLink discogsUrl={data.label.discogsUrl} title="Open label on Discogs" variant="textButton" />
             <SourceRefreshButton labelId={data.label.id} compactLabel />
-          </div>
+          </ActionRow>
         </CardContent>
       </Card>
 

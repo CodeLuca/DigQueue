@@ -342,6 +342,7 @@
     - Consolidated source/account mutation controls so source retry/refresh/activate/delete and account test/disconnect/sign-out/export actions now share dedicated source-action-button and account-action-button wrappers instead of hand-rolling the same preset-driven mutation-button setup across management surfaces.
     - Consolidated release-item mutation controls so release wishlist, release track todo, and choose-match actions now share one release-item-action-button wrapper instead of repeating the same release-detail mutation-button preset/size contract inline.
     - Consolidated the action-wrapper layer itself so source/account/inline/release/playback/recommendation button wrappers now share one preset-action-button primitive instead of each repeating the same mutation-button plumbing internally.
+    - Consolidated inline action-row layout so dashboard source controls, source filters, listen-page utility navigation, label-page source actions, release-inspector status rows, and YouTube export actions now share one action-row primitive instead of repeating the same wrap/alignment flex contract inline.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

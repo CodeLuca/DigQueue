@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { ExternalLink, ListVideo, Youtube } from "lucide-react";
 import { AccountActionButton } from "@/components/account-action-button";
+import { ActionRow } from "@/components/action-row";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { HighlightActionLink } from "@/components/highlight-action";
 import { InsetPanel, SectionKicker } from "@/components/inset-panel";
@@ -71,7 +72,7 @@ export function YoutubePlaylistExportButton(props: Props) {
         </div>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <ActionRow className="mt-2">
         {!props.youtubeConnected ? (
           <HighlightActionLink
             href={buildYoutubeOAuthStartPath(props.connectNextPath)}
@@ -112,7 +113,7 @@ export function YoutubePlaylistExportButton(props: Props) {
             <ExternalLink className="h-3 w-3" />
           </ExternalActionLink>
         ) : null}
-      </div>
+      </ActionRow>
     </InsetPanel>
   );
 }

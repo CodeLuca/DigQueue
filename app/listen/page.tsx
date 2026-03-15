@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { ButtonLink } from "@/components/button-link";
+import { ActionRow } from "@/components/action-row";
 import { AppPageHeader } from "@/components/app-page-header";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
 import { SectionCardHeader } from "@/components/section-card-header";
@@ -21,10 +22,10 @@ export default async function ListenPage({
     <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
       <AppPageHeader
         actions={
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+          <ActionRow className="text-sm">
             <ButtonLink href="/" size="sm" variant="outline">Dashboard</ButtonLink>
             <ButtonLink href="/settings" size="sm" variant="outline">Settings</ButtonLink>
-          </div>
+          </ActionRow>
         }
         description="A focused lane for everything you still need to hear and decide on."
         title="To Listen Inbox"

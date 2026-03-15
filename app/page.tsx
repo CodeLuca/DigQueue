@@ -16,6 +16,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
+import { ActionRow } from "@/components/action-row";
 import { ActionLink } from "@/components/action-link";
 import { DiscogsRequiredNotice } from "@/components/discogs-required-notice";
 import { EmptyStateNote } from "@/components/empty-state-note";
@@ -404,7 +405,7 @@ export default async function HomePage({
         </div>
         {sourceView.visibleError ? <p className="mt-2 line-clamp-2 text-xs text-red-300">Error: {sourceView.visibleError}</p> : null}
         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+          <ActionRow>
             <DiscogsLink discogsUrl={label.discogsUrl} title="Open on Discogs" />
             {!label.tracksFullyLoaded ? (
               <SourceRetryButton
@@ -417,8 +418,8 @@ export default async function HomePage({
             <p className="text-xs text-[var(--color-muted)]">
               Updated {new Date(label.updatedAt).toLocaleDateString()} • Retry {label.retryCount}
             </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+          </ActionRow>
+          <ActionRow>
             <ProcessingToggle
               key={`${label.id}-${label.active ? "1" : "0"}-${label.status}`}
               labelId={label.id}
@@ -426,15 +427,15 @@ export default async function HomePage({
               initialStatus={label.status}
               disabled={!canProcess}
             />
-          </div>
+          </ActionRow>
         </div>
         <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 px-2.5 py-2 text-xs text-[var(--color-muted)]">
           <summary className="cursor-pointer select-none text-[11px] uppercase tracking-[0.06em] text-[var(--color-muted)]">Details</summary>
           <p className="mt-2 line-clamp-2">{label.summaryText}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <ActionRow className="mt-2">
             {needsSourceInfoRefresh ? <SourceRefreshButton labelId={label.id} /> : null}
             <LabelDeleteButton labelId={label.id} labelName={label.name} />
-          </div>
+          </ActionRow>
           {label.notableReleasesJson !== "[]" ? (
             <div className="mt-2 flex flex-wrap gap-1">
               {(() => {
@@ -734,7 +735,7 @@ export default async function HomePage({
                 </summary>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div className="min-w-0">
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <ActionRow className="mt-2">
                       <SegmentedControlLink active={selectedLabelState === "all"} href={filterHref("all")} title="Show all loaded sources">
                         All ({queriedLabels.length})
                       </SegmentedControlLink>
@@ -746,7 +747,7 @@ export default async function HomePage({
                       </SegmentedControlLink>
                       <Badge>Label sources {labelSources.length}</Badge>
                       <Badge>Artist sources {artistSources.length}</Badge>
-                    </div>
+                    </ActionRow>
                     <form method="GET" className="mt-2 flex flex-wrap items-center gap-2">
                       <input type="hidden" name="tab" value="step-1" />
                       {listenLabel ? <input type="hidden" name="listenLabel" value={listenLabel} /> : null}

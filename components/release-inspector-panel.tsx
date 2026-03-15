@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
+import { ActionRow } from "@/components/action-row";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { ExternalLinkRow } from "@/components/external-link-row";
@@ -131,10 +132,10 @@ export function ReleaseInspectorPanel({
               )}
             </ReleaseInspectorPanelSection>
             <ReleaseInspectorPanelSection title="Open Links" className="lg:col-span-2 2xl:col-span-3">
-              <div className="flex flex-wrap items-center gap-2">
+              <ActionRow>
                 {releaseLinksLoading ? <span className="text-[10px] text-[var(--color-muted)]">finding stores…</span> : null}
                 {releaseLinksError ? <span className="text-[10px] text-rose-300">{releaseLinksError}</span> : null}
-              </div>
+              </ActionRow>
               <div className="mt-2 flex flex-wrap gap-2">
                 {releaseInspector.discogsReleaseUrl ? (
                   <ExternalActionLink
