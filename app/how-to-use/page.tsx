@@ -20,8 +20,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { HoverTooltip, getHoverTooltipClassName } from "@/components/hover-tooltip";
 import { Input } from "@/components/ui/input";
+import { InsetPanel } from "@/components/inset-panel";
+import { InstructionList } from "@/components/instruction-list";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
@@ -61,9 +64,9 @@ export default async function HowToUsePage() {
             <Badge><Heart className="mr-1 h-3 w-3" />Saved tracks</Badge>
           </NativeTooltip>
         </div>
-        <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+        <FeedbackBanner tone="warning" className="mt-3 text-xs">
           Demo page note: sample controls below are disabled and shown for orientation only.
-        </div>
+        </FeedbackBanner>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Sources</Button></Link>
           <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Listening Station</Button></Link>
@@ -115,13 +118,13 @@ export default async function HowToUsePage() {
                 <Badge>Artists (10)</Badge>
               </NativeTooltip>
             </div>
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/55 p-2 text-sm">
+            <InsetPanel tone="muted" className="text-sm">
               <p className="font-medium">What to do first</p>
               <p className="text-[var(--color-muted)]">Add 1-3 sources (labels or artists), activate them, then go to Listening Station.</p>
               <p className="mt-1 text-[var(--color-muted)]">
                 Label sources focus on a label catalog. Artist sources follow one artist across multiple labels and projects.
               </p>
-            </div>
+            </InsetPanel>
           </CardContent>
         </Card>
 
@@ -138,7 +141,7 @@ export default async function HowToUsePage() {
               <Badge>Reviewed</Badge>
               <Badge>Played</Badge>
             </div>
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/55 p-2">
+            <InsetPanel tone="muted">
               <div className="flex flex-wrap items-center gap-2">
                 <NativeTooltip text="Play now in mini-player; if queue is empty, DigQueue attempts to load from active sources.">
                   <span>
@@ -161,7 +164,7 @@ export default async function HowToUsePage() {
                   </span>
                 </NativeTooltip>
               </div>
-            </div>
+            </InsetPanel>
             <p className="text-sm text-[var(--color-muted)]">
               <span className="font-medium text-[var(--color-text)]">Single check:</span> review this track.
               {" "}
@@ -212,9 +215,14 @@ export default async function HowToUsePage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>If you do not know which sources to add yet, start from music you already like.</p>
-            <p>1. Open a track/release you like in Listening Station or Library.</p>
-            <p>2. Use the release action to <span className="font-medium">Add + activate source</span>.</p>
-            <p>3. Go to Sources and run ingestion on that new source.</p>
+            <InstructionList
+              className="text-sm"
+              items={[
+                "Open a track or release you like in Listening Station or Library.",
+                <>Use the release action to <span className="font-medium text-[var(--color-text)]">Add + activate source</span>.</>,
+                "Go to Sources and run ingestion on that new source.",
+              ]}
+            />
             <p className="text-[var(--color-muted)]">
               This is the fastest way to grow your source list without guessing random names.
             </p>
@@ -227,9 +235,14 @@ export default async function HowToUsePage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>Default flow:</p>
-            <p>1. Use <span className="font-medium">View</span> first (All/Needs Review/Reviewed/Played).</p>
-            <p>2. Use <span className="font-medium">Exclude</span> to subtract noise.</p>
-            <p>3. Open <span className="font-medium">More filters</span> only when needed.</p>
+            <InstructionList
+              className="text-sm"
+              items={[
+                <>Use <span className="font-medium text-[var(--color-text)]">View</span> first (All/Needs Review/Reviewed/Played).</>,
+                <>Use <span className="font-medium text-[var(--color-text)]">Exclude</span> to subtract noise.</>,
+                <>Open <span className="font-medium text-[var(--color-text)]">More filters</span> only when needed.</>,
+              ]}
+            />
             <div className="flex flex-wrap gap-2">
               <NativeTooltip text="View presets: All, Needs Review, Reviewed, Played.">
                 <span>
@@ -261,21 +274,27 @@ export default async function HowToUsePage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {isLoggedIn && onboardingSnapshot ? (
-              <>
-                <p>1. Check the setup state above.</p>
-                <p>2. Follow the next-step buttons that match your current state.</p>
-                <p>3. Once the queue is live, use Listening Station to review tracks.</p>
-                <p>4. Clear leftovers in Library → Needs Review.</p>
-                <p>5. Return to Sources and keep only the sources worth rotating.</p>
-              </>
+              <InstructionList
+                className="text-sm"
+                items={[
+                  "Check the setup state above.",
+                  "Follow the next-step buttons that match your current state.",
+                  "Once the queue is live, use Listening Station to review tracks.",
+                  "Clear leftovers in Library -> Needs Review.",
+                  "Return to Sources and keep only the sources worth rotating.",
+                ]}
+              />
             ) : (
-              <>
-                <p>1. Add sources and activate a few.</p>
-                <p>2. Open Listening Station and press Play Now on a track.</p>
-                <p>3. Use review buttons while listening.</p>
-                <p>4. Check Library → Needs Review and clear leftovers.</p>
-                <p>5. Return to Sources and add one more source.</p>
-              </>
+              <InstructionList
+                className="text-sm"
+                items={[
+                  "Add sources and activate a few.",
+                  "Open Listening Station and press Play Now on a track.",
+                  "Use review buttons while listening.",
+                  "Check Library -> Needs Review and clear leftovers.",
+                  "Return to Sources and add one more source.",
+                ]}
+              />
             )}
             <div className="flex flex-wrap gap-2">
               <Link href="/settings">
