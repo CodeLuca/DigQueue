@@ -1,31 +1,28 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MutationActionButton } from "@/components/mutation-action-button";
-import { responsiveActionButtonLayout } from "@/components/responsive-action-button-layout";
-import { cn } from "@/lib/utils";
+import { PresetActionButton } from "@/components/preset-action-button";
 
 export function RecommendationActionButton({
   children,
   className,
   fullSpan = false,
   ...props
-}: Omit<Parameters<typeof MutationActionButton>[0], "className" | "preset" | "size"> & {
+}: Omit<Parameters<typeof PresetActionButton>[0], "className" | "preset" | "size" | "responsiveLayout"> & {
   children: ReactNode;
   className?: string;
   fullSpan?: boolean;
 }) {
   return (
-    <MutationActionButton
+    <PresetActionButton
       {...props}
       preset="recommendation"
       size="sm"
-      className={cn(
-        responsiveActionButtonLayout({ fullSpan }),
-        className,
-      )}
+      responsiveLayout
+      fullSpan={fullSpan}
+      className={className}
     >
       {children}
-    </MutationActionButton>
+    </PresetActionButton>
   );
 }

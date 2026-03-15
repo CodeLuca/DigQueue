@@ -1,11 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MutationActionButton } from "@/components/mutation-action-button";
-import { responsiveActionWidthClassName } from "@/components/responsive-action-button-layout";
-import { cn } from "@/lib/utils";
+import { PresetActionButton } from "@/components/preset-action-button";
 
-type AccountActionButtonProps = Omit<Parameters<typeof MutationActionButton>[0], "preset" | "className" | "size"> & {
+type AccountActionButtonProps = Omit<Parameters<typeof PresetActionButton>[0], "preset" | "className" | "size" | "responsiveLayout"> & {
   children: ReactNode;
   className?: string;
   mobileFullWidth?: boolean;
@@ -20,13 +18,14 @@ export function AccountActionButton({
   ...props
 }: AccountActionButtonProps) {
   return (
-    <MutationActionButton
+    <PresetActionButton
       {...props}
       preset="account"
       size={size}
-      className={cn(mobileFullWidth && responsiveActionWidthClassName(), className)}
+      mobileFullWidth={mobileFullWidth}
+      className={className}
     >
       {children}
-    </MutationActionButton>
+    </PresetActionButton>
   );
 }

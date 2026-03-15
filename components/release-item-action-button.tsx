@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { PresetActionButton } from "@/components/preset-action-button";
 
-type ReleaseItemActionButtonProps = Omit<Parameters<typeof MutationActionButton>[0], "preset" | "size"> & {
+type ReleaseItemActionButtonProps = Omit<Parameters<typeof PresetActionButton>[0], "preset" | "size" | "responsiveLayout" | "mobileFullWidth" | "fullSpan"> & {
   children: ReactNode;
   size?: "sm" | "default";
 };
@@ -14,12 +14,12 @@ export function ReleaseItemActionButton({
   ...props
 }: ReleaseItemActionButtonProps) {
   return (
-    <MutationActionButton
+    <PresetActionButton
       {...props}
       preset="releaseItem"
       size={size}
     >
       {children}
-    </MutationActionButton>
+    </PresetActionButton>
   );
 }

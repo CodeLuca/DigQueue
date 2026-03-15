@@ -1,11 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MutationActionButton } from "@/components/mutation-action-button";
-import { responsiveActionWidthClassName } from "@/components/responsive-action-button-layout";
-import { cn } from "@/lib/utils";
+import { PresetActionButton } from "@/components/preset-action-button";
 
-type InlineActionButtonProps = Omit<Parameters<typeof MutationActionButton>[0], "preset" | "className" | "size"> & {
+type InlineActionButtonProps = Omit<Parameters<typeof PresetActionButton>[0], "preset" | "className" | "size" | "responsiveLayout"> & {
   children: ReactNode;
   className?: string;
   mobileFullWidth?: boolean;
@@ -20,13 +18,14 @@ export function InlineActionButton({
   ...props
 }: InlineActionButtonProps) {
   return (
-    <MutationActionButton
+    <PresetActionButton
       {...props}
       preset="inline"
       size={size}
-      className={cn(mobileFullWidth && responsiveActionWidthClassName(), className)}
+      mobileFullWidth={mobileFullWidth}
+      className={className}
     >
       {children}
-    </MutationActionButton>
+    </PresetActionButton>
   );
 }
