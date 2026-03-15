@@ -37,6 +37,7 @@ import { SourceRetryButton } from "@/components/source-retry-button";
 import { SourceSyncControlButton } from "@/components/source-sync-control-button";
 import { SyncSavedToDiscogsButton } from "@/components/sync-saved-to-discogs-button";
 import { SourceSyncStatus } from "@/components/source-sync-status";
+import { StatTile } from "@/components/stat-tile";
 import { YoutubePlaylistExportButton } from "@/components/youtube-playlist-export-button";
 import { WishlistSyncStatus } from "@/components/wishlist-sync-status";
 import { Badge } from "@/components/ui/badge";
@@ -549,50 +550,58 @@ export default async function HomePage({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-              <PlayCircle className="h-3.5 w-3.5" />
-              Unplayed
-            </p>
-            <p className="text-xl font-semibold">{data.metrics.unplayedTracks}</p>
-            <ActionLink href="/?tab=library&libraryView=needs-review" variant="textLink" className="text-xs">
-              Open in library
-            </ActionLink>
+            <StatTile
+              icon={<PlayCircle className="h-3.5 w-3.5" />}
+              label="Unplayed"
+              value={data.metrics.unplayedTracks}
+              action={(
+                <ActionLink href="/?tab=library&libraryView=needs-review" variant="textLink" className="text-xs">
+                  Open in library
+                </ActionLink>
+              )}
+            />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-              <History className="h-3.5 w-3.5" />
-              Played
-            </p>
-            <p className="text-xl font-semibold">{data.metrics.playedItems}</p>
-            <ActionLink href="/?tab=library&libraryView=history" variant="textLink" className="text-xs">
-              Open in library
-            </ActionLink>
+            <StatTile
+              icon={<History className="h-3.5 w-3.5" />}
+              label="Played"
+              value={data.metrics.playedItems}
+              action={(
+                <ActionLink href="/?tab=library&libraryView=history" variant="textLink" className="text-xs">
+                  Open in library
+                </ActionLink>
+              )}
+            />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Reviewed
-            </p>
-            <p className="text-xl font-semibold">{data.metrics.doneTracks}</p>
-            <ActionLink href="/?tab=library&libraryView=reviewed" variant="textLink" className="text-xs">
-              Open in library
-            </ActionLink>
+            <StatTile
+              icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+              label="Reviewed"
+              value={data.metrics.doneTracks}
+              action={(
+                <ActionLink href="/?tab=library&libraryView=reviewed" variant="textLink" className="text-xs">
+                  Open in library
+                </ActionLink>
+              )}
+            />
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-              <Heart className="h-3.5 w-3.5" />
-              Saved Tracks
-            </p>
-            <p className="text-xl font-semibold">{data.metrics.savedTracks}</p>
-            <ActionLink href="/?tab=library&libraryView=library" variant="textLink" className="text-xs">
-              Open in library
-            </ActionLink>
+            <StatTile
+              icon={<Heart className="h-3.5 w-3.5" />}
+              label="Saved Tracks"
+              value={data.metrics.savedTracks}
+              action={(
+                <ActionLink href="/?tab=library&libraryView=library" variant="textLink" className="text-xs">
+                  Open in library
+                </ActionLink>
+              )}
+            />
           </CardContent>
         </Card>
         </div>
@@ -1295,20 +1304,18 @@ export default async function HomePage({
               </div>
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className={getInsetPanelClassName("surface")}>
-                  <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-                    <History className="h-3.5 w-3.5" />
-                    Played Events
-                  </p>
-                  <p className="text-xl font-semibold">{data.metrics.playedItems}</p>
-                </div>
-                <div className={getInsetPanelClassName("surface")}>
-                  <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Reviewed Tracks
-                  </p>
-                  <p className="text-xl font-semibold">{data.metrics.doneTracks}</p>
-                </div>
+                <StatTile
+                  className={getInsetPanelClassName("surface")}
+                  icon={<History className="h-3.5 w-3.5" />}
+                  label="Played Events"
+                  value={data.metrics.playedItems}
+                />
+                <StatTile
+                  className={getInsetPanelClassName("surface")}
+                  icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                  label="Reviewed Tracks"
+                  value={data.metrics.doneTracks}
+                />
               </div>
 
               <ListenInboxClient
