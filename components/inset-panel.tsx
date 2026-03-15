@@ -10,6 +10,18 @@ export function getInsetPanelClassName(tone: InsetPanelTone = "surface") {
     : "rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3";
 }
 
+export function InsetPanel({
+  children,
+  className,
+  tone = "surface",
+}: {
+  children: ReactNode;
+  className?: string;
+  tone?: InsetPanelTone;
+}) {
+  return <div className={cn(getInsetPanelClassName(tone), className)}>{children}</div>;
+}
+
 export function SectionKicker({
   children,
   className,

@@ -5,6 +5,7 @@ import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-brid
 import { ChooseMatchButton } from "@/components/choose-match-button";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { ExternalActionLink } from "@/components/external-action-link";
+import { InsetPanel } from "@/components/inset-panel";
 import { PlayMatchButton } from "@/components/play-match-button";
 import { ReleaseInspectorPanel } from "@/components/release-inspector-panel";
 import { ReleaseTrackTodoButton } from "@/components/release-track-todo-button";
@@ -50,7 +51,7 @@ export default async function ReleasePage({
         </CardHeader>
         <CardContent className="space-y-3">
           {visibleTracks.map((track) => (
-            <div key={track.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+            <InsetPanel key={track.id}>
               <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium">{track.position} {track.title}</p>
@@ -91,7 +92,7 @@ export default async function ReleasePage({
                   </p>
                 ) : null}
               </div>
-            </div>
+            </InsetPanel>
           ))}
           {visibleTracks.length === 0 ? <EmptyStateNote title="No tracks found for this release." /> : null}
         </CardContent>

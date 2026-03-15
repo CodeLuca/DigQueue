@@ -1,6 +1,7 @@
 "use client";
 
 import { EmptyStateNote } from "@/components/empty-state-note";
+import { InsetPanel } from "@/components/inset-panel";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { ListenInboxEmptyState } from "@/lib/listen-inbox-types";
@@ -15,7 +16,7 @@ export function ListenInboxEmptyStateCard({
   }
 
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+    <InsetPanel>
       <p className="text-sm font-medium">{emptyState.title}</p>
       <p className="mt-1 text-sm text-[var(--color-muted)]">{emptyState.detail}</p>
       {emptyState.actionHref && emptyState.actionLabel ? (
@@ -34,6 +35,6 @@ export function ListenInboxEmptyStateCard({
           ) : null}
         </div>
       ) : null}
-    </div>
+    </InsetPanel>
   );
 }

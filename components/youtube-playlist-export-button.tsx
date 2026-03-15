@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { ExternalLink, ListVideo, Youtube } from "lucide-react";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { HighlightActionLink } from "@/components/highlight-action";
+import { InsetPanel, SectionKicker } from "@/components/inset-panel";
 import { MutationActionButton } from "@/components/mutation-action-button";
 import { buildYoutubeOAuthStartPath } from "@/lib/auth-provider-paths";
 import { useYoutubePlaylistExportAction } from "@/lib/use-account-settings-actions";
@@ -32,12 +33,12 @@ export function YoutubePlaylistExportButton(props: Props) {
   };
 
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+    <InsetPanel>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted)]">
+        <SectionKicker className="inline-flex items-center gap-2">
           <Youtube className="h-3.5 w-3.5 text-[var(--color-accent)]" />
           YouTube Export
-        </p>
+        </SectionKicker>
         {props.channelTitle ? <p className="text-[11px] text-[var(--color-muted)]">Connected: {props.channelTitle}</p> : null}
       </div>
 
@@ -113,6 +114,6 @@ export function YoutubePlaylistExportButton(props: Props) {
           </ExternalActionLink>
         ) : null}
       </div>
-    </div>
+    </InsetPanel>
   );
 }
