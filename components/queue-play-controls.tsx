@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { responsiveActionButtonLayout } from "@/components/responsive-action-button-layout";
 import { dispatchPlaybackNextEvent } from "@/lib/client-playback-events";
 
 export function QueuePlayControls() {
@@ -9,7 +10,7 @@ export function QueuePlayControls() {
       <Button
         type="button"
         size="sm"
-        className="w-full justify-center sm:w-auto sm:justify-start"
+        className={responsiveActionButtonLayout({})}
         title="Start playback in the mini-player from the next queued item"
         onClick={dispatchPlaybackNextEvent}
       >

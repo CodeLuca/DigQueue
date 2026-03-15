@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { MutationActionButton } from "@/components/mutation-action-button";
+import { responsiveActionButtonLayout } from "@/components/responsive-action-button-layout";
 import { cn } from "@/lib/utils";
 
 export function PlaybackActionButton({
@@ -20,9 +21,7 @@ export function PlaybackActionButton({
       preset="playback"
       size="sm"
       className={cn(
-        fullSpan
-          ? "col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
-          : "w-full justify-center sm:w-auto sm:justify-start",
+        responsiveActionButtonLayout({ fullSpan }),
         className,
       )}
     >

@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCheck, CheckCircle2, CheckSquare, Heart, HeartOff, X } from "lucide-react";
+import { responsiveActionButtonLayout } from "@/components/responsive-action-button-layout";
 import { Button } from "@/components/ui/button";
 import { getTrackSaveActionLabels } from "@/lib/library-action-labels";
 
@@ -29,12 +30,10 @@ export function ListenInboxBulkActions({
   visibleNeedsReviewCount: number;
   compact?: boolean;
 }) {
-  const selectClass = compact ? "w-full justify-center" : "w-full justify-center sm:w-auto sm:justify-start";
+  const selectClass = responsiveActionButtonLayout({ compact });
   const selectedTextClass = compact ? "col-span-2 text-[var(--color-muted)]" : "col-span-2 text-[var(--color-muted)] sm:col-auto";
-  const reviewedClass = compact
-    ? "col-span-2 w-full justify-center"
-    : "col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start";
-  const secondaryClass = compact ? "w-full justify-center" : "w-full justify-center sm:w-auto sm:justify-start";
+  const reviewedClass = responsiveActionButtonLayout({ compact, fullSpan: true });
+  const secondaryClass = responsiveActionButtonLayout({ compact });
   const saveLabels = getTrackSaveActionLabels(false);
 
   return (
