@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CompactResultRow } from "@/components/compact-result-row";
 
 export function ExternalLinkRow({
   href,
@@ -16,14 +17,12 @@ export function ExternalLinkRow({
   titleAccent?: boolean;
 }) {
   return (
-    <a
+    <CompactResultRow
       href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="block rounded-md border border-[var(--color-border)] p-2 hover:bg-[var(--color-surface)]"
-    >
-      <p className={`line-clamp-1 text-sm ${titleAccent ? "text-[var(--color-accent)] hover:underline" : "font-medium"}`}>{title}</p>
-      <p className={metaClassName ?? "text-xs text-[var(--color-muted)]"}>{meta}</p>
-    </a>
+      meta={meta}
+      metaClassName={metaClassName ?? "text-xs text-[var(--color-muted)]"}
+      title={title}
+      titleClassName={titleAccent ? "text-sm text-[var(--color-accent)] hover:underline" : "text-sm font-medium"}
+    />
   );
 }

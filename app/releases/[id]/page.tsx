@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { ChooseMatchButton } from "@/components/choose-match-button";
+import { CompactResultRow } from "@/components/compact-result-row";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { EntityDetailHeader } from "@/components/entity-detail-header";
 import { ExternalActionLink } from "@/components/external-action-link";
@@ -71,20 +72,21 @@ export default async function ReleasePage({
 
               <div className="space-y-1">
                 {track.matches.slice(0, 5).map((match) => (
-                  <div key={match.id} className="flex flex-col gap-2 rounded-md border border-[var(--color-border)] p-2 text-xs sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="line-clamp-1">{match.title}</p>
-                      <p className="line-clamp-1 text-[var(--color-muted)]">{match.channelTitle} • score {match.score.toFixed(1)}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                  <CompactResultRow
+                    key={match.id}
+                    actions={
+                      <>
                       {match.chosen ? <Badge>chosen</Badge> : null}
                       <PlayMatchButton trackId={track.id} matchId={match.id} />
                       <ExternalActionLink href={`https://www.youtube.com/watch?v=${match.videoId}`} title="Open match on YouTube" variant="textLink">
                         Open
                       </ExternalActionLink>
                       <ChooseMatchButton trackId={track.id} matchId={match.id} />
-                    </div>
-                  </div>
+                      </>
+                    }
+                    meta={`${match.channelTitle} • score ${match.score.toFixed(1)}`}
+                    title={match.title}
+                  />
                 ))}
                 {track.matches.length === 0 ? (
                   <p className="text-xs text-[var(--color-muted)]">
