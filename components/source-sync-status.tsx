@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { SourceSyncActivityTimeline } from "@/components/source-sync-activity-timeline";
+import { SourceSyncNote } from "@/components/source-sync-note";
 import { SourceSyncSection } from "@/components/source-sync-section";
 import { SupportInsightCard } from "@/components/support-insight-card";
 import {
@@ -94,24 +95,24 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               <span className="text-[10px] text-[var(--color-muted)]">{data.throughputComparison.summary}</span>
             </div>
           ) : null}
-          <p className="text-[10px] text-[var(--color-muted)]">
+          <SourceSyncNote>
             Avg duration: {formatSourceSyncDuration(data.throughput.averageDurationMs)}
-          </p>
+          </SourceSyncNote>
           {data.throughputComparison ? (
-            <p className="text-[10px] text-[var(--color-muted)]">
+            <SourceSyncNote>
               <span className="hidden sm:inline">Versus previous {data.throughputComparison.currentWindowMinutes}m:</span>
               <span className="sm:hidden">Vs prev:</span>
               {" "}runs {formatSourceSyncDelta(data.throughputComparison.runDelta, (value) => `${value}`)},
               {" "}failures {formatSourceSyncDelta(data.throughputComparison.failedDelta, (value) => `${value}`)},
               {" "}avg duration {formatSourceSyncDelta(data.throughputComparison.averageDurationDeltaMs, (value) => formatSourceSyncDuration(value))}
-            </p>
+            </SourceSyncNote>
           ) : null}
-          <p className="text-[10px] text-[var(--color-muted)]">
+          <SourceSyncNote>
             p50/p90: {formatSourceSyncDuration(data.throughput.durationP50Ms)} / {formatSourceSyncDuration(data.throughput.durationP90Ms)}
-          </p>
-          <p className="text-[10px] text-[var(--color-muted)]">
+          </SourceSyncNote>
+          <SourceSyncNote>
             Last success: {data.throughput.lastSuccessAt ? formatSourceSyncAge(data.throughput.lastSuccessAt) : "none yet"}
-          </p>
+          </SourceSyncNote>
           {data.throughputComparison || data.throughputBreakdown ? (
             <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
               <SupportInsightCard
@@ -129,9 +130,9 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
                     <p className="text-[11px] text-[var(--color-text)]">
                       {view.topFailureCategory ? `${view.topFailureCategory.label} (${view.topFailureCategory.count})` : "No failures in the current window."}
                     </p>
-                    <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                    <SourceSyncNote className="mt-1">
                       {view.topFailureProvider ? `Mostly ${view.topFailureProvider.label.toLowerCase()} (${view.topFailureProvider.count}).` : "No provider skew detected."}
-                    </p>
+                    </SourceSyncNote>
                   </>
                 }
               />
@@ -142,11 +143,11 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
                     <p className="text-[11px] text-[var(--color-text)]">
                       {view.dominantRunMix ? `${view.dominantRunMix.label} leading (${view.dominantRunMix.count})` : "No recent runs."}
                     </p>
-                    <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                    <SourceSyncNote className="mt-1">
                       {data.throughputBreakdown
                         ? `${data.throughputBreakdown.sourceKinds.label} label, ${data.throughputBreakdown.sourceKinds.artist} artist`
                         : "Awaiting recent run history."}
-                    </p>
+                    </SourceSyncNote>
                   </>
                 }
               />
@@ -176,12 +177,12 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
             </>
           }
         >
-          <p className="mt-1 hidden text-[10px] text-[var(--color-muted)] sm:block">
+          <SourceSyncNote className="mt-1 hidden sm:block">
             Success/failed: {data.throughputLong.successfulRuns}/{data.throughputLong.failedRuns}
-          </p>
-          <p className="hidden text-[10px] text-[var(--color-muted)] sm:block">
+          </SourceSyncNote>
+          <SourceSyncNote className="hidden sm:block">
             Duration p50/p90: {formatSourceSyncDuration(data.throughputLong.durationP50Ms)} / {formatSourceSyncDuration(data.throughputLong.durationP90Ms)}
-          </p>
+          </SourceSyncNote>
           {view.longTimelineGrouped.length > 0 ? (
             <SourceSyncActivityTimeline
               className="mt-1"
@@ -193,18 +194,18 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
           ) : null}
           {data.throughputBreakdown ? (
             <div className="mt-2 hidden space-y-1 sm:block">
-              <p className="text-[10px] text-[var(--color-muted)]">
+              <SourceSyncNote>
                 Run mix: labels {data.throughputBreakdown.sourceKinds.label}, artists {data.throughputBreakdown.sourceKinds.artist}
                 {data.throughputBreakdown.sourceKinds.unknown > 0 ? `, unknown ${data.throughputBreakdown.sourceKinds.unknown}` : ""}
-              </p>
-              <p className="text-[10px] text-[var(--color-muted)]">
+              </SourceSyncNote>
+              <SourceSyncNote>
                 Failure providers: Discogs {data.throughputBreakdown.failureProviders.discogs}, YouTube {data.throughputBreakdown.failureProviders.youtube}
                 {data.throughputBreakdown.failureProviders.unknown > 0 ? `, unknown ${data.throughputBreakdown.failureProviders.unknown}` : ""}
-              </p>
-              <p className="text-[10px] text-[var(--color-muted)]">
+              </SourceSyncNote>
+              <SourceSyncNote>
                 Failure categories: auth {data.throughputBreakdown.failureCategories.auth}, rate limit {data.throughputBreakdown.failureCategories.rate_limit}, provider {data.throughputBreakdown.failureCategories.provider}, database {data.throughputBreakdown.failureCategories.database}, data {data.throughputBreakdown.failureCategories.data}
                 {data.throughputBreakdown.failureCategories.unknown > 0 ? `, unknown ${data.throughputBreakdown.failureCategories.unknown}` : ""}
-              </p>
+              </SourceSyncNote>
             </div>
           ) : null}
         </SourceSyncSection>
@@ -220,11 +221,11 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         >
           <div className="mt-2 space-y-1">
             {data.runHistory.slice(0, 5).map((item) => (
-              <p key={`${item.createdAt}-${item.sourceId}-${item.outcome}`} className="text-[10px] text-[var(--color-muted)]">
+              <SourceSyncNote key={`${item.createdAt}-${item.sourceId}-${item.outcome}`}>
                 {new Date(item.createdAt).toLocaleTimeString()} • {item.sourceName} • {item.outcome}
                 {" "}({formatSourceSyncDuration(item.durationMs)})
                 {item.error ? ` • ${item.error}` : item.message ? ` • ${item.message}` : ""}
-              </p>
+              </SourceSyncNote>
             ))}
           </div>
         </SourceSyncSection>
@@ -240,9 +241,9 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         >
           <div className="mt-1 space-y-1">
             {view.recentSuccessBySource.map(({ sourceName, createdAt }) => (
-              <p key={`${sourceName}-${createdAt}`} className="text-[10px] text-[var(--color-muted)]">
+              <SourceSyncNote key={`${sourceName}-${createdAt}`}>
                 {sourceName}: {formatSourceSyncAge(createdAt)}
-              </p>
+              </SourceSyncNote>
             ))}
           </div>
         </SourceSyncSection>
