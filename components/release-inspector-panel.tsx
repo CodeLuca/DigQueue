@@ -5,6 +5,11 @@ import { ExternalLink } from "lucide-react";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { ExternalLinkRow } from "@/components/external-link-row";
+import {
+  getReleaseInspectorPanelClassName,
+  ReleaseInspectorMetricCell,
+  ReleaseInspectorPanelSection,
+} from "@/components/release-inspector-panels";
 import type { FinderCandidate } from "@/lib/client-release-data";
 import { releaseDiscogsLinkTitle } from "@/lib/library-action-labels";
 import { useReleaseInspectorData } from "@/lib/use-release-inspector-data";
@@ -57,7 +62,7 @@ export function ReleaseInspectorPanel({
       {releaseDetailsError ? <p className="text-xs text-rose-300">{releaseDetailsError}</p> : null}
       {!releaseDetailsLoading && !releaseDetailsError && releaseDetails ? (
         <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-2.5">
+          <div className={getReleaseInspectorPanelClassName("p-2.5")}>
             {releaseInspector.expandedArtworkUrl ? (
               <Image
                 src={releaseInspector.expandedArtworkUrl}
@@ -77,25 +82,23 @@ export function ReleaseInspectorPanel({
             </div>
           </div>
           <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-            <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
-              <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Release Snapshot</p>
+            <ReleaseInspectorPanelSection title="Release Snapshot">
               <p className="mt-1 text-sm font-medium">{releaseDetails.title}</p>
               <p className="mt-1 text-xs text-[var(--color-muted)]">{releaseDetails.year || "n/a"} • {releaseDetails.country || "n/a"}</p>
               <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{releaseInspector.currentLabel || "Label unknown"}</p>
               <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{releaseInspector.currentFormats || "Format unknown"}</p>
               <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{releaseInspector.currentGenreStyles || "No genre/style tags"}</p>
-            </div>
-            <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
-              <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Market Snapshot</p>
+            </ReleaseInspectorPanelSection>
+            <ReleaseInspectorPanelSection title="Market Snapshot">
               <div className="mt-1 grid grid-cols-2 gap-2">
-                <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
-                  <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Median</p>
-                  <p className="text-xs font-medium">{formatReleasePrice(releaseDetails.marketStats?.median_price, releaseInspector.marketCurrency)}</p>
-                </div>
-                <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5">
-                  <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)]">Lowest</p>
-                  <p className="text-xs font-medium">{formatReleasePrice(releaseDetails.marketStats?.lowest_price, releaseInspector.marketCurrency)}</p>
-                </div>
+                <ReleaseInspectorMetricCell
+                  label="Median"
+                  value={formatReleasePrice(releaseDetails.marketStats?.median_price, releaseInspector.marketCurrency)}
+                />
+                <ReleaseInspectorMetricCell
+                  label="Lowest"
+                  value={formatReleasePrice(releaseDetails.marketStats?.lowest_price, releaseInspector.marketCurrency)}
+                />
               </div>
               <p className="mt-2 text-xs text-[var(--color-muted)]">
                 {releaseDetails.marketStats?.num_for_sale ?? "n/a"} listed
@@ -112,9 +115,8 @@ export function ReleaseInspectorPanel({
               {releaseDetails.marketStats?.blocked_from_sale ? (
                 <span className="mt-2 inline-flex rounded border border-amber-500/40 px-1.5 py-0.5 text-[10px] text-amber-300">Sale blocked</span>
               ) : null}
-            </div>
-            <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3">
-              <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Price Guide (By Condition)</p>
+            </ReleaseInspectorPanelSection>
+            <ReleaseInspectorPanelSection title="Price Guide (By Condition)">
               {releaseInspector.priceSuggestionRows.length ? (
                 <div className="mt-1 space-y-1.5">
                   {releaseInspector.priceSuggestionRows.map((row) => (
@@ -127,10 +129,9 @@ export function ReleaseInspectorPanel({
               ) : (
                 <EmptyStateNote title="No condition pricing available from Discogs for this release." className="mt-1 text-xs" />
               )}
-            </div>
-            <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3 lg:col-span-2 2xl:col-span-3">
+            </ReleaseInspectorPanelSection>
+            <ReleaseInspectorPanelSection title="Open Links" className="lg:col-span-2 2xl:col-span-3">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Open Links</p>
                 {releaseLinksLoading ? <span className="text-[10px] text-[var(--color-muted)]">finding stores…</span> : null}
                 {releaseLinksError ? <span className="text-[10px] text-rose-300">{releaseLinksError}</span> : null}
               </div>
@@ -178,10 +179,9 @@ export function ReleaseInspectorPanel({
                   </ExternalActionLink>
                 ))}
               </div>
-            </div>
+            </ReleaseInspectorPanelSection>
             {showFinderCandidates && releaseLinks?.bestBandcamp ? (
-              <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3 lg:col-span-2 2xl:col-span-3">
-                <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Best Bandcamp Match</p>
+              <ReleaseInspectorPanelSection title="Best Bandcamp Match" className="lg:col-span-2 2xl:col-span-3">
                 <a
                   className="mt-1 block text-sm font-medium text-[var(--color-accent)] hover:underline"
                   href={releaseLinks.bestBandcamp.url}
@@ -193,11 +193,10 @@ export function ReleaseInspectorPanel({
                 <p className={`mt-1 text-xs ${confidenceClass(releaseLinks.bestBandcamp.confidence)}`}>
                   Confidence: {releaseLinks.bestBandcamp.confidence} • {releaseLinks.bestBandcamp.reason}
                 </p>
-              </div>
+              </ReleaseInspectorPanelSection>
             ) : null}
             {showFinderCandidates && releaseLinks?.bandcamp?.length ? (
-              <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3 lg:col-span-2 2xl:col-span-3">
-                <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Bandcamp Candidates</p>
+              <ReleaseInspectorPanelSection title="Bandcamp Candidates" className="lg:col-span-2 2xl:col-span-3">
                 <div className="mt-2 space-y-1.5">
                   {releaseLinks.bandcamp.map((item) => (
                     <ExternalLinkRow
@@ -210,7 +209,7 @@ export function ReleaseInspectorPanel({
                     />
                   ))}
                 </div>
-              </div>
+              </ReleaseInspectorPanelSection>
             ) : null}
           </div>
         </div>
