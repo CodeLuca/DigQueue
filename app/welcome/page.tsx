@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bookmark, CheckCheck, Disc3, Heart, Inbox, Settings, Sparkles } from "lucide-react";
 import { GuideCard } from "@/components/guide-card";
+import { InfoCard } from "@/components/info-card";
 import { InstructionList } from "@/components/instruction-list";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { Button } from "@/components/ui/button";
@@ -63,11 +64,14 @@ export default async function WelcomePage() {
 
       <section className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3 reveal reveal-delay-1">
         {highlights.map((item) => (
-          <article key={item.title} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-low)]">
-            <item.icon className="mb-3 h-4 w-4 text-[var(--color-accent)]" />
-            <h2 className="text-base font-medium">{item.title}</h2>
-            <p className="mt-2 text-sm text-[var(--color-muted)]">{item.description}</p>
-          </article>
+          <InfoCard
+            key={item.title}
+            className="shadow-[var(--shadow-low)]"
+            description={item.description}
+            icon={item.icon}
+            title={item.title}
+            variant="stacked"
+          />
         ))}
       </section>
 
@@ -145,18 +149,21 @@ export default async function WelcomePage() {
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
-        <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <p className="inline-flex items-center gap-2 text-sm font-medium"><Heart className="h-4 w-4 text-[var(--color-accent)]" />Save Tracks</p>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">Use saves intentionally. They directly shape what shows up again.</p>
-        </article>
-        <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <p className="inline-flex items-center gap-2 text-sm font-medium"><Settings className="h-4 w-4 text-[var(--color-accent)]" />Integrations</p>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">Discogs powers ingest. YouTube OAuth is optional and only needed for playlist export.</p>
-        </article>
-        <article className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <p className="inline-flex items-center gap-2 text-sm font-medium"><Sparkles className="h-4 w-4 text-[var(--color-accent)]" />Keep It Focused</p>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">Pause sources that are not useful right now, keep reviewing, and your queue stays clean.</p>
-        </article>
+        <InfoCard
+          description="Use saves intentionally. They directly shape what shows up again."
+          icon={Heart}
+          title="Save Tracks"
+        />
+        <InfoCard
+          description="Discogs powers ingest. YouTube OAuth is optional and only needed for playlist export."
+          icon={Settings}
+          title="Integrations"
+        />
+        <InfoCard
+          description="Pause sources that are not useful right now, keep reviewing, and your queue stays clean."
+          icon={Sparkles}
+          title="Keep It Focused"
+        />
       </section>
     </main>
   );

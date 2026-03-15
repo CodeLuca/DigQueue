@@ -316,6 +316,7 @@
     - Consolidated guide-page support surfaces so the How To Use page now reuses shared warning banners, inset panels, and checklist lists instead of maintaining its own demo note box, muted helper cards, and handwritten numbered paragraphs.
     - Consolidated remaining warning feedback surfaces so the dashboard remediation summary, listen-inbox YouTube quota lockout, and Discogs-required callouts now reuse the shared feedback-banner contract instead of carrying bespoke amber alert markup.
     - Consolidated onboarding/docs guide cards so Welcome and How To Use now share one guide-card shell for icon/title/body sections, while Welcome also moves its numbered setup blocks onto the shared instruction-list contract.
+    - Consolidated the remaining Welcome-page info cards so both highlight tiles and closing guidance cards now share one info-card shell instead of carrying two separate bordered marketing-card implementations in the same page.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 
