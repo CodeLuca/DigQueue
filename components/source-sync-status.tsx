@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { SupportInsightCard } from "@/components/support-insight-card";
 import {
   formatSourceSyncAge,
   formatSourceSyncDelta,
@@ -112,32 +113,42 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
           </p>
           {data.throughputComparison || data.throughputBreakdown ? (
             <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
-              <div className="rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/45 p-2">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--color-muted)]">What Changed</p>
-                <p className="mt-1 text-[11px] text-[var(--color-text)]">
-                  {data.throughputComparison?.summary || "No recent comparison yet."}
-                </p>
-              </div>
-              <div className="rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/45 p-2">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Top Failure</p>
-                <p className="mt-1 text-[11px] text-[var(--color-text)]">
-                  {view.topFailureCategory ? `${view.topFailureCategory.label} (${view.topFailureCategory.count})` : "No failures in the current window."}
-                </p>
-                <p className="mt-1 text-[10px] text-[var(--color-muted)]">
-                  {view.topFailureProvider ? `Mostly ${view.topFailureProvider.label.toLowerCase()} (${view.topFailureProvider.count}).` : "No provider skew detected."}
-                </p>
-              </div>
-              <div className="rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/45 p-2">
-                <p className="text-[10px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Run Mix</p>
-                <p className="mt-1 text-[11px] text-[var(--color-text)]">
-                  {view.dominantRunMix ? `${view.dominantRunMix.label} leading (${view.dominantRunMix.count})` : "No recent runs."}
-                </p>
-                <p className="mt-1 text-[10px] text-[var(--color-muted)]">
-                  {data.throughputBreakdown
-                    ? `${data.throughputBreakdown.sourceKinds.label} label, ${data.throughputBreakdown.sourceKinds.artist} artist`
-                    : "Awaiting recent run history."}
-                </p>
-              </div>
+              <SupportInsightCard
+                title="What Changed"
+                detail={
+                  <p className="text-[11px] text-[var(--color-text)]">
+                    {data.throughputComparison?.summary || "No recent comparison yet."}
+                  </p>
+                }
+              />
+              <SupportInsightCard
+                title="Top Failure"
+                detail={
+                  <>
+                    <p className="text-[11px] text-[var(--color-text)]">
+                      {view.topFailureCategory ? `${view.topFailureCategory.label} (${view.topFailureCategory.count})` : "No failures in the current window."}
+                    </p>
+                    <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                      {view.topFailureProvider ? `Mostly ${view.topFailureProvider.label.toLowerCase()} (${view.topFailureProvider.count}).` : "No provider skew detected."}
+                    </p>
+                  </>
+                }
+              />
+              <SupportInsightCard
+                title="Run Mix"
+                detail={
+                  <>
+                    <p className="text-[11px] text-[var(--color-text)]">
+                      {view.dominantRunMix ? `${view.dominantRunMix.label} leading (${view.dominantRunMix.count})` : "No recent runs."}
+                    </p>
+                    <p className="mt-1 text-[10px] text-[var(--color-muted)]">
+                      {data.throughputBreakdown
+                        ? `${data.throughputBreakdown.sourceKinds.label} label, ${data.throughputBreakdown.sourceKinds.artist} artist`
+                        : "Awaiting recent run history."}
+                    </p>
+                  </>
+                }
+              />
             </div>
           ) : null}
           {view.timeline.length > 0 ? (

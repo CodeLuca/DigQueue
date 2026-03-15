@@ -325,6 +325,7 @@
     - Consolidated section card headers so listen, settings, label, and release cards now share one section-card-header wrapper for title, optional description, and optional actions instead of repeating direct CardHeader/CardTitle layouts inline.
     - Consolidated compact result rows so release match rows and external result links now share one compact-result-row primitive instead of maintaining separate bordered title/meta row markup across comparison surfaces.
     - Hardened the live release gate so `release:verify:live` now retries transient Railway deployment/service status probe failures before falling back to base-URL readiness, reducing noisy CLI flake during production verification.
+    - Consolidated sync telemetry insight cards so the source-sync status panel now uses one support-insight-card primitive for “What Changed”, “Top Failure”, and “Run Mix” instead of repeating the same mini summary-card markup inside the operations surface.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 
