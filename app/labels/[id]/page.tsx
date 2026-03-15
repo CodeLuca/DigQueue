@@ -1,8 +1,8 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { ButtonLink } from "@/components/button-link";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsLink } from "@/components/discogs-link";
 import { EmptyStateNote } from "@/components/empty-state-note";
@@ -10,10 +10,11 @@ import { EntityDetailHeader } from "@/components/entity-detail-header";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { MediaActionRow } from "@/components/media-action-row";
 import { ProcessingToggle } from "@/components/processing-toggle";
+import { SectionCardHeader } from "@/components/section-card-header";
 import { SourceRefreshButton } from "@/components/source-refresh-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getLabelDetail } from "@/lib/queries";
 import { getSourceViewModel } from "@/lib/source-view";
@@ -71,7 +72,7 @@ export default async function LabelPage({
       />
 
       <Card className="mb-4">
-        <CardHeader><CardTitle>Label Overview</CardTitle></CardHeader>
+        <SectionCardHeader title="Label Overview" />
         <CardContent className="space-y-3">
           <div className="flex items-start gap-3">
             {data.label.imageUrl ? (
@@ -119,21 +120,21 @@ export default async function LabelPage({
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Releases</CardTitle>
-          <form method="GET" className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-              <input type="checkbox" name="playableOnly" value="1" defaultChecked={onlyPlayable} />
-              Playable only
-            </label>
-            <Button type="submit" size="sm" variant="secondary">Apply</Button>
-            {onlyPlayable ? (
-              <Link href={`/labels/${data.label.id}`} className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs hover:bg-[var(--color-surface2)]">
-                Reset
-              </Link>
-            ) : null}
-          </form>
-        </CardHeader>
+        <SectionCardHeader
+          actions={
+            <form method="GET" className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+                <input type="checkbox" name="playableOnly" value="1" defaultChecked={onlyPlayable} />
+                Playable only
+              </label>
+              <Button type="submit" size="sm" variant="secondary">Apply</Button>
+              {onlyPlayable ? (
+                <ButtonLink href={`/labels/${data.label.id}`} size="sm" variant="outline">Reset</ButtonLink>
+              ) : null}
+            </form>
+          }
+          title="Releases"
+        />
         <CardContent className="space-y-2">
           {visibleReleases.map((release) => (
             <div key={release.id} className="rounded-lg border border-[var(--color-border)] p-3">
@@ -141,7 +142,7 @@ export default async function LabelPage({
                 size="lg"
                 artworkAlt={`${release.title} artwork`}
                 artworkUrl={release.thumbUrl}
-                title={<Link href={`/releases/${release.id}`} className="hover:text-[var(--color-accent)]">{release.title}</Link>}
+                title={<ButtonLink href={`/releases/${release.id}`} className="h-auto justify-start px-0 py-0 text-sm hover:brightness-100" variant="ghost">{release.title}</ButtonLink>}
                 meta={
                   <>
                     {release.artist} • {release.catno || "No catno"} • {release.year || "n/a"}

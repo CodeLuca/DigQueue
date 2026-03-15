@@ -9,11 +9,12 @@ import { ExternalActionLink } from "@/components/external-action-link";
 import { InsetPanel } from "@/components/inset-panel";
 import { PlayMatchButton } from "@/components/play-match-button";
 import { ReleaseInspectorPanel } from "@/components/release-inspector-panel";
+import { SectionCardHeader } from "@/components/section-card-header";
 import { ReleaseTrackTodoButton } from "@/components/release-track-todo-button";
 import { ReleaseWishlistButton } from "@/components/release-wishlist-button";
 import { TrackQueueButtons } from "@/components/track-queue-buttons";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { getReleaseDetail } from "@/lib/queries";
 
 export default async function ReleasePage({
@@ -44,12 +45,10 @@ export default async function ReleasePage({
       />
 
       <Card>
-        <CardHeader>
-          <CardTitle>Tracks + YouTube Matches</CardTitle>
-          <p className="text-xs text-[var(--color-muted)]">
-            Record wishlist and track saves are separate: record wishlist syncs to Discogs, track save stays local.
-          </p>
-        </CardHeader>
+        <SectionCardHeader
+          description="Record wishlist and track saves are separate: record wishlist syncs to Discogs, track save stays local."
+          title="Tracks + YouTube Matches"
+        />
         <CardContent className="space-y-3">
           {visibleTracks.map((track) => (
             <InsetPanel key={track.id}>

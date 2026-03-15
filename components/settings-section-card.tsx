@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { SectionCardHeader } from "@/components/section-card-header";
 import { cn } from "@/lib/utils";
 
 type SettingsSectionCardProps = {
@@ -21,10 +22,12 @@ export function SettingsSectionCard({
 }: SettingsSectionCardProps) {
   return (
     <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className={headerClassName}>
-        <CardTitle className="text-xl">{title}</CardTitle>
-        {description ? <p className="mt-1 text-sm text-[var(--color-muted)]">{description}</p> : null}
-      </CardHeader>
+      <SectionCardHeader
+        className={headerClassName}
+        description={description}
+        title={title}
+        titleClassName="text-xl"
+      />
       <CardContent className={contentClassName}>{children}</CardContent>
     </Card>
   );

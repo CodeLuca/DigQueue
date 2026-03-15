@@ -3,8 +3,9 @@ export const dynamic = "force-dynamic";
 import { ButtonLink } from "@/components/button-link";
 import { AppPageHeader } from "@/components/app-page-header";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
+import { SectionCardHeader } from "@/components/section-card-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { getToListenData } from "@/lib/queries";
 
 export default async function ListenPage({
@@ -31,7 +32,7 @@ export default async function ListenPage({
       />
 
       <Card className="mb-4">
-        <CardHeader><CardTitle>Filters + Bulk Actions</CardTitle></CardHeader>
+        <SectionCardHeader title="Filters + Bulk Actions" />
         <CardContent className="space-y-3">
           <form className="flex flex-wrap items-center gap-2" method="GET">
             <label htmlFor="label" className="text-sm text-[var(--color-muted)]">Label</label>
@@ -56,9 +57,7 @@ export default async function ListenPage({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Unlistened Tracks ({data.rows.length})</CardTitle>
-        </CardHeader>
+        <SectionCardHeader title={`Unlistened Tracks (${data.rows.length})`} />
         <CardContent>
           <ListenInboxClient initialRows={data.rows} />
         </CardContent>
