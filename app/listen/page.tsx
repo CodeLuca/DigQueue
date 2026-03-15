@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { ButtonLink } from "@/components/button-link";
+import { AppPageHeader } from "@/components/app-page-header";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,16 +18,17 @@ export default async function ListenPage({
 
   return (
     <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
-      <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">To Listen Inbox</h1>
-          <p className="text-sm text-[var(--color-muted)]">A focused lane for everything you still need to hear and decide on.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <ButtonLink href="/" size="sm" variant="outline">Dashboard</ButtonLink>
-          <ButtonLink href="/settings" size="sm" variant="outline">Settings</ButtonLink>
-        </div>
-      </header>
+      <AppPageHeader
+        actions={
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <ButtonLink href="/" size="sm" variant="outline">Dashboard</ButtonLink>
+            <ButtonLink href="/settings" size="sm" variant="outline">Settings</ButtonLink>
+          </div>
+        }
+        description="A focused lane for everything you still need to hear and decide on."
+        title="To Listen Inbox"
+        tone="compact"
+      />
 
       <Card className="mb-4">
         <CardHeader><CardTitle>Filters + Bulk Actions</CardTitle></CardHeader>

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { Disc3, ExternalLink } from "lucide-react";
 import { ActionLink } from "@/components/action-link";
 import { ApiKeyTester } from "@/components/api-key-tester";
+import { AppPageHeader } from "@/components/app-page-header";
 import { AuthStartLink } from "@/components/auth-start-link";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsConnectLink } from "@/components/discogs-connect-link";
@@ -38,15 +39,11 @@ export default async function SettingsPage({
   return (
     <main className="pb-player-safe mx-auto max-w-[980px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
       <ClientRouteRefreshBridge />
-      <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-sm text-[var(--color-muted)]">Control integrations, exports, and playback behavior without breaking your digging flow.</p>
-        </div>
-        <div className="w-full sm:w-auto">
-          <SignOutButton />
-        </div>
-      </header>
+      <AppPageHeader
+        actions={<SignOutButton />}
+        description="Control integrations, exports, and playback behavior without breaking your digging flow."
+        title="Settings"
+      />
 
       {params.discogs === "connected" ? (
         <FeedbackBanner tone="success" emphasis="gradient" className="mb-4 rounded-lg py-3">
