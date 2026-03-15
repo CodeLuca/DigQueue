@@ -96,7 +96,7 @@ SMOKE_COOKIE='sb-access-token=...; sb-refresh-token=...' \
 yarn release:verify:live
 ```
 
-`release:verify:live` waits for the latest Railway deployment to be promoted when the Railway CLI is linked, then waits for the live base URL to start responding before it runs smoke probes.
+`release:verify:live` retries Railway deployment/service status probes before falling back to live URL readiness, then waits for the live base URL to start responding before it runs smoke probes.
 
 Release checklist:
 - Confirm Discogs OAuth callback URL is configured for the target deploy origin.

@@ -112,30 +112,72 @@ function isRailwayPendingStatus(status: string) {
   return status === "INITIALIZING" || status === "BUILDING" || status === "DEPLOYING";
 }
 
+type RailwayProbeResult =
+  | {
+      ok: true;
+      latest: Extract<LatestDeploymentStatus, { ok: true }>;
+      service: Extract<ServiceDeploymentStatus, { ok: true }>;
+    }
+  | {
+      ok: false;
+      reason: string;
+    };
+
+async function getRailwayPromotionProbe(): Promise<RailwayProbeResult> {
+  const latest = await getLatestRailwayDeploymentStatus();
+  if (!latest.ok) {
+    return { ok: false, reason: `deployment list: ${latest.reason}` };
+  }
+
+  const service = await getRailwayServiceStatus();
+  if (!service.ok) {
+    return { ok: false, reason: `service status: ${service.reason}` };
+  }
+
+  return {
+    ok: true,
+    latest,
+    service,
+  };
+}
+
 async function waitForRailwayPromotion() {
   const enabled = (process.env.LIVE_VERIFY_WAIT_FOR_RAILWAY || "1").trim() !== "0";
   if (!enabled) return;
 
   const timeoutMs = Number(process.env.LIVE_VERIFY_RAILWAY_TIMEOUT_MS || 300_000);
   const intervalMs = Number(process.env.LIVE_VERIFY_RAILWAY_INTERVAL_MS || 5_000);
+  const maxProbeFailures = Number(process.env.LIVE_VERIFY_RAILWAY_MAX_PROBE_FAILURES || 3);
   const deadline = Date.now() + timeoutMs;
   let attempt = 0;
   let lastMessage = "no Railway status checked";
+  let consecutiveProbeFailures = 0;
 
   while (Date.now() <= deadline) {
     attempt += 1;
-    const latest = await getLatestRailwayDeploymentStatus();
-    if (!latest.ok) {
-      console.log(`release-verify-live: skipping Railway promotion wait (${latest.reason}).`);
-      return;
+    const probe = await getRailwayPromotionProbe();
+
+    if (!probe.ok) {
+      consecutiveProbeFailures += 1;
+      lastMessage = probe.reason;
+
+      if (consecutiveProbeFailures >= maxProbeFailures) {
+        console.log(
+          `release-verify-live: skipping Railway promotion wait after ${consecutiveProbeFailures} probe failure(s) (${probe.reason}).`,
+        );
+        return;
+      }
+
+      console.log(
+        `release-verify-live: Railway promotion probe failed on attempt ${attempt} (${probe.reason}); retrying.`,
+      );
+      if (Date.now() + intervalMs > deadline) break;
+      await sleep(intervalMs);
+      continue;
     }
 
-    const service = await getRailwayServiceStatus();
-    if (!service.ok) {
-      console.log(`release-verify-live: skipping Railway service promotion check (${service.reason}).`);
-      return;
-    }
-
+    consecutiveProbeFailures = 0;
+    const { latest, service } = probe;
     lastMessage = `latest=${latest.deploymentId}:${latest.status}, service=${service.deploymentId}:${service.status}`;
 
     if (latest.status === "SUCCESS" && service.status === "SUCCESS" && latest.deploymentId === service.deploymentId) {
