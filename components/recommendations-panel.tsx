@@ -7,6 +7,7 @@ import { EmptyStateNote } from "@/components/empty-state-note";
 import { getInsetPanelClassName, SectionKicker } from "@/components/inset-panel";
 import { MutationActionButton } from "@/components/mutation-action-button";
 import { RecommendationCardShell } from "@/components/recommendation-card-shell";
+import { ResponsiveLabel } from "@/components/responsive-label";
 import { SegmentedControlButton } from "@/components/segmented-control-button";
 import {
   getAddSourceFromReleaseActionLabels,
@@ -175,8 +176,7 @@ function LibraryRecommendationCard({
         pendingChildren="..."
       >
         <Play className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Play Now</span>
-        <span className="sm:hidden">Play</span>
+        <ResponsiveLabel compact="Play" full="Play Now" />
       </MutationActionButton>
       <MutationActionButton
         preset="playback"
@@ -191,8 +191,7 @@ function LibraryRecommendationCard({
         pendingChildren="..."
         message={feedback}
       >
-        <span className="hidden sm:inline">Queue Next</span>
-        <span className="sm:hidden">Queue</span>
+        <ResponsiveLabel compact="Queue" full="Queue Next" />
       </MutationActionButton>
         <MutationActionButton
           preset="recommendation"
@@ -206,8 +205,7 @@ function LibraryRecommendationCard({
           pendingChildren="..."
           message={reviewMessage}
         >
-          <span className="hidden sm:inline">Reviewed</span>
-          <span className="sm:hidden">Review</span>
+          <ResponsiveLabel compact="Review" full="Reviewed" />
         </MutationActionButton>
         <MutationActionButton
           preset="recommendation"
@@ -223,7 +221,7 @@ function LibraryRecommendationCard({
           message={saveMessage}
         >
           <HeartPlus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{trackSaveLabels.buttonLabel}</span>
+          <ResponsiveLabel compact="Save" full={trackSaveLabels.buttonLabel} />
         </MutationActionButton>
         <MutationActionButton
           preset="recommendation"
@@ -239,7 +237,7 @@ function LibraryRecommendationCard({
           message={wishlistMessage}
         >
           <BookmarkPlus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{wishlistLabels.buttonLabel}</span>
+          <ResponsiveLabel compact="Wishlist" full={wishlistLabels.buttonLabel} />
         </MutationActionButton>
         <MutationActionButton
           preset="recommendation"
@@ -255,7 +253,7 @@ function LibraryRecommendationCard({
           message={dismissMessage}
         >
           <X className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Dismiss</span>
+          <ResponsiveLabel compact="Dismiss" full="Dismiss" />
         </MutationActionButton>
     </RecommendationCardShell>
   );
@@ -311,7 +309,7 @@ function ExternalRecommendationCard({
         message={addLabelMessage}
       >
         <Plus className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">{addSourceLabels.buttonLabel}</span>
+        <ResponsiveLabel compact="Add" full={addSourceLabels.buttonLabel} />
       </MutationActionButton>
       <MutationActionButton
         preset="recommendation"
@@ -327,7 +325,7 @@ function ExternalRecommendationCard({
         message={wantMessage}
       >
         <BookmarkPlus className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">{wishlistLabels.buttonLabel}</span>
+        <ResponsiveLabel compact="Wishlist" full={wishlistLabels.buttonLabel} />
       </MutationActionButton>
       <DiscogsLink discogsUrl={item.discogsUrl} title={releaseDiscogsLinkTitle()} variant="textButton" />
       <MutationActionButton
@@ -344,7 +342,7 @@ function ExternalRecommendationCard({
         message={dismissMessage}
       >
         <X className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Dismiss</span>
+        <ResponsiveLabel compact="Dismiss" full="Dismiss" />
       </MutationActionButton>
     </RecommendationCardShell>
   );

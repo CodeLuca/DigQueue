@@ -1,5 +1,6 @@
 "use client";
 
+import { ResponsiveLabel } from "@/components/responsive-label";
 import { Button } from "@/components/ui/button";
 
 export function ListenInboxAutoNextToggleButton({
@@ -53,8 +54,7 @@ export function ListenInboxMobilePresetControls({
         onClick={onApplyCommuteMode}
         title="Train-friendly preset: Needs Review + Playable + hide reviewed/played"
       >
-        <span className="hidden sm:inline">Commute Mode</span>
-        <span className="sm:hidden">Commute</span>
+        <ResponsiveLabel compact="Commute" full="Commute Mode" />
       </Button>
       <Button
         type="button"
@@ -65,8 +65,7 @@ export function ListenInboxMobilePresetControls({
         disabled={!commuteModeActive}
         title="Reset commute preset filters"
       >
-        <span className="hidden sm:inline">Reset Preset</span>
-        <span className="sm:hidden">Reset</span>
+        <ResponsiveLabel compact="Reset" full="Reset Preset" />
       </Button>
       <Button
         type="button"
