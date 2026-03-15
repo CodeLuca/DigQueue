@@ -3,6 +3,7 @@
 import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { DiscogsLink } from "@/components/discogs-link";
+import { getInsetPanelClassName, SectionKicker } from "@/components/inset-panel";
 import { MutationActionButton } from "@/components/mutation-action-button";
 import { RecommendationCardShell } from "@/components/recommendation-card-shell";
 import { SegmentedControlButton } from "@/components/segmented-control-button";
@@ -72,8 +73,8 @@ export function RecommendationsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Views</p>
+      <div className={getInsetPanelClassName("surface")}>
+        <SectionKicker>Views</SectionKicker>
         <div className="mt-2 flex flex-wrap gap-2">
           <SegmentedControlButton active={view === "all"} onClick={() => setView("all")}>
             All ({items.length + externalItems.length})
@@ -86,14 +87,14 @@ export function RecommendationsPanel({
           </SegmentedControlButton>
         </div>
       </div>
-      {visibleLibraryItems.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">In Library</p> : null}
+      {visibleLibraryItems.length > 0 ? <SectionKicker size="sm">In Library</SectionKicker> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {visibleLibraryItems.map((track) => (
           <LibraryRecommendationCard key={track.id} track={track} setItems={setItems} />
         ))}
       </div>
 
-      {visibleExternalItems.length > 0 ? <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Outside Library</p> : null}
+      {visibleExternalItems.length > 0 ? <SectionKicker size="sm">Outside Library</SectionKicker> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {visibleExternalItems.map((item) => (
           <ExternalRecommendationCard

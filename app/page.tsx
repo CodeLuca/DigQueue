@@ -19,6 +19,7 @@ import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-brid
 import { ActionLink } from "@/components/action-link";
 import { DiscogsRequiredNotice } from "@/components/discogs-required-notice";
 import { FeedbackBanner } from "@/components/feedback-banner";
+import { getInsetPanelClassName, SectionKicker } from "@/components/inset-panel";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { DiscogsLink } from "@/components/discogs-link";
 import { LabelDeleteButton } from "@/components/label-delete-button";
@@ -639,15 +640,15 @@ export default async function HomePage({
               ) : null}
 
               <SourceIntakeForm />
-              <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5 text-xs text-[var(--color-muted)]">
+              <div className={`${getInsetPanelClassName("muted")} text-xs text-[var(--color-muted)]`}>
                 <p><span className="font-medium text-[var(--color-text)]">Label:</span> tighter label-led digging.</p>
                 <p className="mt-1"><span className="font-medium text-[var(--color-text)]">Artist:</span> broader cross-label discovery.</p>
               </div>
-              <details className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]/45 p-2.5" open={showIngestionPanelOpen}>
+              <details className={getInsetPanelClassName("muted")} open={showIngestionPanelOpen}>
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Sync</p>
+                      <SectionKicker>Sync</SectionKicker>
                       <p className="mt-1 text-xs text-[var(--color-muted)]">
                         {activeStatusCounts.processing > 0
                           ? "Sync is active."
@@ -716,9 +717,9 @@ export default async function HomePage({
                 <SourceSyncStatus initialProcessingCount={activeStatusCounts.processing} />
                 {!hasDiscogs ? <div className="mt-1"><DiscogsRequiredNotice context="wishlist_sync_status" compact /></div> : null}
               </details>
-              <details className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3" open={!useSimpleSourcesView}>
-                <summary className="cursor-pointer list-none text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">
-                  Filters
+              <details className={getInsetPanelClassName("surface")} open={!useSimpleSourcesView}>
+                <summary className="cursor-pointer list-none">
+                  <SectionKicker>Filters</SectionKicker>
                 </summary>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div className="min-w-0">
@@ -1130,7 +1131,7 @@ export default async function HomePage({
           <div className="rounded-xl border border-[var(--color-border)] bg-[linear-gradient(140deg,color-mix(in_oklab,var(--color-surface2)_88%,transparent),var(--color-surface2))] p-3 sm:p-4">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Library Views</p>
+                <SectionKicker>Library Views</SectionKicker>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                 <SegmentedControlLink
                   active={selectedLibraryView === "library"}
@@ -1177,8 +1178,8 @@ export default async function HomePage({
                   {selectedLibraryView === "needs-review" ? <Badge>Needs Review {needsReviewCount}</Badge> : null}
                 </div>
               </div>
-              <div className="min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/40 p-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-muted)]">Actions</p>
+              <div className={getInsetPanelClassName("muted")}>
+                <SectionKicker>Actions</SectionKicker>
                 {showLibraryItemsSection && hasDiscogs ? (
                   <div className="mt-1.5 flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                   <ManualWishlistSyncButton enabled={hasDiscogs} importLabel className="w-full sm:w-auto" />
@@ -1232,7 +1233,7 @@ export default async function HomePage({
                 />
 
                 {bandcampWishlist.enabled ? (
-                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+                  <div className={getInsetPanelClassName("surface")}>
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-medium">
                         Previous Bandcamp Wishlist ({bandcampWishlist.totalCount})
@@ -1282,8 +1283,8 @@ export default async function HomePage({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Activity</p>
+              <div className={getInsetPanelClassName("surface")}>
+                <SectionKicker size="sm">Current Activity</SectionKicker>
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
                   {selectedLibraryView === "reviewed"
                     ? "Tracks you marked reviewed."
@@ -1294,14 +1295,14 @@ export default async function HomePage({
               </div>
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+                <div className={getInsetPanelClassName("surface")}>
                   <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
                     <History className="h-3.5 w-3.5" />
                     Played Events
                   </p>
                   <p className="text-xl font-semibold">{data.metrics.playedItems}</p>
                 </div>
-                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] p-3">
+                <div className={getInsetPanelClassName("surface")}>
                   <p className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     Reviewed Tracks
