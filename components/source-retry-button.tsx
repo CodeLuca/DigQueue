@@ -1,6 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { SourceActionButton } from "@/components/source-action-button";
 import { useSourceRetryButtonAction } from "@/lib/use-source-single-actions";
 
 export function SourceRetryButton(props: {
@@ -25,8 +25,7 @@ export function SourceRetryButton(props: {
   };
 
   return (
-    <MutationActionButton
-      preset="source"
+    <SourceActionButton
       type="button"
       size={props.size ?? "sm"}
       variant={props.variant ?? "outline"}
@@ -41,6 +40,6 @@ export function SourceRetryButton(props: {
       onClick={() => void onClick()}
     >
       {label}
-    </MutationActionButton>
+    </SourceActionButton>
   );
 }

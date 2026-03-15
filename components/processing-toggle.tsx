@@ -1,6 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { SourceActionButton } from "@/components/source-action-button";
 import { useSourceActiveButtonAction } from "@/lib/use-source-single-actions";
 
 export function ProcessingToggle({
@@ -20,8 +20,7 @@ export function ProcessingToggle({
   };
 
   return (
-    <MutationActionButton
-      preset="source"
+    <SourceActionButton
       size="sm"
       variant={initialActive ? "secondary" : "outline"}
       onClick={() => void setRemoteActive(!initialActive)}
@@ -34,6 +33,6 @@ export function ProcessingToggle({
       pendingChildren="..."
     >
       {initialActive ? "Deactivate" : "Activate"}
-    </MutationActionButton>
+    </SourceActionButton>
   );
 }

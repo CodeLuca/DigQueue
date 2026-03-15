@@ -1,6 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { SourceActionButton } from "@/components/source-action-button";
 import { useSourceDeleteButtonAction } from "@/lib/use-source-single-actions";
 
 export function LabelDeleteButton({ labelId, labelName }: { labelId: number; labelName: string }) {
@@ -11,8 +11,7 @@ export function LabelDeleteButton({ labelId, labelName }: { labelId: number; lab
   };
 
   return (
-    <MutationActionButton
-      preset="source"
+    <SourceActionButton
       type="button"
       size="sm"
       variant="destructive"
@@ -25,6 +24,6 @@ export function LabelDeleteButton({ labelId, labelName }: { labelId: number; lab
       onClick={() => void onClick()}
     >
       Delete
-    </MutationActionButton>
+    </SourceActionButton>
   );
 }

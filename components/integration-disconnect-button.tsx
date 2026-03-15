@@ -1,6 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { AccountActionButton } from "@/components/account-action-button";
 import { useIntegrationDisconnectAction } from "@/lib/use-account-settings-actions";
 
 export function IntegrationDisconnectButton({
@@ -17,8 +17,7 @@ export function IntegrationDisconnectButton({
   const { pending, run } = useIntegrationDisconnectAction(provider);
 
   return (
-    <MutationActionButton
-      preset="account"
+    <AccountActionButton
       variant="outline"
       className={className}
       pending={pending}
@@ -27,6 +26,6 @@ export function IntegrationDisconnectButton({
       title={label}
     >
       {label}
-    </MutationActionButton>
+    </AccountActionButton>
   );
 }

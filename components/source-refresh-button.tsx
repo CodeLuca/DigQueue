@@ -1,8 +1,8 @@
 "use client";
 
 import { RefreshCcw } from "lucide-react";
-import { MutationActionButton } from "@/components/mutation-action-button";
 import { ResponsiveLabel } from "@/components/responsive-label";
+import { SourceActionButton } from "@/components/source-action-button";
 import { useSourceRefreshButtonAction } from "@/lib/use-source-single-actions";
 
 export function SourceRefreshButton(props: {
@@ -17,8 +17,7 @@ export function SourceRefreshButton(props: {
   };
 
   return (
-    <MutationActionButton
-      preset="source"
+    <SourceActionButton
       type="button"
       size="sm"
       variant="ghost"
@@ -33,6 +32,6 @@ export function SourceRefreshButton(props: {
     >
       <RefreshCcw className="mr-1 h-3.5 w-3.5" />
       <ResponsiveLabel compact="Refresh info" full={props.compactLabel ? "Refresh" : "Refresh source info"} />
-    </MutationActionButton>
+    </SourceActionButton>
   );
 }

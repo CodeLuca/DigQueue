@@ -339,6 +339,7 @@
     - Consolidated responsive action-button layout so recommendation/playback wrappers plus listen-inbox bulk actions and queue playback controls now share one responsive width/justify helper instead of repeating the same mobile/full-width button contract inline.
     - Consolidated mobile-full-width CTA width handling so onboarding button links, API key testing, and dashboard wishlist sync controls now share one responsive width helper instead of scattering raw `w-full sm:w-auto` classes across link and mutation-button surfaces.
     - Consolidated inline operational action buttons so source batch controls, remediation actions, and wishlist sync controls now share one inline-action-button wrapper for preset, size, and optional mobile width handling instead of repeating the same inline mutation-button contract across operational surfaces.
+    - Consolidated source/account mutation controls so source retry/refresh/activate/delete and account test/disconnect/sign-out/export actions now share dedicated source-action-button and account-action-button wrappers instead of hand-rolling the same preset-driven mutation-button setup across management surfaces.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

@@ -1,10 +1,10 @@
 "use client";
 import { useMemo, useState } from "react";
 import { ExternalLink, ListVideo, Youtube } from "lucide-react";
+import { AccountActionButton } from "@/components/account-action-button";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { HighlightActionLink } from "@/components/highlight-action";
 import { InsetPanel, SectionKicker } from "@/components/inset-panel";
-import { MutationActionButton } from "@/components/mutation-action-button";
 import { buildYoutubeOAuthStartPath } from "@/lib/auth-provider-paths";
 import { useYoutubePlaylistExportAction } from "@/lib/use-account-settings-actions";
 
@@ -81,8 +81,7 @@ export function YoutubePlaylistExportButton(props: Props) {
             Connect YouTube
           </HighlightActionLink>
         ) : (
-          <MutationActionButton
-            preset="account"
+          <AccountActionButton
             size="sm"
             className="h-8"
             pending={pending}
@@ -100,7 +99,7 @@ export function YoutubePlaylistExportButton(props: Props) {
           >
             <ListVideo className="h-3.5 w-3.5" />
             Export Saved to Playlist
-          </MutationActionButton>
+          </AccountActionButton>
         )}
 
         {playlistUrl ? (

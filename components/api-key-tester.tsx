@@ -1,17 +1,15 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
-import { responsiveActionWidthClassName } from "@/components/responsive-action-button-layout";
+import { AccountActionButton } from "@/components/account-action-button";
 import { useApiKeyTestAction } from "@/lib/use-account-settings-actions";
 
 export function ApiKeyTester() {
   const { pending, result, error, run } = useApiKeyTestAction();
 
   return (
-    <MutationActionButton
-      preset="account"
+    <AccountActionButton
       variant="secondary"
-      className={responsiveActionWidthClassName()}
+      mobileFullWidth
       pending={pending}
       pendingChildren="Testing..."
       onClick={() => void run()}
@@ -27,6 +25,6 @@ export function ApiKeyTester() {
       }
     >
       Test Keys
-    </MutationActionButton>
+    </AccountActionButton>
   );
 }
