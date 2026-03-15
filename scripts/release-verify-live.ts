@@ -152,6 +152,12 @@ async function waitForRailwayPromotion() {
   let attempt = 0;
   let lastMessage = "no Railway status checked";
   let consecutiveProbeFailures = 0;
+  let initialServiceDeploymentId: string | null = null;
+
+  const initialService = await getRailwayServiceStatus();
+  if (initialService.ok) {
+    initialServiceDeploymentId = initialService.deploymentId;
+  }
 
   while (Date.now() <= deadline) {
     attempt += 1;
@@ -182,6 +188,17 @@ async function waitForRailwayPromotion() {
 
     if (latest.status === "SUCCESS" && service.status === "SUCCESS" && latest.deploymentId === service.deploymentId) {
       console.log(`release-verify-live: Railway deployment promoted on attempt ${attempt} (${latest.deploymentId}).`);
+      return;
+    }
+
+    if (
+      service.status === "SUCCESS" &&
+      initialServiceDeploymentId &&
+      service.deploymentId !== initialServiceDeploymentId
+    ) {
+      console.log(
+        `release-verify-live: Railway service promoted on attempt ${attempt} (${service.deploymentId}) while newer deployment activity continues (${latest.deploymentId}:${latest.status}).`,
+      );
       return;
     }
 
