@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { ChooseMatchButton } from "@/components/choose-match-button";
 import { EmptyStateNote } from "@/components/empty-state-note";
+import { EntityDetailHeader } from "@/components/entity-detail-header";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { InsetPanel } from "@/components/inset-panel";
 import { PlayMatchButton } from "@/components/play-match-button";
@@ -28,19 +29,19 @@ export default async function ReleasePage({
   return (
     <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
       <ClientRouteRefreshBridge />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold">{release.title}</h1>
-          <p className="text-sm text-[var(--color-muted)]">{release.artist} • {release.label?.name} • {release.catno || "No catno"}</p>
-          <p className="text-xs text-[var(--color-muted)]">{visibleTracks.length} track{visibleTracks.length === 1 ? "" : "s"} on this release</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <EntityDetailHeader
+        actions={
+          <>
           <Badge className={release.wishlist ? "border-amber-600/50 text-amber-300" : ""}>
             {release.wishlist ? "Record Wishlisted" : "Record Not Wishlisted"}
           </Badge>
           <ReleaseWishlistButton releaseId={release.id} wishlisted={release.wishlist} />
-        </div>
-      </div>
+          </>
+        }
+        meta={`${visibleTracks.length} track${visibleTracks.length === 1 ? "" : "s"} on this release`}
+        subtitle={`${release.artist} • ${release.label?.name} • ${release.catno || "No catno"}`}
+        title={release.title}
+      />
 
       <Card>
         <CardHeader>

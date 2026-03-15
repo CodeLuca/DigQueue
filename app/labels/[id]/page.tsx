@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsLink } from "@/components/discogs-link";
 import { EmptyStateNote } from "@/components/empty-state-note";
+import { EntityDetailHeader } from "@/components/entity-detail-header";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { SourceRefreshButton } from "@/components/source-refresh-button";
@@ -51,12 +52,9 @@ export default async function LabelPage({
   return (
     <main className="pb-player-safe mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-6">
       <ClientRouteRefreshBridge />
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">{data.label.name}</h1>
-          <p className="text-sm text-[var(--color-muted)]">Label ID {data.label.id}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <EntityDetailHeader
+        actions={
+          <>
           <Badge>{data.label.active ? "active" : "inactive"}</Badge>
           <Badge>{sourceView.progressState}</Badge>
           <ProcessingToggle
@@ -65,8 +63,11 @@ export default async function LabelPage({
             initialActive={Boolean(data.label.active)}
             initialStatus={data.label.status}
           />
-        </div>
-      </div>
+          </>
+        }
+        subtitle={`Label ID ${data.label.id}`}
+        title={data.label.name}
+      />
 
       <Card className="mb-4">
         <CardHeader><CardTitle>Label Overview</CardTitle></CardHeader>
