@@ -1,6 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { ReleaseItemActionButton } from "@/components/release-item-action-button";
 import { chooseMatchLabel } from "@/lib/library-action-labels";
 import { useChooseMatchButtonAction } from "@/lib/use-library-actions";
 
@@ -15,8 +15,7 @@ export function ChooseMatchButton(props: {
   };
 
   return (
-    <MutationActionButton
-      preset="releaseItem"
+    <ReleaseItemActionButton
       size="sm"
       type="button"
       variant="ghost"
@@ -28,6 +27,6 @@ export function ChooseMatchButton(props: {
       onClick={() => void onClick()}
     >
       Choose
-    </MutationActionButton>
+    </ReleaseItemActionButton>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { Check, Heart } from "lucide-react";
-import { MutationActionButton } from "@/components/mutation-action-button";
 import { getTrackSaveActionLabels } from "@/lib/library-action-labels";
+import { ReleaseItemActionButton } from "@/components/release-item-action-button";
 import { useReleaseTrackTodoButtonAction } from "@/lib/use-library-actions";
 
 export function ReleaseTrackTodoButton(props: {
@@ -23,8 +23,7 @@ export function ReleaseTrackTodoButton(props: {
     : trackSaveLabels.ariaLabel;
 
   return (
-    <MutationActionButton
-      preset="releaseItem"
+    <ReleaseItemActionButton
       type="button"
       size="sm"
       variant={props.active ? "secondary" : (isListened ? "outline" : "ghost")}
@@ -35,6 +34,6 @@ export function ReleaseTrackTodoButton(props: {
       onClick={() => void onClick()}
     >
       {isListened ? <Check className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
-    </MutationActionButton>
+    </ReleaseItemActionButton>
   );
 }

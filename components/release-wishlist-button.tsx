@@ -1,7 +1,7 @@
 "use client";
 
 import { Bookmark } from "lucide-react";
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { ReleaseItemActionButton } from "@/components/release-item-action-button";
 import { getDiscogsWishlistActionLabels } from "@/lib/library-action-labels";
 import { useReleaseWishlistButtonAction } from "@/lib/use-library-actions";
 
@@ -18,8 +18,7 @@ export function ReleaseWishlistButton(props: {
   const labels = getDiscogsWishlistActionLabels(props.wishlisted, "record");
 
   return (
-    <MutationActionButton
-      preset="releaseItem"
+    <ReleaseItemActionButton
       type="button"
       size="sm"
       variant={props.wishlisted ? "secondary" : "ghost"}
@@ -31,6 +30,6 @@ export function ReleaseWishlistButton(props: {
       onClick={() => void onClick()}
     >
       <Bookmark className="h-5 w-5 stroke-[2.25]" />
-    </MutationActionButton>
+    </ReleaseItemActionButton>
   );
 }
