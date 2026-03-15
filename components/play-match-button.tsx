@@ -1,7 +1,7 @@
 "use client";
 
 import { Play } from "lucide-react";
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { PlaybackActionButton } from "@/components/playback-action-button";
 import {
   playNowAriaLabel,
   playNowInMiniPlayerLabel,
@@ -12,9 +12,7 @@ export function PlayMatchButton({ trackId, matchId }: { trackId: number; matchId
   const { disabled, pending, playNow } = usePlayMatchButtonAction(trackId, matchId);
 
   return (
-    <MutationActionButton
-      preset="playback"
-      size="sm"
+    <PlaybackActionButton
       variant="ghost"
       onClick={() => void playNow()}
       disabled={disabled}
@@ -24,6 +22,6 @@ export function PlayMatchButton({ trackId, matchId }: { trackId: number; matchId
       pendingChildren="..."
     >
       <Play className="h-3.5 w-3.5" />
-    </MutationActionButton>
+    </PlaybackActionButton>
   );
 }

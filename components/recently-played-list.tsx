@@ -6,6 +6,7 @@ import { EmptyStateNote } from "@/components/empty-state-note";
 import { MediaActionRow } from "@/components/media-action-row";
 import { PlaybackActionButton } from "@/components/playback-action-button";
 import { SegmentedControlButton } from "@/components/segmented-control-button";
+import { SupportText } from "@/components/support-text";
 import {
   replayTrackAriaLabel,
   replayTrackTitle,
@@ -107,7 +108,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
         })}
         {filteredItems.length === 0 ? <EmptyStateNote title="No played items in this filter yet." /> : null}
       </div>
-      {feedback ? <p className="mt-2 text-xs text-[var(--color-muted)]">{feedback}</p> : null}
+      {feedback ? <SupportText className="mt-2">{feedback}</SupportText> : null}
     </div>
   );
 }

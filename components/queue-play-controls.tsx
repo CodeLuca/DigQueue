@@ -1,5 +1,6 @@
 "use client";
 
+import { SupportText } from "@/components/support-text";
 import { Button } from "@/components/ui/button";
 import { responsiveActionButtonLayout } from "@/components/responsive-action-button-layout";
 import { dispatchPlaybackNextEvent } from "@/lib/client-playback-events";
@@ -16,9 +17,9 @@ export function QueuePlayControls() {
       >
         Play Queue
       </Button>
-      <p className="text-xs text-[var(--color-muted)] sm:self-center">
+      <SupportText className="sm:self-center">
         Uses the bottom mini-player and starts/advances queue playback.
-      </p>
+      </SupportText>
     </div>
   );
 }
