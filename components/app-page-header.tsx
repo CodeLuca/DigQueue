@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { responsiveActionWidthClassName } from "@/components/responsive-action-button-layout";
 import { cn } from "@/lib/utils";
 
 type AppPageHeaderTone = "default" | "compact";
@@ -37,7 +38,7 @@ export function AppPageHeader({
         </h1>
         {description ? <p className="text-sm text-[var(--color-muted)]">{description}</p> : null}
       </div>
-      {actions ? <div className="w-full sm:w-auto">{actions}</div> : null}
+      {actions ? <div className={responsiveActionWidthClassName()}>{actions}</div> : null}
     </header>
   );
 }

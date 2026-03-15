@@ -1174,9 +1174,9 @@ export default async function HomePage({
                 <SectionKicker>Actions</SectionKicker>
                 {showLibraryItemsSection && hasDiscogs ? (
                   <div className="mt-1.5 flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <ManualWishlistSyncButton enabled={hasDiscogs} importLabel className="w-full sm:w-auto" />
+                  <ManualWishlistSyncButton enabled={hasDiscogs} importLabel mobileFullWidth />
                   <SyncSavedToDiscogsButton enabled={hasDiscogs} />
-                  <ManualWishlistSyncButton enabled={hasDiscogs} compact className="w-full sm:w-auto" />
+                  <ManualWishlistSyncButton enabled={hasDiscogs} compact mobileFullWidth />
                   </div>
                 ) : showLibraryItemsSection ? (
                   <div className="mt-1.5">

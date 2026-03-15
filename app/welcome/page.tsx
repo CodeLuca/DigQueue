@@ -37,15 +37,15 @@ export default async function WelcomePage() {
         actions={
           isLoggedIn ? (
             <>
-              <ButtonLink className="w-full sm:w-auto" href="/?tab=step-1">Open Sources</ButtonLink>
-              <ButtonLink className="w-full sm:w-auto" href="/?tab=step-2" variant="outline">Open Listening Station</ButtonLink>
-              <ButtonLink className="w-full sm:w-auto" href="/?tab=library" variant="outline">Open Library</ButtonLink>
-              <ButtonLink className="w-full sm:w-auto" href="/how-to-use" variant="ghost">Full How-To</ButtonLink>
+              <ButtonLink mobileFullWidth href="/?tab=step-1">Open Sources</ButtonLink>
+              <ButtonLink mobileFullWidth href="/?tab=step-2" variant="outline">Open Listening Station</ButtonLink>
+              <ButtonLink mobileFullWidth href="/?tab=library" variant="outline">Open Library</ButtonLink>
+              <ButtonLink mobileFullWidth href="/how-to-use" variant="ghost">Full How-To</ButtonLink>
             </>
           ) : (
             <>
-              <ButtonLink className="w-full sm:w-auto" href="/login">Login</ButtonLink>
-              <ButtonLink className="w-full sm:w-auto" href="/login?mode=register" variant="outline">Register</ButtonLink>
+              <ButtonLink mobileFullWidth href="/login">Login</ButtonLink>
+              <ButtonLink mobileFullWidth href="/login?mode=register" variant="outline">Register</ButtonLink>
             </>
           )
         }

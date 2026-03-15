@@ -1,6 +1,7 @@
 "use client";
 
 import { MutationActionButton } from "@/components/mutation-action-button";
+import { responsiveActionWidthClassName } from "@/components/responsive-action-button-layout";
 import { useApiKeyTestAction } from "@/lib/use-account-settings-actions";
 
 export function ApiKeyTester() {
@@ -10,7 +11,7 @@ export function ApiKeyTester() {
     <MutationActionButton
       preset="account"
       variant="secondary"
-      className="w-full sm:w-auto"
+      className={responsiveActionWidthClassName()}
       pending={pending}
       pendingChildren="Testing..."
       onClick={() => void run()}

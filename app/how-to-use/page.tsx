@@ -48,9 +48,9 @@ export default async function HowToUsePage() {
       <OrientationHero
         actions={
           <>
-            <ButtonLink className="w-full sm:w-auto" href="/?tab=step-1" size="sm" variant="outline">Open Sources</ButtonLink>
-            <ButtonLink className="w-full sm:w-auto" href="/?tab=step-2" size="sm" variant="outline">Open Listening Station</ButtonLink>
-            <ButtonLink className="w-full sm:w-auto" href="/?tab=library" size="sm" variant="outline">Open Library</ButtonLink>
+            <ButtonLink mobileFullWidth href="/?tab=step-1" size="sm" variant="outline">Open Sources</ButtonLink>
+            <ButtonLink mobileFullWidth href="/?tab=step-2" size="sm" variant="outline">Open Listening Station</ButtonLink>
+            <ButtonLink mobileFullWidth href="/?tab=library" size="sm" variant="outline">Open Library</ButtonLink>
           </>
         }
         badgeRow={

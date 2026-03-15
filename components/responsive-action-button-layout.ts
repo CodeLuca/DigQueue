@@ -13,3 +13,7 @@ export function responsiveActionButtonLayout({
     ? "col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
     : "w-full justify-center sm:w-auto sm:justify-start";
 }
+
+export function responsiveActionWidthClassName() {
+  return "w-full sm:w-auto";
+}
