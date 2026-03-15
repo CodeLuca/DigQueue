@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { MediaActionRow } from "@/components/media-action-row";
+import { SupportText } from "@/components/support-text";
 
 export function RecommendationCardShell({
   artworkAlt,
@@ -28,9 +29,9 @@ export function RecommendationCardShell({
         artworkUrl={artworkUrl}
         title={title}
         meta={meta}
-        actions={<p className="text-[11px] text-[var(--color-muted)]">Score {score.toFixed(1)}</p>}
+        actions={<SupportText size="11">Score {score.toFixed(1)}</SupportText>}
       />
-      {reason ? <p className="mt-1 text-xs text-[var(--color-muted)]">{reason}</p> : null}
+      {reason ? <SupportText className="mt-1">{reason}</SupportText> : null}
       <div className="mt-2 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
         {children}
       </div>

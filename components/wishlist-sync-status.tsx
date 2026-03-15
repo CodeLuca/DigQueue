@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
+import { SupportText } from "@/components/support-text";
 import { type WantsSyncStatus } from "@/lib/client-wishlist-sync";
 import { useWishlistSyncStatus } from "@/lib/use-wishlist-sync-status";
 
@@ -91,12 +92,12 @@ export function WishlistSyncStatus({
   }
 
   return (
-    <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+    <SupportText className="mt-1 inline-flex items-center gap-1.5">
       {status?.status === "running" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
       {summary}
       {status?.status === "running" ? (
         <span className="text-[10px] uppercase tracking-wide text-[var(--color-accent)]">live</span>
       ) : null}
-    </p>
+    </SupportText>
   );
 }

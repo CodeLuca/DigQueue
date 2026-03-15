@@ -343,6 +343,7 @@
     - Consolidated release-item mutation controls so release wishlist, release track todo, and choose-match actions now share one release-item-action-button wrapper instead of repeating the same release-detail mutation-button preset/size contract inline.
     - Consolidated the action-wrapper layer itself so source/account/inline/release/playback/recommendation button wrappers now share one preset-action-button primitive instead of each repeating the same mutation-button plumbing internally.
     - Consolidated inline action-row layout so dashboard source controls, source filters, listen-page utility navigation, label-page source actions, release-inspector status rows, and YouTube export actions now share one action-row primitive instead of repeating the same wrap/alignment flex contract inline.
+    - Consolidated muted support-copy rows so release inspector status text, YouTube export helper text, wishlist sync summaries, and recommendation-card score/reason text now share one support-text primitive instead of repeating raw muted microcopy classes across those surfaces.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

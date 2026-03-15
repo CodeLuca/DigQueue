@@ -6,6 +6,7 @@ import { ActionRow } from "@/components/action-row";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { ExternalLinkRow } from "@/components/external-link-row";
+import { SupportText } from "@/components/support-text";
 import {
   getReleaseInspectorPanelClassName,
   ReleaseInspectorMetricCell,
@@ -59,7 +60,7 @@ export function ReleaseInspectorPanel({
 
   return (
     <div className={`rounded-xl border border-[var(--color-border)] bg-[linear-gradient(130deg,color-mix(in_oklab,var(--color-surface2)_86%,black_14%),color-mix(in_oklab,var(--color-surface)_78%,black_22%))] p-3 ${className}`.trim()}>
-      {releaseDetailsLoading ? <p className="text-xs text-[var(--color-muted)]">Loading Discogs details…</p> : null}
+      {releaseDetailsLoading ? <SupportText>Loading Discogs details…</SupportText> : null}
       {releaseDetailsError ? <p className="text-xs text-rose-300">{releaseDetailsError}</p> : null}
       {!releaseDetailsLoading && !releaseDetailsError && releaseDetails ? (
         <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
@@ -78,17 +79,17 @@ export function ReleaseInspectorPanel({
             <div className="mt-2.5 space-y-1.5">
               <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">{contextLabel}</p>
               <p className="line-clamp-2 text-sm font-semibold">{contextTitle}</p>
-              <p className="line-clamp-1 text-xs text-[var(--color-muted)]">{releaseInspector.currentArtist || "Unknown artist"}</p>
-              <p className="line-clamp-2 text-xs text-[var(--color-muted)]">{current?.release?.title || releaseDetails.title || "Unknown release"}</p>
+              <SupportText className="line-clamp-1">{releaseInspector.currentArtist || "Unknown artist"}</SupportText>
+              <SupportText className="line-clamp-2">{current?.release?.title || releaseDetails.title || "Unknown release"}</SupportText>
             </div>
           </div>
           <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
             <ReleaseInspectorPanelSection title="Release Snapshot">
               <p className="mt-1 text-sm font-medium">{releaseDetails.title}</p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">{releaseDetails.year || "n/a"} • {releaseDetails.country || "n/a"}</p>
-              <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{releaseInspector.currentLabel || "Label unknown"}</p>
-              <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{releaseInspector.currentFormats || "Format unknown"}</p>
-              <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{releaseInspector.currentGenreStyles || "No genre/style tags"}</p>
+              <SupportText className="mt-1">{releaseDetails.year || "n/a"} • {releaseDetails.country || "n/a"}</SupportText>
+              <SupportText className="mt-1 line-clamp-2">{releaseInspector.currentLabel || "Label unknown"}</SupportText>
+              <SupportText className="mt-1 line-clamp-2">{releaseInspector.currentFormats || "Format unknown"}</SupportText>
+              <SupportText className="mt-1 line-clamp-2">{releaseInspector.currentGenreStyles || "No genre/style tags"}</SupportText>
             </ReleaseInspectorPanelSection>
             <ReleaseInspectorPanelSection title="Market Snapshot">
               <div className="mt-1 grid grid-cols-2 gap-2">
@@ -101,18 +102,18 @@ export function ReleaseInspectorPanel({
                   value={formatReleasePrice(releaseDetails.marketStats?.lowest_price, releaseInspector.marketCurrency)}
                 />
               </div>
-              <p className="mt-2 text-xs text-[var(--color-muted)]">
+              <SupportText className="mt-2">
                 {releaseDetails.marketStats?.num_for_sale ?? "n/a"} listed
                 {releaseInspector.marketSpreadPercent !== null ? ` • median is ${releaseInspector.marketSpreadPercent}% above lowest` : ""}
-              </p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">
+              </SupportText>
+              <SupportText className="mt-1">
                 Rating: {typeof releaseDetails.community?.rating?.average === "number"
                   ? `${releaseDetails.community.rating.average.toFixed(2)} (${releaseDetails.community.rating.count ?? 0})`
                   : "n/a"}
-              </p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">
+              </SupportText>
+              <SupportText className="mt-1">
                 Have {releaseDetails.community?.have ?? "n/a"} • Want {releaseDetails.community?.want ?? "n/a"}
-              </p>
+              </SupportText>
               {releaseDetails.marketStats?.blocked_from_sale ? (
                 <span className="mt-2 inline-flex rounded border border-amber-500/40 px-1.5 py-0.5 text-[10px] text-amber-300">Sale blocked</span>
               ) : null}
@@ -133,7 +134,7 @@ export function ReleaseInspectorPanel({
             </ReleaseInspectorPanelSection>
             <ReleaseInspectorPanelSection title="Open Links" className="lg:col-span-2 2xl:col-span-3">
               <ActionRow>
-                {releaseLinksLoading ? <span className="text-[10px] text-[var(--color-muted)]">finding stores…</span> : null}
+                {releaseLinksLoading ? <SupportText as="span" size="10">finding stores…</SupportText> : null}
                 {releaseLinksError ? <span className="text-[10px] text-rose-300">{releaseLinksError}</span> : null}
               </ActionRow>
               <div className="mt-2 flex flex-wrap gap-2">

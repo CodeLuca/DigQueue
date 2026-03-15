@@ -6,6 +6,7 @@ import { ActionRow } from "@/components/action-row";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { HighlightActionLink } from "@/components/highlight-action";
 import { InsetPanel, SectionKicker } from "@/components/inset-panel";
+import { SupportText } from "@/components/support-text";
 import { buildYoutubeOAuthStartPath } from "@/lib/auth-provider-paths";
 import { useYoutubePlaylistExportAction } from "@/lib/use-account-settings-actions";
 
@@ -40,10 +41,10 @@ export function YoutubePlaylistExportButton(props: Props) {
           <Youtube className="h-3.5 w-3.5 text-[var(--color-accent)]" />
           YouTube Export
         </SectionKicker>
-        {props.channelTitle ? <p className="text-[11px] text-[var(--color-muted)]">Connected: {props.channelTitle}</p> : null}
+        {props.channelTitle ? <SupportText size="11">Connected: {props.channelTitle}</SupportText> : null}
       </div>
 
-      <p className="mt-1 text-xs text-[var(--color-muted)]">{helperText}</p>
+      <SupportText className="mt-1">{helperText}</SupportText>
 
       {props.youtubeConnected ? (
         <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-5">
