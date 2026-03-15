@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { DiscogsLink } from "@/components/discogs-link";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { MediaActionRow } from "@/components/media-action-row";
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { PlaybackActionButton } from "@/components/playback-action-button";
 import { SegmentedControlButton } from "@/components/segmented-control-button";
 import {
   replayTrackAriaLabel,
@@ -88,11 +88,8 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
                   </>
                 }
                 actions={<div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-                  <MutationActionButton
-                    preset="playback"
-                    size="sm"
+                  <PlaybackActionButton
                     variant="outline"
-                    className="w-full justify-center sm:w-auto sm:justify-start"
                     disabled={!item.trackId || replayDisabled}
                     onClick={() => void replay(item.id, item.trackId)}
                     title={replayTrackTitle()}
@@ -101,7 +98,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
                     pendingChildren="..."
                   >
                     Play Again
-                  </MutationActionButton>
+                  </PlaybackActionButton>
                   <DiscogsLink discogsUrl={item.release?.discogsUrl ?? ""} />
                 </div>}
               />
