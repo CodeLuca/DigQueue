@@ -9,6 +9,7 @@ type SupportPanelProps = {
   actions?: ReactNode;
   className?: string;
   children?: ReactNode;
+  id?: string;
 };
 
 export function SupportPanel({
@@ -19,9 +20,10 @@ export function SupportPanel({
   actions,
   className,
   children,
+  id,
 }: SupportPanelProps) {
   return (
-    <section className={cn("rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4", className)}>
+    <section id={id} className={cn("rounded-xl border border-[var(--color-border)] bg-[var(--color-surface2)] p-4", className)}>
       {eyebrow ? (
         <p className="mb-2 inline-flex items-center gap-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
           {eyebrow}

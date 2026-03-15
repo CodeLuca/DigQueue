@@ -2,16 +2,19 @@ export const dynamic = "force-dynamic";
 
 import { Disc3, ExternalLink } from "lucide-react";
 import { ActionLink } from "@/components/action-link";
+import { ApiKeyTester } from "@/components/api-key-tester";
 import { AuthStartLink } from "@/components/auth-start-link";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsConnectLink } from "@/components/discogs-connect-link";
 import { FeedbackBanner } from "@/components/feedback-banner";
+import { InstructionList } from "@/components/instruction-list";
 import { IntegrationDisconnectButton } from "@/components/integration-disconnect-button";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { PlaybackModeSettings } from "@/components/playback-mode-settings";
 import { SettingsSectionCard } from "@/components/settings-section-card";
 import { SignOutButton } from "@/components/sign-out-button";
 import { SupportPanel } from "@/components/support-panel";
+import { YoutubeKeyFixAssistant } from "@/components/youtube-key-fix-assistant";
 import { getApiKeys } from "@/lib/api-keys";
 import { sanitizeDiscogsConnectionErrorMessage } from "@/lib/discogs-errors";
 import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
@@ -89,11 +92,13 @@ export default async function SettingsPage({
             )
           }
         >
-          <ol className="list-decimal space-y-1 pl-5 text-xs text-[var(--color-muted)]">
-            <li>Click Connect Discogs (below or in the guided page).</li>
-            <li>Authorize in Discogs and return here automatically.</li>
-            <li>Go to Listening Station and run “Retry wishlist sync now” once.</li>
-          </ol>
+          <InstructionList
+            items={[
+              "Click Connect Discogs below or open the guided page.",
+              "Authorize in Discogs and return here automatically.",
+              "Go to Listening Station and run Retry wishlist sync now once.",
+            ]}
+          />
         </SupportPanel>
 
         <div className="grid gap-3 md:grid-cols-2">
@@ -145,6 +150,20 @@ export default async function SettingsPage({
             }
           />
         </div>
+      </SettingsSectionCard>
+
+      <SettingsSectionCard
+        title="Diagnostics"
+        description="Verify the current deployment wiring and resolve YouTube API restrictions without leaving the setup flow."
+        className="mb-4"
+        contentClassName="space-y-4 p-4 md:p-5"
+      >
+        <SupportPanel
+          title="Connection diagnostics"
+          description="Runs live checks against the current deployment so you can confirm Discogs and YouTube configuration before debugging anything else."
+          actions={<ApiKeyTester />}
+        />
+        <YoutubeKeyFixAssistant />
       </SettingsSectionCard>
 
       <SettingsSectionCard title="Developer Links" className="mb-4" contentClassName="p-4 md:p-5">
