@@ -1,6 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { InlineActionButton } from "@/components/inline-action-button";
 import type { SourceControlAction } from "@/lib/source-action-contract";
 import { useSourceControlButtonAction } from "@/lib/use-source-batch-actions";
 
@@ -38,8 +38,7 @@ export function SourceSyncControlButton({
   };
 
   return (
-    <MutationActionButton
-      preset="inline"
+    <InlineActionButton
       className={className}
       disabled={disabled}
       error={error}
@@ -51,6 +50,6 @@ export function SourceSyncControlButton({
       variant={variant}
     >
       {labelFor(action, compact)}
-    </MutationActionButton>
+    </InlineActionButton>
   );
 }

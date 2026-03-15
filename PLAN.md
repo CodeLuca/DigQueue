@@ -338,6 +338,7 @@
     - Hardened the live release gate again so `release:verify:live` now accepts a newly promoted Railway service deployment even when a duplicate newer build remains queued/building in the background, instead of failing the release path on that Railway queue edge case.
     - Consolidated responsive action-button layout so recommendation/playback wrappers plus listen-inbox bulk actions and queue playback controls now share one responsive width/justify helper instead of repeating the same mobile/full-width button contract inline.
     - Consolidated mobile-full-width CTA width handling so onboarding button links, API key testing, and dashboard wishlist sync controls now share one responsive width helper instead of scattering raw `w-full sm:w-auto` classes across link and mutation-button surfaces.
+    - Consolidated inline operational action buttons so source batch controls, remediation actions, and wishlist sync controls now share one inline-action-button wrapper for preset, size, and optional mobile width handling instead of repeating the same inline mutation-button contract across operational surfaces.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

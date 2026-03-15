@@ -1,6 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { InlineActionButton } from "@/components/inline-action-button";
 import type { SourceRemediationAction } from "@/lib/source-action-contract";
 import { useSourceRemediationButtonAction } from "@/lib/use-source-batch-actions";
 
@@ -48,8 +48,7 @@ export function SourceRemediationButton({
   };
 
   return (
-    <MutationActionButton
-      preset="inline"
+    <InlineActionButton
       size={size}
       variant={variant}
       className={className}
@@ -61,6 +60,6 @@ export function SourceRemediationButton({
       onClick={() => void onClick()}
     >
       {children}
-    </MutationActionButton>
+    </InlineActionButton>
   );
 }

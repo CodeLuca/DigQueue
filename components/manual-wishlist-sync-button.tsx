@@ -1,8 +1,6 @@
 "use client";
 
-import { MutationActionButton } from "@/components/mutation-action-button";
-import { responsiveActionWidthClassName } from "@/components/responsive-action-button-layout";
-import { cn } from "@/lib/utils";
+import { InlineActionButton } from "@/components/inline-action-button";
 import { useManualWishlistSyncAction } from "@/lib/use-wishlist-sync-actions";
 
 export function ManualWishlistSyncButton({
@@ -23,12 +21,12 @@ export function ManualWishlistSyncButton({
   const label = importLabel ? "Import recent wishlist records" : compact ? "Run sync" : "Run sync now";
 
   return (
-    <MutationActionButton
-      preset="inline"
-      className={cn(mobileFullWidth && responsiveActionWidthClassName(), className)}
+    <InlineActionButton
+      className={className}
       disabled={!enabled}
       error={error}
       message={message}
+      mobileFullWidth={mobileFullWidth}
       pending={pending}
       pendingChildren={importLabel ? "Importing..." : "Syncing..."}
       onClick={() => void run()}
@@ -36,6 +34,6 @@ export function ManualWishlistSyncButton({
       variant="outline"
     >
       {label}
-    </MutationActionButton>
+    </InlineActionButton>
   );
 }
