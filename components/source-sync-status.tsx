@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { SourceSyncActivityTimeline } from "@/components/source-sync-activity-timeline";
+import { SourceSyncSection } from "@/components/source-sync-section";
 import { SupportInsightCard } from "@/components/support-insight-card";
 import {
   formatSourceSyncAge,
@@ -167,11 +168,14 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
         </div>
       ) : null}
       {data.throughputLong ? (
-        <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
-          <summary className="cursor-pointer text-[11px] font-medium text-[var(--color-text)]">
+        <SourceSyncSection
+          title={
+            <>
             <span className="hidden sm:inline">{data.throughputLong.windowMinutes}m trend: {data.throughputLong.runs} runs</span>
             <span className="sm:hidden">{data.throughputLong.windowMinutes}m trend</span>
-          </summary>
+            </>
+          }
+        >
           <p className="mt-1 hidden text-[10px] text-[var(--color-muted)] sm:block">
             Success/failed: {data.throughputLong.successfulRuns}/{data.throughputLong.failedRuns}
           </p>
@@ -203,14 +207,17 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               </p>
             </div>
           ) : null}
-        </details>
+        </SourceSyncSection>
       ) : null}
       {data.runHistory && data.runHistory.length > 0 ? (
-        <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
-          <summary className="cursor-pointer text-[11px] font-medium text-[var(--color-text)]">
+        <SourceSyncSection
+          title={
+            <>
             <span className="hidden sm:inline">Recent run history</span>
             <span className="sm:hidden">Run history</span>
-          </summary>
+            </>
+          }
+        >
           <div className="mt-2 space-y-1">
             {data.runHistory.slice(0, 5).map((item) => (
               <p key={`${item.createdAt}-${item.sourceId}-${item.outcome}`} className="text-[10px] text-[var(--color-muted)]">
@@ -220,14 +227,17 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               </p>
             ))}
           </div>
-        </details>
+        </SourceSyncSection>
       ) : null}
       {view.recentSuccessBySource.length > 0 ? (
-        <details className="mt-2 rounded-md border border-[var(--color-border)]/70 bg-[var(--color-surface)]/40 p-2">
-          <summary className="cursor-pointer text-[11px] font-medium text-[var(--color-text)]">
+        <SourceSyncSection
+          title={
+            <>
             <span className="hidden sm:inline">Per-source recent success</span>
             <span className="sm:hidden">Recent success</span>
-          </summary>
+            </>
+          }
+        >
           <div className="mt-1 space-y-1">
             {view.recentSuccessBySource.map(({ sourceName, createdAt }) => (
               <p key={`${sourceName}-${createdAt}`} className="text-[10px] text-[var(--color-muted)]">
@@ -235,7 +245,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               </p>
             ))}
           </div>
-        </details>
+        </SourceSyncSection>
       ) : null}
     </div>
   );

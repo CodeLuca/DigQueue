@@ -327,6 +327,7 @@
     - Hardened the live release gate so `release:verify:live` now retries transient Railway deployment/service status probe failures before falling back to base-URL readiness, reducing noisy CLI flake during production verification.
     - Consolidated sync telemetry insight cards so the source-sync status panel now uses one support-insight-card primitive for “What Changed”, “Top Failure”, and “Run Mix” instead of repeating the same mini summary-card markup inside the operations surface.
     - Consolidated sync activity timelines so the source-sync status panel now renders both the short-window and grouped long-window charts through one source-sync-activity-timeline primitive instead of hand-rolling the same bar-chart markup twice.
+    - Consolidated sync status collapsible sections so trend, run-history, and recent-success blocks now share one source-sync-section wrapper instead of repeating the same `<details>` shell and summary styling inline.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 
