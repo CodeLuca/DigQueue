@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { SourceSyncActivityTimeline } from "@/components/source-sync-activity-timeline";
 import { SupportInsightCard } from "@/components/support-insight-card";
 import {
   formatSourceSyncAge,
@@ -10,7 +11,6 @@ import {
   getSourceSyncAnomalyBadgeClass,
   getSourceSyncAnomalyLabel,
 } from "@/lib/source-sync-status-view";
-import { getTimelineBarStyle } from "@/lib/sync-timeline";
 import { useSourceSyncStatus } from "@/lib/use-source-sync-status";
 
 export function SourceSyncStatus({ initialProcessingCount }: { initialProcessingCount: number }) {
@@ -152,25 +152,17 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
             </div>
           ) : null}
           {view.timeline.length > 0 ? (
-            <div className="mt-1">
-              <p className="text-[10px] text-[var(--color-muted)]">
+            <SourceSyncActivityTimeline
+              className="mt-1"
+              buckets={view.timeline}
+              maxRuns={view.timelineMaxRuns}
+              title={
+                <>
                 <span className="hidden sm:inline">Timeline (oldest to newest)</span>
                 <span className="sm:hidden">Timeline</span>
-              </p>
-              <div className="mt-1 flex h-8 items-end gap-0.5 rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/40 p-1">
-                {view.timeline.map((bucket, index) => {
-                  const { heightPct, className } = getTimelineBarStyle(bucket, view.timelineMaxRuns);
-                  return (
-                    <span
-                      key={`${bucket.minuteOffset}-${index}`}
-                      title={`${bucket.runs} runs (${bucket.successfulRuns} ok, ${bucket.failedRuns} failed)`}
-                      className={`w-2 rounded-sm ${className}`}
-                      style={{ height: `${heightPct}%` }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+                </>
+              }
+            />
           ) : null}
         </div>
       ) : null}
@@ -187,22 +179,13 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
             Duration p50/p90: {formatSourceSyncDuration(data.throughputLong.durationP50Ms)} / {formatSourceSyncDuration(data.throughputLong.durationP90Ms)}
           </p>
           {view.longTimelineGrouped.length > 0 ? (
-            <div className="mt-1">
-              <p className="text-[10px] text-[var(--color-muted)]">5-minute grouped activity</p>
-              <div className="mt-1 flex h-7 items-end gap-0.5 rounded border border-[var(--color-border)]/60 bg-[var(--color-surface2)]/40 p-1">
-                {view.longTimelineGrouped.map((bucket, index) => {
-                  const { heightPct, className } = getTimelineBarStyle(bucket, view.longTimelineMaxRuns);
-                  return (
-                    <span
-                      key={`${bucket.minuteOffset}-${index}`}
-                      title={`${bucket.runs} runs (${bucket.successfulRuns} ok, ${bucket.failedRuns} failed)`}
-                      className={`w-2 rounded-sm ${className}`}
-                      style={{ height: `${heightPct}%` }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+            <SourceSyncActivityTimeline
+              className="mt-1"
+              buckets={view.longTimelineGrouped}
+              emptyHeightClassName="h-7"
+              maxRuns={view.longTimelineMaxRuns}
+              title="5-minute grouped activity"
+            />
           ) : null}
           {data.throughputBreakdown ? (
             <div className="mt-2 hidden space-y-1 sm:block">
