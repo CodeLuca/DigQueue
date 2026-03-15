@@ -308,6 +308,7 @@
     - Consolidated auth/setup hero shells so login, reset-password, and guided Discogs connect now share one account-surface layout for the outer card, width handling, heading/intro spacing, and optional accent treatment instead of carrying parallel page-frame markup.
     - Consolidated dashboard/recommendation inset panels so source-intake info blocks, library activity stat cards, and recommendation view sections now share one inset-panel class helper plus one section-kicker label component instead of repeating the same low-emphasis panel chrome and uppercase heading styles inline.
     - Consolidated dashboard/library stat tiles so the main source/library metric cards plus the reviewed/history activity counters now share one stat-tile component instead of duplicating the icon-label-value layout and optional drill-in action wiring inline.
+    - Consolidated neutral empty-state notes so dashboard source fallbacks, inbox/recommendation/recently-played empties, label/release empty results, and release-inspector no-pricing feedback now share one reusable empty-state note instead of scattering one-off muted fallback paragraphs and dashed empty cards.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

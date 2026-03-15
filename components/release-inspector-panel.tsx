@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { ExternalLink } from "lucide-react";
+import { EmptyStateNote } from "@/components/empty-state-note";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { ExternalLinkRow } from "@/components/external-link-row";
 import type { FinderCandidate } from "@/lib/client-release-data";
@@ -124,7 +125,7 @@ export function ReleaseInspectorPanel({
                   ))}
                 </div>
               ) : (
-                <p className="mt-1 text-xs text-[var(--color-muted)]">No condition pricing available from Discogs for this release.</p>
+                <EmptyStateNote title="No condition pricing available from Discogs for this release." className="mt-1 text-xs" />
               )}
             </div>
             <div className="rounded-lg border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_84%,black_16%)] p-3 lg:col-span-2 2xl:col-span-3">

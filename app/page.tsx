@@ -18,6 +18,7 @@ import {
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { ActionLink } from "@/components/action-link";
 import { DiscogsRequiredNotice } from "@/components/discogs-required-notice";
+import { EmptyStateNote } from "@/components/empty-state-note";
 import { FeedbackBanner } from "@/components/feedback-banner";
 import { getInsetPanelClassName, SectionKicker } from "@/components/inset-panel";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
@@ -797,18 +798,13 @@ export default async function HomePage({
                   </div>
                 ) : null}
                 {filteredLabels.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-                    <p className="text-sm text-[var(--color-muted)]">No sources match this filter.</p>
-                  </div>
+                  <EmptyStateNote variant="card" detail="No sources match this filter." />
                 ) : null}
-                <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-                  <p className="text-sm font-medium">
-                    {data.labels.length === 0 ? "No sources yet." : "Want more sources?"}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    Import recent Discogs wants from the Actions panel to review them in Library.
-                  </p>
-                </div>
+                <EmptyStateNote
+                  variant="card"
+                  title={data.labels.length === 0 ? "No sources yet." : "Want more sources?"}
+                  detail="Import recent Discogs wants from the Actions panel to review them in Library."
+                />
               </div>
             </CardContent>
           </Card>

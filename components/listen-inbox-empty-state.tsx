@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyStateNote } from "@/components/empty-state-note";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { ListenInboxEmptyState } from "@/lib/listen-inbox-types";
@@ -10,7 +11,7 @@ export function ListenInboxEmptyStateCard({
   emptyState?: ListenInboxEmptyState;
 }) {
   if (!emptyState) {
-    return <p className="text-sm text-[var(--color-muted)]">Nothing pending for this view.</p>;
+    return <EmptyStateNote title="Nothing pending for this view." />;
   }
 
   return (

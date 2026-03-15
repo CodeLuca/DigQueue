@@ -5,6 +5,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { DiscogsLink } from "@/components/discogs-link";
+import { EmptyStateNote } from "@/components/empty-state-note";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { SourceRefreshButton } from "@/components/source-refresh-button";
@@ -169,7 +170,7 @@ export default async function LabelPage({
               </div>
             </div>
           ))}
-          {visibleReleases.length === 0 ? <p className="text-sm text-[var(--color-muted)]">No releases match this filter.</p> : null}
+          {visibleReleases.length === 0 ? <EmptyStateNote title="No releases match this filter." /> : null}
         </CardContent>
       </Card>
     </main>

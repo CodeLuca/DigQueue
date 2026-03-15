@@ -3,6 +3,7 @@
 import { BookmarkPlus, HeartPlus, Plus, Play, X } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { DiscogsLink } from "@/components/discogs-link";
+import { EmptyStateNote } from "@/components/empty-state-note";
 import { getInsetPanelClassName, SectionKicker } from "@/components/inset-panel";
 import { MutationActionButton } from "@/components/mutation-action-button";
 import { RecommendationCardShell } from "@/components/recommendation-card-shell";
@@ -68,7 +69,7 @@ export function RecommendationsPanel({
     visibleLibraryItems,
   } = useRecommendationFeedState(initialItems, initialExternalItems);
   if (!canShow) {
-    return <p className="text-sm text-[var(--color-muted)]">No fresh recommendations right now. Process more labels or play more tracks.</p>;
+    return <EmptyStateNote title="No fresh recommendations right now. Process more labels or play more tracks." />;
   }
 
   return (
@@ -105,7 +106,7 @@ export function RecommendationsPanel({
         ))}
       </div>
       {visibleLibraryItems.length === 0 && visibleExternalItems.length === 0 ? (
-        <p className="text-sm text-[var(--color-muted)]">No recommendations in this view.</p>
+        <EmptyStateNote title="No recommendations in this view." />
       ) : null}
     </div>
   );

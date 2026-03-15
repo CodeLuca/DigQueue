@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { ClientRouteRefreshBridge } from "@/components/client-route-refresh-bridge";
 import { ChooseMatchButton } from "@/components/choose-match-button";
+import { EmptyStateNote } from "@/components/empty-state-note";
 import { ExternalActionLink } from "@/components/external-action-link";
 import { PlayMatchButton } from "@/components/play-match-button";
 import { ReleaseInspectorPanel } from "@/components/release-inspector-panel";
@@ -92,7 +93,7 @@ export default async function ReleasePage({
               </div>
             </div>
           ))}
-          {visibleTracks.length === 0 ? <p className="text-sm text-[var(--color-muted)]">No tracks found for this release.</p> : null}
+          {visibleTracks.length === 0 ? <EmptyStateNote title="No tracks found for this release." /> : null}
         </CardContent>
       </Card>
 

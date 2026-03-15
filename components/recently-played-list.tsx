@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { DiscogsLink } from "@/components/discogs-link";
+import { EmptyStateNote } from "@/components/empty-state-note";
 import { MediaActionRow } from "@/components/media-action-row";
 import { MutationActionButton } from "@/components/mutation-action-button";
 import { SegmentedControlButton } from "@/components/segmented-control-button";
@@ -107,7 +108,7 @@ export function RecentlyPlayedList({ items }: { items: RecentlyPlayedItem[] }) {
             </div>
           );
         })}
-        {filteredItems.length === 0 ? <p className="text-sm text-[var(--color-muted)]">No played items in this filter yet.</p> : null}
+        {filteredItems.length === 0 ? <EmptyStateNote title="No played items in this filter yet." /> : null}
       </div>
       {feedback ? <p className="mt-2 text-xs text-[var(--color-muted)]">{feedback}</p> : null}
     </div>
