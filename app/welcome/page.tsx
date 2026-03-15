@@ -4,6 +4,7 @@ import { GuideCard } from "@/components/guide-card";
 import { InfoCard } from "@/components/info-card";
 import { InstructionList } from "@/components/instruction-list";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
+import { OrientationHero } from "@/components/orientation-hero";
 import { Button } from "@/components/ui/button";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
@@ -33,34 +34,36 @@ export default async function WelcomePage() {
 
   return (
     <main className="mx-auto max-w-[1400px] px-3 py-6 sm:px-4 md:px-8 md:py-8">
-      <section className="marketing-hero reveal">
-        <div className="max-w-3xl">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-5xl">
-            Welcome to DigQueue
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm text-[var(--color-muted)] md:text-base">
-            This is your starting page. Use it as a quick guide, then jump into Sources, Listening Station, and Library.
-          </p>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--color-muted)]">
-            Labels give catalog-driven digging. Artist sources let you follow one artist across labels, projects, and aliases.
-          </p>
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-            {isLoggedIn ? (
-              <>
-                <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" type="button">Open Sources</Button></Link>
-                <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Listening Station</Button></Link>
-                <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Library</Button></Link>
-                <Link className="w-full sm:w-auto" href="/how-to-use"><Button className="w-full sm:w-auto" type="button" variant="ghost">Full How-To</Button></Link>
-              </>
-            ) : (
-              <>
-                <Link className="w-full sm:w-auto" href="/login"><Button className="w-full sm:w-auto" type="button">Login</Button></Link>
-                <Link className="w-full sm:w-auto" href="/login?mode=register"><Button className="w-full sm:w-auto" type="button" variant="outline">Register</Button></Link>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
+      <OrientationHero
+        actions={
+          isLoggedIn ? (
+            <>
+              <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" type="button">Open Sources</Button></Link>
+              <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Listening Station</Button></Link>
+              <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Library</Button></Link>
+              <Link className="w-full sm:w-auto" href="/how-to-use"><Button className="w-full sm:w-auto" type="button" variant="ghost">Full How-To</Button></Link>
+            </>
+          ) : (
+            <>
+              <Link className="w-full sm:w-auto" href="/login"><Button className="w-full sm:w-auto" type="button">Login</Button></Link>
+              <Link className="w-full sm:w-auto" href="/login?mode=register"><Button className="w-full sm:w-auto" type="button" variant="outline">Register</Button></Link>
+            </>
+          )
+        }
+        description={
+          <>
+            <p className="mt-2 max-w-2xl">
+              This is your starting page. Use it as a quick guide, then jump into Sources, Listening Station, and Library.
+            </p>
+            <p className="mt-2 max-w-2xl">
+              Labels give catalog-driven digging. Artist sources let you follow one artist across labels, projects, and aliases.
+            </p>
+          </>
+        }
+        descriptionClassName="mt-4"
+        title="Welcome to DigQueue"
+      >
+      </OrientationHero>
 
       <section className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3 reveal reveal-delay-1">
         {highlights.map((item) => (

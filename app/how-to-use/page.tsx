@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { InsetPanel } from "@/components/inset-panel";
 import { InstructionList } from "@/components/instruction-list";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
+import { OrientationHero } from "@/components/orientation-hero";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 
@@ -44,35 +45,39 @@ export default async function HowToUsePage() {
 
   return (
     <main className="mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-8">
-      <section className="rounded-xl border border-[var(--color-border)] bg-[linear-gradient(135deg,rgba(245,158,11,0.14),transparent_48%),var(--color-surface2)] p-4 md:p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">How To Use DigQueue</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">Learn The Interface Once</h1>
-        <p className="mt-2 max-w-3xl text-sm text-[var(--color-muted)]">
-          This page uses the same controls you see in the app so you can recognize them quickly during real use.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <NativeTooltip text="Disc icon = source ingestion progress across label and artist sources">
-            <Badge><Disc3 className="mr-1 h-3 w-3" />Sources loaded</Badge>
-          </NativeTooltip>
-          <NativeTooltip text="Play icon = queue playback activity">
-            <Badge><PlayCircle className="mr-1 h-3 w-3" />Tracks played</Badge>
-          </NativeTooltip>
-          <NativeTooltip text="Single check icon = reviewed track">
-            <Badge><CheckCircle2 className="mr-1 h-3 w-3" />Reviewed</Badge>
-          </NativeTooltip>
-          <NativeTooltip text="Heart icon = locally saved track">
-            <Badge><Heart className="mr-1 h-3 w-3" />Saved tracks</Badge>
-          </NativeTooltip>
-        </div>
+      <OrientationHero
+        actions={
+          <>
+            <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Sources</Button></Link>
+            <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Listening Station</Button></Link>
+            <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Library</Button></Link>
+          </>
+        }
+        badgeRow={
+          <>
+            <NativeTooltip text="Disc icon = source ingestion progress across label and artist sources">
+              <Badge><Disc3 className="mr-1 h-3 w-3" />Sources loaded</Badge>
+            </NativeTooltip>
+            <NativeTooltip text="Play icon = queue playback activity">
+              <Badge><PlayCircle className="mr-1 h-3 w-3" />Tracks played</Badge>
+            </NativeTooltip>
+            <NativeTooltip text="Single check icon = reviewed track">
+              <Badge><CheckCircle2 className="mr-1 h-3 w-3" />Reviewed</Badge>
+            </NativeTooltip>
+            <NativeTooltip text="Heart icon = locally saved track">
+              <Badge><Heart className="mr-1 h-3 w-3" />Saved tracks</Badge>
+            </NativeTooltip>
+          </>
+        }
+        description="This page uses the same controls you see in the app so you can recognize them quickly during real use."
+        eyebrow="How To Use DigQueue"
+        title="Learn The Interface Once"
+        tone="guide"
+      >
         <FeedbackBanner tone="warning" className="mt-3 text-xs">
           Demo page note: sample controls below are disabled and shown for orientation only.
         </FeedbackBanner>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Sources</Button></Link>
-          <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Listening Station</Button></Link>
-          <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Library</Button></Link>
-        </div>
-      </section>
+      </OrientationHero>
 
       {isLoggedIn && onboardingSnapshot ? (
         <section className="mt-4">
