@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { Bookmark, CheckCheck, Disc3, Heart, Inbox, Settings, Sparkles } from "lucide-react";
+import { ButtonLink } from "@/components/button-link";
 import { GuideCard } from "@/components/guide-card";
 import { InfoCard } from "@/components/info-card";
 import { InstructionList } from "@/components/instruction-list";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { OrientationHero } from "@/components/orientation-hero";
-import { Button } from "@/components/ui/button";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 
@@ -38,15 +37,15 @@ export default async function WelcomePage() {
         actions={
           isLoggedIn ? (
             <>
-              <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" type="button">Open Sources</Button></Link>
-              <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Listening Station</Button></Link>
-              <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" type="button" variant="outline">Open Library</Button></Link>
-              <Link className="w-full sm:w-auto" href="/how-to-use"><Button className="w-full sm:w-auto" type="button" variant="ghost">Full How-To</Button></Link>
+              <ButtonLink className="w-full sm:w-auto" href="/?tab=step-1">Open Sources</ButtonLink>
+              <ButtonLink className="w-full sm:w-auto" href="/?tab=step-2" variant="outline">Open Listening Station</ButtonLink>
+              <ButtonLink className="w-full sm:w-auto" href="/?tab=library" variant="outline">Open Library</ButtonLink>
+              <ButtonLink className="w-full sm:w-auto" href="/how-to-use" variant="ghost">Full How-To</ButtonLink>
             </>
           ) : (
             <>
-              <Link className="w-full sm:w-auto" href="/login"><Button className="w-full sm:w-auto" type="button">Login</Button></Link>
-              <Link className="w-full sm:w-auto" href="/login?mode=register"><Button className="w-full sm:w-auto" type="button" variant="outline">Register</Button></Link>
+              <ButtonLink className="w-full sm:w-auto" href="/login">Login</ButtonLink>
+              <ButtonLink className="w-full sm:w-auto" href="/login?mode=register" variant="outline">Register</ButtonLink>
             </>
           )
         }
@@ -134,7 +133,7 @@ export default async function WelcomePage() {
                 ]}
               />
               <div className="pt-1">
-                <Link href="/how-to-use"><Button type="button" size="sm" variant="outline">Open Detailed Guide</Button></Link>
+                <ButtonLink href="/how-to-use" size="sm" variant="outline">Open Detailed Guide</ButtonLink>
               </div>
             </>
           ) : (

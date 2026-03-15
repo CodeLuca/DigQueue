@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
+import { ButtonLink } from "@/components/button-link";
 import { ListenInboxClient } from "@/components/listen-inbox-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,8 @@ export default async function ListenPage({
           <p className="text-sm text-[var(--color-muted)]">A focused lane for everything you still need to hear and decide on.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <Link href="/" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Dashboard</Link>
-          <Link href="/settings" className="rounded-md border border-[var(--color-border)] px-3 py-2 hover:bg-[var(--color-surface2)]">Settings</Link>
+          <ButtonLink href="/" size="sm" variant="outline">Dashboard</ButtonLink>
+          <ButtonLink href="/settings" size="sm" variant="outline">Settings</ButtonLink>
         </div>
       </header>
 
@@ -46,7 +46,7 @@ export default async function ListenPage({
             </select>
             <Button type="submit" variant="secondary">Apply</Button>
             {selectedLabelId ? (
-              <Link href="/listen" className="rounded-md border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[var(--color-surface2)]">Reset</Link>
+              <ButtonLink href="/listen" size="sm" variant="outline">Reset</ButtonLink>
             ) : null}
           </form>
 

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   Bookmark,
@@ -17,6 +16,7 @@ import {
   Shuffle,
   SlidersHorizontal,
 } from "lucide-react";
+import { ButtonLink } from "@/components/button-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FeedbackBanner } from "@/components/feedback-banner";
@@ -48,9 +48,9 @@ export default async function HowToUsePage() {
       <OrientationHero
         actions={
           <>
-            <Link className="w-full sm:w-auto" href="/?tab=step-1"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Sources</Button></Link>
-            <Link className="w-full sm:w-auto" href="/?tab=step-2"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Listening Station</Button></Link>
-            <Link className="w-full sm:w-auto" href="/?tab=library"><Button className="w-full sm:w-auto" size="sm" variant="outline">Open Library</Button></Link>
+            <ButtonLink className="w-full sm:w-auto" href="/?tab=step-1" size="sm" variant="outline">Open Sources</ButtonLink>
+            <ButtonLink className="w-full sm:w-auto" href="/?tab=step-2" size="sm" variant="outline">Open Listening Station</ButtonLink>
+            <ButtonLink className="w-full sm:w-auto" href="/?tab=library" size="sm" variant="outline">Open Library</ButtonLink>
           </>
         }
         badgeRow={
@@ -285,15 +285,17 @@ export default async function HowToUsePage() {
               />
             )}
             <div className="flex flex-wrap gap-2">
-              <Link href="/settings">
-                <Button size="sm" variant="outline"><Settings className="mr-1 h-3.5 w-3.5" />Settings</Button>
-              </Link>
-              <Link href="/?tab=step-2">
-                <Button size="sm">Start Listening</Button>
-              </Link>
-              <Link href="/?tab=step-1">
-                <Button size="sm" variant="outline"><ExternalLink className="mr-1 h-3.5 w-3.5" />Open Sources</Button>
-              </Link>
+              <ButtonLink href="/settings" size="sm" variant="outline">
+                <Settings className="mr-1 h-3.5 w-3.5" />
+                Settings
+              </ButtonLink>
+              <ButtonLink href="/?tab=step-2" size="sm">
+                Start Listening
+              </ButtonLink>
+              <ButtonLink href="/?tab=step-1" size="sm" variant="outline">
+                <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                Open Sources
+              </ButtonLink>
             </div>
         </GuideCard>
       </section>
