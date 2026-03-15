@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { DiscogsLink } from "@/components/discogs-link";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { getInsetPanelClassName, SectionKicker } from "@/components/inset-panel";
-import { MutationActionButton } from "@/components/mutation-action-button";
+import { RecommendationActionButton } from "@/components/recommendation-action-button";
 import { RecommendationCardShell } from "@/components/recommendation-card-shell";
 import { ResponsiveLabel } from "@/components/responsive-label";
 import { SegmentedControlButton } from "@/components/segmented-control-button";
@@ -163,11 +163,9 @@ function LibraryRecommendationCard({
       score={track.score}
       reason={track.reason}
     >
-      <MutationActionButton
-        preset="playback"
-        size="sm"
+      <RecommendationActionButton
         variant="secondary"
-        className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+        fullSpan
         disabled={loading || playbackDisabled}
         onClick={() => void playNow()}
         title={playNowInMiniPlayerLabel()}
@@ -177,12 +175,9 @@ function LibraryRecommendationCard({
       >
         <Play className="h-3.5 w-3.5" />
         <ResponsiveLabel compact="Play" full="Play Now" />
-      </MutationActionButton>
-      <MutationActionButton
-        preset="playback"
-        size="sm"
+      </RecommendationActionButton>
+      <RecommendationActionButton
         variant="outline"
-        className="w-full justify-center sm:w-auto sm:justify-start"
         disabled={loading || playbackDisabled}
         onClick={() => void queueNext()}
         title={queueTrackNextTitle()}
@@ -192,12 +187,9 @@ function LibraryRecommendationCard({
         message={feedback}
       >
         <ResponsiveLabel compact="Queue" full="Queue Next" />
-      </MutationActionButton>
-        <MutationActionButton
-          preset="recommendation"
-          size="sm"
+      </RecommendationActionButton>
+        <RecommendationActionButton
           variant="outline"
-          className="w-full justify-center sm:w-auto sm:justify-start"
           disabled={loading}
           onClick={() => void onReviewed()}
           title={recommendationReviewLabel()}
@@ -206,12 +198,9 @@ function LibraryRecommendationCard({
           message={reviewMessage}
         >
           <ResponsiveLabel compact="Review" full="Reviewed" />
-        </MutationActionButton>
-        <MutationActionButton
-          preset="recommendation"
-          size="sm"
+        </RecommendationActionButton>
+        <RecommendationActionButton
           variant={track.saved ? "secondary" : "outline"}
-          className="w-full justify-center sm:w-auto sm:justify-start"
           disabled={loading || Boolean(track.saved)}
           onClick={() => void onSave()}
           title={trackSaveLabels.title}
@@ -222,12 +211,9 @@ function LibraryRecommendationCard({
         >
           <HeartPlus className="h-3.5 w-3.5" />
           <ResponsiveLabel compact="Save" full={trackSaveLabels.buttonLabel} />
-        </MutationActionButton>
-        <MutationActionButton
-          preset="recommendation"
-          size="sm"
+        </RecommendationActionButton>
+        <RecommendationActionButton
           variant={release.wishlist ? "secondary" : "outline"}
-          className="w-full justify-center sm:w-auto sm:justify-start"
           disabled={loading || Boolean(release.wishlist)}
           onClick={() => void onAddRecordWishlist()}
           title={wishlistLabels.title}
@@ -238,12 +224,10 @@ function LibraryRecommendationCard({
         >
           <BookmarkPlus className="h-3.5 w-3.5" />
           <ResponsiveLabel compact="Wishlist" full={wishlistLabels.buttonLabel} />
-        </MutationActionButton>
-        <MutationActionButton
-          preset="recommendation"
-          size="sm"
+        </RecommendationActionButton>
+        <RecommendationActionButton
           variant="ghost"
-          className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+          fullSpan
           disabled={loading}
           onClick={() => void onDismissTrack()}
           title={recommendationDismissLabel()}
@@ -254,7 +238,7 @@ function LibraryRecommendationCard({
         >
           <X className="h-3.5 w-3.5" />
           <ResponsiveLabel compact="Dismiss" full="Dismiss" />
-        </MutationActionButton>
+        </RecommendationActionButton>
     </RecommendationCardShell>
   );
 }
@@ -295,11 +279,8 @@ function ExternalRecommendationCard({
       score={item.score}
       reason={item.reason}
     >
-      <MutationActionButton
-        preset="recommendation"
-        size="sm"
+      <RecommendationActionButton
         variant="outline"
-        className="w-full justify-center sm:w-auto sm:justify-start"
         disabled={loading}
         onClick={() => void onAddLabel()}
         title={addSourceLabels.title}
@@ -310,12 +291,9 @@ function ExternalRecommendationCard({
       >
         <Plus className="h-3.5 w-3.5" />
         <ResponsiveLabel compact="Add" full={addSourceLabels.buttonLabel} />
-      </MutationActionButton>
-      <MutationActionButton
-        preset="recommendation"
-        size="sm"
+      </RecommendationActionButton>
+      <RecommendationActionButton
         variant="outline"
-        className="w-full justify-center sm:w-auto sm:justify-start"
         disabled={loading}
         onClick={() => void onWant()}
         title={wishlistLabels.title}
@@ -326,13 +304,11 @@ function ExternalRecommendationCard({
       >
         <BookmarkPlus className="h-3.5 w-3.5" />
         <ResponsiveLabel compact="Wishlist" full={wishlistLabels.buttonLabel} />
-      </MutationActionButton>
+      </RecommendationActionButton>
       <DiscogsLink discogsUrl={item.discogsUrl} title={releaseDiscogsLinkTitle()} variant="textButton" />
-      <MutationActionButton
-        preset="recommendation"
-        size="sm"
+      <RecommendationActionButton
         variant="ghost"
-        className="col-span-2 w-full justify-center sm:col-auto sm:w-auto sm:justify-start"
+        fullSpan
         disabled={loading}
         onClick={() => void onDismiss()}
         title={recommendationDismissLabel()}
@@ -343,7 +319,7 @@ function ExternalRecommendationCard({
       >
         <X className="h-3.5 w-3.5" />
         <ResponsiveLabel compact="Dismiss" full="Dismiss" />
-      </MutationActionButton>
+      </RecommendationActionButton>
     </RecommendationCardShell>
   );
 }

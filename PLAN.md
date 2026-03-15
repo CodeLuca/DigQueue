@@ -333,6 +333,7 @@
     - Consolidated responsive short/long labels so the source-sync status panel plus core source-management/navigation controls now share one responsive-label primitive instead of repeating paired `hidden sm:inline` / `sm:hidden` spans inline.
     - Extended responsive-label coverage across the dashboard source filters and failure-center remediation controls so the main operations surface now uses the same short/long label helper instead of keeping another cluster of inline mobile/desktop text swaps.
     - Extended responsive-label coverage across recommendation actions and mobile listen presets so the app’s highest-frequency action buttons now share the same compact/mobile label contract instead of repeating one-off visibility spans.
+    - Consolidated recommendation action buttons so library/external recommendation cards now share one recommendation-action-button wrapper for preset, size, and responsive width/justify behavior instead of repeating the same mutation-button layout contract inline.
     - Hardened the live release gate again so `release:verify:live` now accepts a newly promoted Railway service deployment even when a duplicate newer build remains queued/building in the background, instead of failing the release path on that Railway queue edge case.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
