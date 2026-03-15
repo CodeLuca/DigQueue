@@ -2,6 +2,7 @@
 
 import { RefreshCcw } from "lucide-react";
 import { MutationActionButton } from "@/components/mutation-action-button";
+import { ResponsiveLabel } from "@/components/responsive-label";
 import { useSourceRefreshButtonAction } from "@/lib/use-source-single-actions";
 
 export function SourceRefreshButton(props: {
@@ -31,10 +32,7 @@ export function SourceRefreshButton(props: {
       onClick={() => void onClick()}
     >
       <RefreshCcw className="mr-1 h-3.5 w-3.5" />
-      <>
-        <span className="hidden sm:inline">{props.compactLabel ? "Refresh" : "Refresh source info"}</span>
-        <span className="sm:hidden">Refresh info</span>
-      </>
+      <ResponsiveLabel compact="Refresh info" full={props.compactLabel ? "Refresh" : "Refresh source info"} />
     </MutationActionButton>
   );
 }

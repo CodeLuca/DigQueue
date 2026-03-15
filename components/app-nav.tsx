@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Bookmark, CircleHelp, Disc3, Inbox, LogIn, Settings, UserPlus } from "lucide-react";
+import { ResponsiveLabel } from "@/components/responsive-label";
 
 function itemClass(active: boolean) {
   return active
@@ -55,9 +56,9 @@ export function AppNav() {
         <Link href="/welcome" className="text-lg font-semibold tracking-tight">DigQueue</Link>
         <nav className="flex w-full items-center gap-1.5 overflow-x-auto rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)]/30 p-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:w-auto md:flex-nowrap md:justify-end" aria-label="Primary tabs">
           <Link href="/?tab=step-1" className={itemClass(pathname === "/" && activeTab === "step-1")} title="Manage sources and ingestion" onMouseEnter={() => prefetchRoute("/?tab=step-1")} onFocus={() => prefetchRoute("/?tab=step-1")} aria-current={pathname === "/" && activeTab === "step-1" ? "page" : undefined}><Disc3 className="h-3.5 w-3.5" /><span>Sources</span></Link>
-          <Link href="/?tab=step-2" className={itemClass(pathname === "/" && activeTab === "step-2")} title="Browse and play tracks in your queue" onMouseEnter={() => prefetchRoute("/?tab=step-2")} onFocus={() => prefetchRoute("/?tab=step-2")} aria-current={pathname === "/" && activeTab === "step-2" ? "page" : undefined}><Inbox className="h-3.5 w-3.5" /><span className="sm:hidden">Listen</span><span className="hidden sm:inline">Listening Station</span></Link>
+          <Link href="/?tab=step-2" className={itemClass(pathname === "/" && activeTab === "step-2")} title="Browse and play tracks in your queue" onMouseEnter={() => prefetchRoute("/?tab=step-2")} onFocus={() => prefetchRoute("/?tab=step-2")} aria-current={pathname === "/" && activeTab === "step-2" ? "page" : undefined}><Inbox className="h-3.5 w-3.5" /><ResponsiveLabel compact="Listen" full="Listening Station" /></Link>
           <Link href={libraryHref} className={itemClass(pathname === "/" && activeTab === "library")} title="Saved tracks, Discogs wishlist, and played/reviewed history" onMouseEnter={() => prefetchRoute(libraryHref)} onFocus={() => prefetchRoute(libraryHref)} aria-current={pathname === "/" && activeTab === "library" ? "page" : undefined}><Bookmark className="h-3.5 w-3.5" />Library</Link>
-          <Link href="/how-to-use" className={itemClass(pathname === "/how-to-use")} title="Read a full first-time user guide" onMouseEnter={() => prefetchRoute("/how-to-use")} onFocus={() => prefetchRoute("/how-to-use")} aria-current={pathname === "/how-to-use" ? "page" : undefined}><CircleHelp className="h-3.5 w-3.5" /><span className="sm:hidden">Guide</span><span className="hidden sm:inline">How to use</span></Link>
+          <Link href="/how-to-use" className={itemClass(pathname === "/how-to-use")} title="Read a full first-time user guide" onMouseEnter={() => prefetchRoute("/how-to-use")} onFocus={() => prefetchRoute("/how-to-use")} aria-current={pathname === "/how-to-use" ? "page" : undefined}><CircleHelp className="h-3.5 w-3.5" /><ResponsiveLabel compact="Guide" full="How to use" /></Link>
           <Link href="/settings" className={itemClass(pathname === "/settings")} title="Configure API keys and integrations" onMouseEnter={() => prefetchRoute("/settings")} onFocus={() => prefetchRoute("/settings")} aria-current={pathname === "/settings" ? "page" : undefined}><Settings className="h-3.5 w-3.5" />Settings</Link>
         </nav>
       </div>

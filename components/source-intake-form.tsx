@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ResponsiveLabel } from "@/components/responsive-label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { addSourceAndDispatchClient } from "@/lib/client-source-intake";
@@ -40,12 +41,7 @@ export function SourceIntakeForm() {
           required
         />
         <Button type="submit" disabled={pending || source.trim().length === 0}>
-          {pending ? "Adding..." : (
-            <>
-              <span className="hidden sm:inline">Add Source</span>
-              <span className="sm:hidden">Add</span>
-            </>
-          )}
+          {pending ? "Adding..." : <ResponsiveLabel compact="Add" full="Add Source" />}
         </Button>
       </form>
       {feedback ? <p className="text-xs text-emerald-200">{feedback}</p> : null}

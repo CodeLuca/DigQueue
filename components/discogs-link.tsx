@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Disc3, ExternalLink } from "lucide-react";
 import { ExternalActionLink } from "@/components/external-action-link";
+import { ResponsiveLabel } from "@/components/responsive-label";
 import { toDiscogsWebUrl } from "@/lib/discogs-links";
 
 type DiscogsLinkVariant = "iconButton" | "inlineIcon" | "textButton" | "textLink";
@@ -49,10 +50,7 @@ export function DiscogsLink({
         className={className}
       >
         {children ? children : variant === "textButton" ? (
-          <>
-            <span className="hidden sm:inline">{resolvedLabel}</span>
-            <span className="sm:hidden">Open</span>
-          </>
+          <ResponsiveLabel compact="Open" full={resolvedLabel} />
         ) : (
           "Open on Discogs"
         )}

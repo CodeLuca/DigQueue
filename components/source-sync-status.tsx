@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { ResponsiveLabel } from "@/components/responsive-label";
 import { SourceSyncActivityTimeline } from "@/components/source-sync-activity-timeline";
 import { SourceSyncHealthAlert } from "@/components/source-sync-health-alert";
 import { SourceSyncNote } from "@/components/source-sync-note";
@@ -28,8 +29,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
       </p>
       {view.processingNames.length > 0 ? (
         <p className="mt-1 text-[var(--color-muted)]">
-          <span className="hidden sm:inline">Currently processing:</span>
-          <span className="sm:hidden">Now:</span>{" "}
+          <ResponsiveLabel compact="Now:" full="Currently processing:" />{" "}
           {view.processingNames.join(", ")}
         </p>
       ) : null}
@@ -41,21 +41,18 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
             <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">{formatSourceSyncAge(data.syncTelemetry.updatedAt)}</Badge>
           </div>
           <p className="text-[var(--color-text)]">
-            <span className="hidden sm:inline">Source:</span>
-            <span className="sm:hidden">Src:</span>{" "}
+            <ResponsiveLabel compact="Src:" full="Source:" />{" "}
             {data.syncTelemetry.sourceName}
           </p>
           {data.syncTelemetry.releaseTitle ? (
             <p className="text-[var(--color-muted)]">
-              <span className="hidden sm:inline">Release:</span>
-              <span className="sm:hidden">Rel:</span>{" "}
+              <ResponsiveLabel compact="Rel:" full="Release:" />{" "}
               {data.syncTelemetry.releaseTitle}
             </p>
           ) : null}
           {data.syncTelemetry.trackTitle ? (
             <p className="text-[var(--color-muted)]">
-              <span className="hidden sm:inline">Track now:</span>
-              <span className="sm:hidden">Track:</span>{" "}
+              <ResponsiveLabel compact="Track:" full="Track now:" />{" "}
               {data.syncTelemetry.trackTitle}
               {typeof data.syncTelemetry.trackIndex === "number" && typeof data.syncTelemetry.trackTotal === "number"
                 ? ` (${data.syncTelemetry.trackIndex}/${data.syncTelemetry.trackTotal})`
@@ -96,8 +93,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
           </SourceSyncNote>
           {data.throughputComparison ? (
             <SourceSyncNote>
-              <span className="hidden sm:inline">Versus previous {data.throughputComparison.currentWindowMinutes}m:</span>
-              <span className="sm:hidden">Vs prev:</span>
+              <ResponsiveLabel compact="Vs prev:" full={`Versus previous ${data.throughputComparison.currentWindowMinutes}m:`} />
               {" "}runs {formatSourceSyncDelta(data.throughputComparison.runDelta, (value) => `${value}`)},
               {" "}failures {formatSourceSyncDelta(data.throughputComparison.failedDelta, (value) => `${value}`)},
               {" "}avg duration {formatSourceSyncDelta(data.throughputComparison.averageDurationDeltaMs, (value) => formatSourceSyncDuration(value))}
@@ -154,24 +150,14 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
               className="mt-1"
               buckets={view.timeline}
               maxRuns={view.timelineMaxRuns}
-              title={
-                <>
-                <span className="hidden sm:inline">Timeline (oldest to newest)</span>
-                <span className="sm:hidden">Timeline</span>
-                </>
-              }
+              title={<ResponsiveLabel compact="Timeline" full="Timeline (oldest to newest)" />}
             />
           ) : null}
         </div>
       ) : null}
       {data.throughputLong ? (
         <SourceSyncSection
-          title={
-            <>
-            <span className="hidden sm:inline">{data.throughputLong.windowMinutes}m trend: {data.throughputLong.runs} runs</span>
-            <span className="sm:hidden">{data.throughputLong.windowMinutes}m trend</span>
-            </>
-          }
+          title={<ResponsiveLabel compact={`${data.throughputLong.windowMinutes}m trend`} full={`${data.throughputLong.windowMinutes}m trend: ${data.throughputLong.runs} runs`} />}
         >
           <SourceSyncNote className="mt-1 hidden sm:block">
             Success/failed: {data.throughputLong.successfulRuns}/{data.throughputLong.failedRuns}
@@ -208,12 +194,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
       ) : null}
       {data.runHistory && data.runHistory.length > 0 ? (
         <SourceSyncSection
-          title={
-            <>
-            <span className="hidden sm:inline">Recent run history</span>
-            <span className="sm:hidden">Run history</span>
-            </>
-          }
+          title={<ResponsiveLabel compact="Run history" full="Recent run history" />}
         >
           <div className="mt-2 space-y-1">
             {data.runHistory.slice(0, 5).map((item) => (
@@ -228,12 +209,7 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
       ) : null}
       {view.recentSuccessBySource.length > 0 ? (
         <SourceSyncSection
-          title={
-            <>
-            <span className="hidden sm:inline">Per-source recent success</span>
-            <span className="sm:hidden">Recent success</span>
-            </>
-          }
+          title={<ResponsiveLabel compact="Recent success" full="Per-source recent success" />}
         >
           <div className="mt-1 space-y-1">
             {view.recentSuccessBySource.map(({ sourceName, createdAt }) => (
