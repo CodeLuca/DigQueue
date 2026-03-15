@@ -8,6 +8,7 @@ import { DiscogsLink } from "@/components/discogs-link";
 import { EmptyStateNote } from "@/components/empty-state-note";
 import { EntityDetailHeader } from "@/components/entity-detail-header";
 import { ExternalActionLink } from "@/components/external-action-link";
+import { MediaActionRow } from "@/components/media-action-row";
 import { ProcessingToggle } from "@/components/processing-toggle";
 import { SourceRefreshButton } from "@/components/source-refresh-button";
 import { Badge } from "@/components/ui/badge";
@@ -136,33 +137,27 @@ export default async function LabelPage({
         <CardContent className="space-y-2">
           {visibleReleases.map((release) => (
             <div key={release.id} className="rounded-lg border border-[var(--color-border)] p-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="flex min-w-0 items-center gap-3">
-                  {release.thumbUrl ? (
-                    <Image
-                      src={release.thumbUrl}
-                      alt={`${release.title} artwork`}
-                      width={56}
-                      height={56}
-                      className="h-14 w-14 shrink-0 rounded-md border border-[var(--color-border)] object-cover"
-                    />
-                  ) : (
-                    <div className="h-14 w-14 shrink-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)]" aria-hidden />
-                  )}
-                  <div className="min-w-0">
-                    <Link href={`/releases/${release.id}`} className="line-clamp-1 text-sm font-medium hover:text-[var(--color-accent)]">{release.title}</Link>
-                    <p className="line-clamp-1 text-xs text-[var(--color-muted)]">{release.artist} • {release.catno || "No catno"} • {release.year || "n/a"}</p>
-                    {release.processingError ? <p className="line-clamp-2 text-xs text-red-300">{release.processingError}</p> : null}
-                  </div>
-                </div>
-                <ExternalActionLink
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${release.artist} ${release.title} ${release.catno || ""}`)}`}
-                  variant="compactButton"
-                  title="Search this release on YouTube"
-                >
-                  YouTube
-                </ExternalActionLink>
-              </div>
+              <MediaActionRow
+                size="lg"
+                artworkAlt={`${release.title} artwork`}
+                artworkUrl={release.thumbUrl}
+                title={<Link href={`/releases/${release.id}`} className="hover:text-[var(--color-accent)]">{release.title}</Link>}
+                meta={
+                  <>
+                    {release.artist} • {release.catno || "No catno"} • {release.year || "n/a"}
+                    {release.processingError ? <span className="block line-clamp-2 text-red-300">{release.processingError}</span> : null}
+                  </>
+                }
+                actions={
+                  <ExternalActionLink
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${release.artist} ${release.title} ${release.catno || ""}`)}`}
+                    variant="compactButton"
+                    title="Search this release on YouTube"
+                  >
+                    YouTube
+                  </ExternalActionLink>
+                }
+              />
               <div className="mt-2 flex flex-wrap items-center gap-1">
                 {release.detailsFetched ? <Badge>tracks</Badge> : null}
                 {release.youtubeMatched ? <Badge>youtube</Badge> : null}

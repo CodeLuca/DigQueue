@@ -321,6 +321,7 @@
     - Consolidated link-driven button navigation so onboarding CTA rows, the Welcome guide shortcut, and Listen-page utility navigation/reset now share one button-link primitive instead of mixing nested `Link` + `Button` markup with handwritten bordered link buttons.
     - Consolidated authenticated page-header chrome so Settings and Listen now share one app-page-header wrapper for title, subtitle, spacing, and action placement instead of each hand-rolling the same top-of-page header structure.
     - Consolidated entity detail-page headers so label and release detail views now share one entity-detail-header wrapper for title, subtitle/meta text, and action badges instead of carrying parallel top-of-page header markup.
+    - Consolidated media summary rows so label release cards and recommendation cards now reuse the shared media-action-row primitive instead of each maintaining separate artwork/title/meta header markup beside the queue overlay and recently played list.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 
