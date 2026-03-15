@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Bookmark, CheckCheck, Disc3, Heart, Inbox, Settings, Sparkles } from "lucide-react";
+import { GuideCard } from "@/components/guide-card";
+import { InstructionList } from "@/components/instruction-list";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentAppUserId } from "@/lib/app-user";
 import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 
@@ -78,63 +79,69 @@ export default async function WelcomePage() {
             titleIcon={<Settings className="h-4 w-4 text-[var(--color-accent)]" />}
           />
         ) : null}
-        <Card>
-          <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2"><Disc3 className="h-4 w-4 text-[var(--color-accent)]" />Sources First</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>1. Start with 1-3 label or artist sources.</p>
-            <p>2. Keep active only the sources you want in your queue.</p>
-            <p>3. Run sync in Queue Workbench and resolve source errors quickly.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2"><Inbox className="h-4 w-4 text-[var(--color-accent)]" />Listening Loop</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>Use play controls to keep momentum.</p>
-            <p><span className="font-medium">Single check:</span> review track.</p>
-            <p><span className="font-medium">Double check:</span> review full release.</p>
-            <p><span className="font-medium">Save track:</span> keep tracks you want to revisit in Library and recommendations.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2"><Bookmark className="h-4 w-4 text-[var(--color-accent)]" />Library Views</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><span className="font-medium">Library:</span> saved tracks + wishlist records.</p>
-            <p><span className="font-medium">History:</span> played tracks.</p>
-            <p><span className="font-medium">Reviewed:</span> decisions already made.</p>
-            <p><span className="font-medium">Needs Review:</span> played but unresolved items.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2"><CheckCheck className="h-4 w-4 text-[var(--color-accent)]" />First 10 Minutes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {isLoggedIn ? (
-              <>
-                <p>1. Check your current setup state above.</p>
-                <p>2. Add or resume sources in Sources.</p>
-                <p>3. Run or monitor sync in Listening Station.</p>
-                <p>4. Clear leftovers in Library → Needs Review.</p>
-                <div className="pt-1">
-                  <Link href="/how-to-use"><Button type="button" size="sm" variant="outline">Open Detailed Guide</Button></Link>
-                </div>
-              </>
-            ) : (
-              <>
-                <p>1. Create your account.</p>
-                <p>2. Log in and return to this page.</p>
-                <p>3. Connect Discogs once in Settings.</p>
-                <p>4. Start with 1-3 sources.</p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <GuideCard
+          title="Sources First"
+          titleIcon={<Disc3 className="h-4 w-4 text-[var(--color-accent)]" />}
+        >
+          <InstructionList
+            className="text-sm"
+            items={[
+              "Start with 1-3 label or artist sources.",
+              "Keep active only the sources you want in your queue.",
+              "Run sync in Queue Workbench and resolve source errors quickly.",
+            ]}
+          />
+        </GuideCard>
+        <GuideCard
+          title="Listening Loop"
+          titleIcon={<Inbox className="h-4 w-4 text-[var(--color-accent)]" />}
+        >
+          <p>Use play controls to keep momentum.</p>
+          <p><span className="font-medium">Single check:</span> review track.</p>
+          <p><span className="font-medium">Double check:</span> review full release.</p>
+          <p><span className="font-medium">Save track:</span> keep tracks you want to revisit in Library and recommendations.</p>
+        </GuideCard>
+        <GuideCard
+          title="Library Views"
+          titleIcon={<Bookmark className="h-4 w-4 text-[var(--color-accent)]" />}
+        >
+          <p><span className="font-medium">Library:</span> saved tracks + wishlist records.</p>
+          <p><span className="font-medium">History:</span> played tracks.</p>
+          <p><span className="font-medium">Reviewed:</span> decisions already made.</p>
+          <p><span className="font-medium">Needs Review:</span> played but unresolved items.</p>
+        </GuideCard>
+        <GuideCard
+          title="First 10 Minutes"
+          titleIcon={<CheckCheck className="h-4 w-4 text-[var(--color-accent)]" />}
+          contentClassName="space-y-3 text-sm"
+        >
+          {isLoggedIn ? (
+            <>
+              <InstructionList
+                className="text-sm"
+                items={[
+                  "Check your current setup state above.",
+                  "Add or resume sources in Sources.",
+                  "Run or monitor sync in Listening Station.",
+                  "Clear leftovers in Library -> Needs Review.",
+                ]}
+              />
+              <div className="pt-1">
+                <Link href="/how-to-use"><Button type="button" size="sm" variant="outline">Open Detailed Guide</Button></Link>
+              </div>
+            </>
+          ) : (
+            <InstructionList
+              className="text-sm"
+              items={[
+                "Create your account.",
+                "Log in and return to this page.",
+                "Connect Discogs once in Settings.",
+                "Start with 1-3 sources.",
+              ]}
+            />
+          )}
+        </GuideCard>
       </section>
 
       <section className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">

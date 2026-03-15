@@ -315,6 +315,7 @@
     - Consolidated hover-tooltip primitives so mini-player controls, listen-inbox icon actions, and the How To Use orientation page now share one tooltip wrapper plus one tooltip class helper instead of carrying separate hover/focus tooltip markup and sizing variants inline.
     - Consolidated guide-page support surfaces so the How To Use page now reuses shared warning banners, inset panels, and checklist lists instead of maintaining its own demo note box, muted helper cards, and handwritten numbered paragraphs.
     - Consolidated remaining warning feedback surfaces so the dashboard remediation summary, listen-inbox YouTube quota lockout, and Discogs-required callouts now reuse the shared feedback-banner contract instead of carrying bespoke amber alert markup.
+    - Consolidated onboarding/docs guide cards so Welcome and How To Use now share one guide-card shell for icon/title/body sections, while Welcome also moves its numbered setup blocks onto the shared instruction-list contract.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

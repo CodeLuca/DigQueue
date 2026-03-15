@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FeedbackBanner } from "@/components/feedback-banner";
+import { GuideCard } from "@/components/guide-card";
 import { HoverTooltip, getHoverTooltipClassName } from "@/components/hover-tooltip";
 import { Input } from "@/components/ui/input";
 import { InsetPanel } from "@/components/inset-panel";
@@ -85,12 +85,11 @@ export default async function HowToUsePage() {
       ) : null}
 
       <section className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <Disc3 className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Sources: Intake</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <GuideCard
+          title="Sources: Intake"
+          titleIcon={<Disc3 className="h-4 w-4 text-[var(--color-accent)]" />}
+          contentClassName="space-y-3"
+        >
             <p className="text-sm text-[var(--color-muted)]">
               This is where queue content starts. One input handles both source types and auto-detects from URL, ID, or name.
             </p>
@@ -125,15 +124,13 @@ export default async function HowToUsePage() {
                 Label sources focus on a label catalog. Artist sources follow one artist across multiple labels and projects.
               </p>
             </InsetPanel>
-          </CardContent>
-        </Card>
+        </GuideCard>
 
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <Inbox className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Listening Station: Work Queue</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <GuideCard
+          title="Listening Station: Work Queue"
+          titleIcon={<Inbox className="h-4 w-4 text-[var(--color-accent)]" />}
+          contentClassName="space-y-3"
+        >
             <p className="text-sm text-[var(--color-muted)]">Use these controls repeatedly while digging.</p>
             <div className="flex flex-wrap gap-2">
               <Badge>All</Badge>
@@ -170,17 +167,14 @@ export default async function HowToUsePage() {
               {" "}
               <span className="font-medium text-[var(--color-text)]">Double check:</span> review full release.
             </p>
-          </CardContent>
-        </Card>
+        </GuideCard>
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <Bookmark className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Library: What Happened</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <GuideCard
+          title="Library: What Happened"
+          titleIcon={<Bookmark className="h-4 w-4 text-[var(--color-accent)]" />}
+        >
             <div className="flex flex-wrap gap-2">
               <Badge>Library</Badge>
               <Badge>History</Badge>
@@ -191,29 +185,23 @@ export default async function HowToUsePage() {
             <p><span className="font-medium">History:</span> previously played tracks.</p>
             <p><span className="font-medium">Reviewed:</span> tracks you marked reviewed.</p>
             <p><span className="font-medium">Needs Review:</span> played but still not reviewed.</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Queue Focus: Keep It Tight</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        </GuideCard>
+        <GuideCard
+          title="Queue Focus: Keep It Tight"
+          titleIcon={<Lightbulb className="h-4 w-4 text-[var(--color-accent)]" />}
+        >
             <p>Keep the queue useful with simple cleanup:</p>
             <p><span className="font-medium">Pause or deactivate</span> sources you do not want in rotation.</p>
             <p><span className="font-medium">Review full releases</span> when you have enough context to decide quickly.</p>
             <p><span className="font-medium">Use retry + error panel</span> to clear blocked sources quickly.</p>
-          </CardContent>
-        </Card>
+        </GuideCard>
       </section>
 
       <section className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <Disc3 className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Find New Sources From Tracks You Already Like</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        <GuideCard
+          title="Find New Sources From Tracks You Already Like"
+          titleIcon={<Disc3 className="h-4 w-4 text-[var(--color-accent)]" />}
+        >
             <p>If you do not know which sources to add yet, start from music you already like.</p>
             <InstructionList
               className="text-sm"
@@ -226,14 +214,11 @@ export default async function HowToUsePage() {
             <p className="text-[var(--color-muted)]">
               This is the fastest way to grow your source list without guessing random names.
             </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>Filters Without Overload</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+        </GuideCard>
+        <GuideCard
+          title="Filters Without Overload"
+          titleIcon={<SlidersHorizontal className="h-4 w-4 text-[var(--color-accent)]" />}
+        >
             <p>Default flow:</p>
             <InstructionList
               className="text-sm"
@@ -265,14 +250,12 @@ export default async function HowToUsePage() {
                 </span>
               </NativeTooltip>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <CircleHelp className="h-4 w-4 text-[var(--color-accent)]" />
-            <CardTitle>First 10 Minutes Checklist</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+        </GuideCard>
+        <GuideCard
+          title="First 10 Minutes Checklist"
+          titleIcon={<CircleHelp className="h-4 w-4 text-[var(--color-accent)]" />}
+          contentClassName="space-y-3 text-sm"
+        >
             {isLoggedIn && onboardingSnapshot ? (
               <InstructionList
                 className="text-sm"
@@ -307,8 +290,7 @@ export default async function HowToUsePage() {
                 <Button size="sm" variant="outline"><ExternalLink className="mr-1 h-3.5 w-3.5" />Open Sources</Button>
               </Link>
             </div>
-          </CardContent>
-        </Card>
+        </GuideCard>
       </section>
     </main>
   );
