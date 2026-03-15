@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { SourceSyncActivityTimeline } from "@/components/source-sync-activity-timeline";
+import { SourceSyncHealthAlert } from "@/components/source-sync-health-alert";
 import { SourceSyncNote } from "@/components/source-sync-note";
 import { SourceSyncSection } from "@/components/source-sync-section";
 import { SupportInsightCard } from "@/components/support-insight-card";
@@ -70,16 +71,11 @@ export function SourceSyncStatus({ initialProcessingCount }: { initialProcessing
           {data.healthAlerts && data.healthAlerts.length > 0 ? (
             <div className="mb-2 space-y-1">
               {data.healthAlerts.map((alert) => (
-                <div
+                <SourceSyncHealthAlert
                   key={alert.kind}
-                  className={`rounded border px-2 py-1 text-[10px] ${
-                    alert.severity === "critical"
-                      ? "border-rose-500/50 bg-rose-500/12 text-rose-100"
-                      : "border-amber-500/50 bg-amber-500/12 text-amber-100"
-                  }`}
-                >
-                  {alert.summary}
-                </div>
+                  severity={alert.severity}
+                  summary={alert.summary}
+                />
               ))}
             </div>
           ) : null}
