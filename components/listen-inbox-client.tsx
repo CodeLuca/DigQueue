@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCcw } from "lucide-react";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { ListenInboxHeaderShell } from "@/components/listen-inbox-header-shell";
 import { ListenInboxListShell } from "@/components/listen-inbox-list-shell";
 import { Button } from "@/components/ui/button";
@@ -480,20 +481,24 @@ export function ListenInboxClient({
 
       {feedback ? <p className="text-xs text-[var(--color-muted)]">{feedback}</p> : null}
       {youtubeQuotaExceeded ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-100">
-          <p>YouTube quota is exhausted. Queue/play controls are disabled until quota reset or key change in Settings.</p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="mt-2"
-            onClick={clearYoutubeQuotaExceeded}
-            title="Retry queue and playback after resetting quota warning"
-          >
-            <RefreshCcw className="h-3.5 w-3.5" />
-            Retry queue/play
-          </Button>
-        </div>
+        <FeedbackBanner
+          tone="warning"
+          className="text-xs"
+          action={(
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={clearYoutubeQuotaExceeded}
+              title="Retry queue and playback after resetting quota warning"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" />
+              Retry queue/play
+            </Button>
+          )}
+        >
+          YouTube quota is exhausted. Queue/play controls are disabled until quota reset or key change in Settings.
+        </FeedbackBanner>
       ) : null}
       {showMobileQuickRail && current ? (
         <ListenInboxMobileQuickRail

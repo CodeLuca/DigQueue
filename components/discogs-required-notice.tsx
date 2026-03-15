@@ -1,4 +1,5 @@
 import { ActionLink } from "@/components/action-link";
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { buildDiscogsConnectPath } from "@/lib/auth-provider-paths";
 import {
   getDiscogsRequiredGuidance,
@@ -26,11 +27,16 @@ export function DiscogsRequiredNotice({
   }
 
   return (
-    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-      <p className="text-amber-200">{guidance.detail}</p>
-      <ActionLink href={buildDiscogsConnectPath("/")} variant="textLink" className="mt-2 inline-block text-xs">
-        {guidance.actionLabel}
-      </ActionLink>
-    </div>
+    <FeedbackBanner
+      tone="warning"
+      className="p-3 text-sm"
+      action={(
+        <ActionLink href={buildDiscogsConnectPath("/")} variant="textLink" className="inline-block text-xs">
+          {guidance.actionLabel}
+        </ActionLink>
+      )}
+    >
+      {guidance.detail}
+    </FeedbackBanner>
   );
 }

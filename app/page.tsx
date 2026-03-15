@@ -831,14 +831,9 @@ export default async function HomePage({
               {data.erroredLabels.length > 0 ? (
                 <div className="space-y-1.5">
                   {showRemediationSummary ? (
-                    <p
-                      className={`rounded-md border px-2 py-1.5 text-[11px] ${
-                        remediationHasFailures
-                          ? "border-amber-500/40 bg-amber-500/10 text-amber-100"
-                          : remediationChanged
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
-                          : "border-amber-500/40 bg-amber-500/10 text-amber-100"
-                      }`}
+                    <FeedbackBanner
+                      tone={remediationHasFailures || !remediationChanged ? "warning" : "success"}
+                      className="px-2 py-1.5 text-[11px]"
                     >
                       Ran{" "}
                       <span className={remediationChanged ? "font-medium text-emerald-50" : "font-medium text-amber-50"}>
@@ -880,7 +875,7 @@ export default async function HomePage({
                           {remediationFailedCount === 1 ? "" : "s"}.
                         </>
                       ) : "."}
-                    </p>
+                    </FeedbackBanner>
                   ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
                     <p className="inline-flex items-center gap-1">
