@@ -312,6 +312,7 @@
     - Consolidated release-inspector sub-panels so artwork context, release/market snapshots, price guide, outbound links, and Bandcamp result sections now share one release-inspector panel helper plus one metric-cell helper instead of repeating the same dark card chrome and tiny market-stat cell markup inline.
     - Consolidated the remaining surface-level inset card wrappers so release track cards, listen inbox empty-state cards, and YouTube export controls now use the shared inset-panel wrapper instead of carrying the same `surface2` border/background shell inline.
     - Consolidated settings diagnostics/help flows so the Discogs quick-setup checklist and YouTube block-fix instructions now share one checklist component, the YouTube fix assistant uses the shared support-panel/action-link contract, and Settings now exposes live key diagnostics instead of leaving that tooling effectively hidden.
+    - Consolidated hover-tooltip primitives so mini-player controls, listen-inbox icon actions, and the How To Use orientation page now share one tooltip wrapper plus one tooltip class helper instead of carrying separate hover/focus tooltip markup and sizing variants inline.
   - Pick off any remaining copy/docs mismatches only if they show up during authenticated smoke verification or manual UX review.
   - Run authenticated smoke probes with `SMOKE_COOKIE` when a fresh production session is available.
 

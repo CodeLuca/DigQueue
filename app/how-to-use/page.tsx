@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HoverTooltip, getHoverTooltipClassName } from "@/components/hover-tooltip";
 import { Input } from "@/components/ui/input";
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { getCurrentAppUserId } from "@/lib/app-user";
@@ -27,15 +28,9 @@ import { getOnboardingSnapshot } from "@/lib/onboarding-snapshot";
 
 function NativeTooltip({ text, children }: { text: string; children: ReactNode }) {
   return (
-    <span className="group relative inline-flex">
+    <HoverTooltip content={text} tooltipClassName={getHoverTooltipClassName()}>
       {children}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute -top-2 left-1/2 z-20 hidden w-max max-w-[260px] -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] px-2 py-1 text-[11px] leading-tight text-[var(--color-text)] shadow-[var(--shadow-low)] group-hover:block group-focus-within:block"
-      >
-        {text}
-      </span>
-    </span>
+    </HoverTooltip>
   );
 }
 

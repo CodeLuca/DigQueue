@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import {
   BookmarkCheck,
   BookmarkPlus,
@@ -12,6 +11,7 @@ import {
   PlusCircle,
   RefreshCcw,
 } from "lucide-react";
+import { HoverTooltip, getHoverTooltipClassName } from "@/components/hover-tooltip";
 import { Button } from "@/components/ui/button";
 import {
   getAddSourceFromReleaseActionLabels,
@@ -19,28 +19,6 @@ import {
   releaseReviewAdvanceLabel,
   trackReviewAdvanceLabel,
 } from "@/lib/library-action-labels";
-
-function HoverTooltip({
-  children,
-  className,
-  content,
-}: {
-  children: ReactNode;
-  className?: string;
-  content: string;
-}) {
-  return (
-    <span className={`group relative inline-flex ${className ?? ""}`}>
-      {children}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-64 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
-      >
-        {content}
-      </span>
-    </span>
-  );
-}
 
 export function ListenInboxWishlistAction({
   loading,
@@ -76,7 +54,14 @@ export function ListenInboxWishlistAction({
     </Button>
   );
 
-  return <HoverTooltip content={loading ? "Updating wishlist..." : label}>{button}</HoverTooltip>;
+  return (
+    <HoverTooltip
+      content={loading ? "Updating wishlist..." : label}
+      tooltipClassName={getHoverTooltipClassName({ size: "compact" })}
+    >
+      {button}
+    </HoverTooltip>
+  );
 }
 
 export function ListenInboxPlayAction({
@@ -117,11 +102,10 @@ export function ListenInboxPlayAction({
       {tooltip ? (
         <span
           role="tooltip"
-          className={`pointer-events-none absolute -top-2 left-1/2 z-20 w-64 -translate-x-1/2 -translate-y-full rounded-md px-2 py-1.5 text-[11px] leading-snug opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${
-            disabledReason
-              ? "border border-amber-500/40 bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] text-amber-100"
-              : "border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] text-[var(--color-text)]"
-          }`}
+          className={getHoverTooltipClassName({
+            size: "wide",
+            tone: disabledReason ? "warning" : "default",
+          })}
         >
           {tooltip}
         </span>
@@ -157,7 +141,11 @@ export function ListenInboxTrackReviewAction({
     </Button>
   );
 
-  return iconOnly ? <HoverTooltip content={title}>{button}</HoverTooltip> : button;
+  return iconOnly ? (
+    <HoverTooltip content={title} tooltipClassName={getHoverTooltipClassName({ size: "compact" })}>
+      {button}
+    </HoverTooltip>
+  ) : button;
 }
 
 export function ListenInboxReleaseReviewAction({
@@ -190,7 +178,11 @@ export function ListenInboxReleaseReviewAction({
     </Button>
   );
 
-  return iconOnly ? <HoverTooltip content={title}>{button}</HoverTooltip> : button;
+  return iconOnly ? (
+    <HoverTooltip content={title} tooltipClassName={getHoverTooltipClassName({ size: "compact" })}>
+      {button}
+    </HoverTooltip>
+  ) : button;
 }
 
 export function ListenInboxSaveTrackAction({

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { BookmarkCheck, BookmarkPlus, Heart, HeartOff, Loader2 } from "lucide-react";
+import { HoverTooltip } from "@/components/hover-tooltip";
 import { Button } from "@/components/ui/button";
 import {
   getDiscogsWishlistActionLabels,
@@ -59,12 +60,13 @@ function MiniPlayerLibraryIconControl({
   if (!tooltip) return button;
 
   return (
-    <span className={`group relative inline-flex ${wrapperClassName}`.trim()}>
+    <HoverTooltip
+      content={loading ? loadingLabel : active ? activeLabel : inactiveLabel}
+      className={wrapperClassName}
+      tooltipClassName={tooltipClassName ?? ""}
+    >
       {button}
-      <span role="tooltip" className={tooltipClassName}>
-        {loading ? loadingLabel : active ? activeLabel : inactiveLabel}
-      </span>
-    </span>
+    </HoverTooltip>
   );
 }
 

@@ -45,6 +45,7 @@ import { MiniPlayerControlRail } from "@/components/mini-player-control-rail";
 import { MiniPlayerNowPlaying } from "@/components/mini-player-now-playing";
 import { MiniPlayerQueueOverlay } from "@/components/mini-player-queue-overlay";
 import { ReleaseInspectorPanel } from "@/components/release-inspector-panel";
+import { getHoverTooltipClassName } from "@/components/hover-tooltip";
 import type { PlaybackQueueItem } from "@/lib/playback-queue-item";
 
 declare global {
@@ -1022,8 +1023,7 @@ export function MiniPlayer() {
 
   const iconButtonClass =
     "h-8 w-8 rounded-full border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_88%,black_12%)] p-0 text-[var(--color-text)] hover:bg-[var(--color-surface2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-0 sm:h-9 sm:w-9";
-  const tooltipClass =
-    "pointer-events-none absolute -top-2 left-1/2 z-20 w-max max-w-56 -translate-x-1/2 -translate-y-full rounded-md border border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-2 py-1 text-[11px] text-[var(--color-text)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
+  const tooltipClass = getHoverTooltipClassName({ size: "compact" });
   const currentTrackSaved = Boolean(current?.track?.saved);
   const currentReleaseWishlisted = Boolean(current?.release?.wishlist);
 

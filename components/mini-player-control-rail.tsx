@@ -1,5 +1,6 @@
 "use client";
 
+import { HoverTooltip } from "@/components/hover-tooltip";
 import {
   MiniPlayerReviewControls,
   MiniPlayerTransportControls,
@@ -78,16 +79,14 @@ export function MiniPlayerControlRail({
           onMarkReleaseReviewed={onMarkReleaseReviewed}
           className="contents"
           trackWrapper={(button) => (
-            <span className="group relative inline-flex">
+            <HoverTooltip content={trackReviewLabel} tooltipClassName={tooltipClass}>
               {button}
-              <span role="tooltip" className={tooltipClass}>{trackReviewLabel}</span>
-            </span>
+            </HoverTooltip>
           )}
           releaseWrapper={(button) => (
-            <span className="group relative inline-flex">
+            <HoverTooltip content={releaseReviewLabel} tooltipClassName={tooltipClass}>
               {button}
-              <span role="tooltip" className={tooltipClass}>{releaseReviewLabel}</span>
-            </span>
+            </HoverTooltip>
           )}
         />
       </div>

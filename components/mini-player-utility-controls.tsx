@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { HoverTooltip } from "@/components/hover-tooltip";
 import { Button } from "@/components/ui/button";
 import { ExternalActionLink } from "@/components/external-action-link";
 
@@ -16,12 +17,9 @@ export function MiniPlayerTooltipControl({
   tooltipClassName: string;
 }) {
   return (
-    <span className={`group relative inline-flex ${wrapperClassName}`.trim()}>
+    <HoverTooltip content={tooltip} className={wrapperClassName} tooltipClassName={tooltipClassName}>
       {children}
-      <span role="tooltip" className={tooltipClassName}>
-        {tooltip}
-      </span>
-    </span>
+    </HoverTooltip>
   );
 }
 
