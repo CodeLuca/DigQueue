@@ -70,33 +70,33 @@ export function RecommendationsPanel({
     visibleLibraryItems,
   } = useRecommendationFeedState(initialItems, initialExternalItems);
   if (!canShow) {
-    return <EmptyStateNote title="No fresh recommendations right now. Process more labels or play more tracks." />;
+    return <EmptyStateNote title="No fresh finds right now. Scan more focused sources or play a few more tracks." />;
   }
 
   return (
     <div className="space-y-4">
       <div className={getInsetPanelClassName("surface")}>
-        <SectionKicker>Views</SectionKicker>
+        <SectionKicker>Discovery Lanes</SectionKicker>
         <div className="mt-2 flex flex-wrap gap-2">
           <SegmentedControlButton active={view === "all"} onClick={() => setView("all")}>
             All ({items.length + externalItems.length})
           </SegmentedControlButton>
           <SegmentedControlButton active={view === "in_library"} onClick={() => setView("in_library")}>
-            In Library ({items.length})
+            From Library ({items.length})
           </SegmentedControlButton>
           <SegmentedControlButton active={view === "outside_library"} onClick={() => setView("outside_library")}>
-            Outside Library ({externalItems.length})
+            New Records ({externalItems.length})
           </SegmentedControlButton>
         </div>
       </div>
-      {visibleLibraryItems.length > 0 ? <SectionKicker size="sm">In Library</SectionKicker> : null}
+      {visibleLibraryItems.length > 0 ? <SectionKicker size="sm">From Library</SectionKicker> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {visibleLibraryItems.map((track) => (
           <LibraryRecommendationCard key={track.id} track={track} setItems={setItems} />
         ))}
       </div>
 
-      {visibleExternalItems.length > 0 ? <SectionKicker size="sm">Outside Library</SectionKicker> : null}
+      {visibleExternalItems.length > 0 ? <SectionKicker size="sm">New Records</SectionKicker> : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {visibleExternalItems.map((item) => (
           <ExternalRecommendationCard
@@ -107,7 +107,7 @@ export function RecommendationsPanel({
         ))}
       </div>
       {visibleLibraryItems.length === 0 && visibleExternalItems.length === 0 ? (
-        <EmptyStateNote title="No recommendations in this view." />
+        <EmptyStateNote title="No finds in this lane." />
       ) : null}
     </div>
   );

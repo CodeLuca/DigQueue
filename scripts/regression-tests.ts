@@ -17,6 +17,7 @@ import {
   selectConfirmedReleaseWishlistFeedbackTargets,
   shouldLogReleaseWishlistFeedback,
 } from "../lib/release-wishlist-feedback";
+import { resolveRequestAppOrigin } from "../lib/app-origin";
 import { buildLocalReleaseWishlistSetPlan, buildLocalReleaseWishlistSyncPlan } from "../lib/release-wishlist-local-sync";
 import { applyLocalReleaseWishlistSyncPlanForUser, setLocalReleaseWishlistForUser } from "../lib/release-wishlist-local-state";
 import {
@@ -40,6 +41,7 @@ import { getOAuthErrorQueryKey, getOAuthProviderLoginNextPath, getOAuthTempCooki
 import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "../lib/oauth-callback-query";
 import { buildOAuthTempCookieOptions } from "../lib/oauth-cookie-options";
 import { normalizeNextPath } from "../lib/next-path";
+import { dashboardTabHref, normalizeDashboardTab, toDashboardQueryTab } from "../lib/app-tabs";
 import { buildOnboardingHealth } from "../lib/onboarding-health";
 import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
 import { resolveRecommendationReleaseTargets, resolveRecommendationReleaseTargetsForIdentity } from "../lib/recommendation-feedback";
@@ -125,6 +127,17 @@ import { collectUniquePlayableVideoIds, normalizePlaylistExportInput } from "../
 import { resolveNextReleaseWishlistValue } from "../lib/release-wishlist-plan";
 
 async function run() {
+  // Dashboard tab routing keeps old links working while making Listen the default.
+  assert.equal(normalizeDashboardTab(null), "listen");
+  assert.equal(normalizeDashboardTab("step-2"), "listen");
+  assert.equal(normalizeDashboardTab("step-1"), "sources");
+  assert.equal(normalizeDashboardTab("recommendations"), "discover");
+  assert.equal(normalizeDashboardTab("played-reviewed"), "listen");
+  assert.equal(dashboardTabHref("listen"), "/");
+  assert.equal(dashboardTabHref("sources"), "/?tab=sources");
+  assert.equal(toDashboardQueryTab("listen"), "step-2");
+  assert.equal(toDashboardQueryTab("discover"), "recommendations");
+
   // Auth redirect safety coverage.
   assert.equal(
     normalizeNextPath("/?tab=step-2", { fallback: "/?tab=step-2", blockAuthEntrypoints: true }),
@@ -229,6 +242,19 @@ async function run() {
   );
   assert.equal(buildOAuthStartLoginPath("discogs"), "/login?next=%2Fconnect-discogs");
   assert.equal(buildOAuthStartLoginPath("youtube"), "/login?next=%2Fsettings");
+  assert.equal(
+    resolveRequestAppOrigin(new Request("http://127.0.0.1:3010/settings")),
+    "http://127.0.0.1:3010",
+  );
+  assert.equal(
+    resolveRequestAppOrigin(new Request("http://internal:3000/settings", {
+      headers: {
+        "x-forwarded-host": "digqueue-production.up.railway.app",
+        "x-forwarded-proto": "https",
+      },
+    })),
+    "https://digqueue-production.up.railway.app",
+  );
   const cookieOptions = buildOAuthTempCookieOptions();
   assert.equal(cookieOptions.httpOnly, true);
   assert.equal(cookieOptions.sameSite, "lax");
@@ -744,7 +770,7 @@ async function run() {
   assert.equal(classifySourceFailure("YouTube provider timeout"), "provider");
   assert.equal(classifySourceFailure("Invalid tracklist payload"), "data");
   assert.equal(classifySourceFailure("totally unknown"), "unknown");
-  assert.equal(getFailureCategoryMeta("auth").href, "/api/discogs/oauth/start?next=%2F%3Ftab%3Dstep-2");
+  assert.equal(getFailureCategoryMeta("auth").href, "/api/discogs/oauth/start?next=%2F");
   assert.equal(getFailureCategoryMeta("rate_limit").label, "Rate Limit");
   assert.match(getFailureCategoryMeta("rate_limit").hint, /pause all active sources/i);
   assert.equal(getFailureCategoryMeta("rate_limit").href, null);

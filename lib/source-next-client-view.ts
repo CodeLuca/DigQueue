@@ -1,4 +1,5 @@
 import type { SourceNextLike } from "@/lib/source-next-client-store";
+import { normalizeDashboardTab } from "@/lib/app-tabs";
 
 export function getSourceNextId(payload: SourceNextLike | null | undefined) {
   return payload?.nextSourceId ?? payload?.nextLabelId ?? null;
@@ -29,7 +30,7 @@ export function isSourceSyncDashboardView(pathname: string, search?: string) {
   if (pathname.startsWith("/labels/")) return true;
   if (pathname !== "/") return false;
   const tab = getDashboardTab(search);
-  return !tab || tab === "step-1";
+  return normalizeDashboardTab(tab) === "sources";
 }
 
 export function isHighPrioritySourceSyncView(pathname: string, search?: string) {

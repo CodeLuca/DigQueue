@@ -20,6 +20,7 @@ export function PasswordResetRequestForm({ defaultEmail }: { defaultEmail?: stri
       className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-3"
       fields={[
         {
+          label: "Password reset email address",
           name: "email",
           type: "email",
           required: true,

@@ -63,6 +63,7 @@ export function HighlightActionButton({
   children,
   className,
   size,
+  type = "button",
   weight,
   width,
   ...props
@@ -75,6 +76,7 @@ export function HighlightActionButton({
 }) {
   return (
     <button
+      type={type}
       {...props}
       className={getHighlightActionClassName({ className, size, weight, width })}
     >

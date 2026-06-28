@@ -30,7 +30,7 @@ import { ManualWishlistSyncButton } from "@/components/manual-wishlist-sync-butt
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { ExternalLinkRow } from "@/components/external-link-row";
 import { ProcessingToggle } from "@/components/processing-toggle";
-import { RecommendationsPanel } from "@/components/recommendations-panel";
+import { RecommendationsPanel as DiscoverPanel } from "@/components/recommendations-panel";
 import { ResponsiveLabel } from "@/components/responsive-label";
 import { SegmentedControlLink } from "@/components/segmented-control-button";
 import { SourceRemediationButton } from "@/components/source-remediation-button";
@@ -48,6 +48,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireCurrentAppUserId } from "@/lib/app-user";
+import { normalizeDashboardTab, toDashboardQueryTab, type DashboardTabId } from "@/lib/app-tabs";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import {
@@ -107,12 +108,9 @@ export default async function HomePage({
     remSourceCount,
     remSourcePreview,
   } = await searchParams;
-  const tabIds = ["step-1", "step-2", "library", "recommendations"] as const;
-  type TabId = (typeof tabIds)[number];
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
-  const normalizedTab =
-    tab === "step-3" ? "step-2" : tab === "wishlist" || tab === "played-reviewed" || tab === "played-done" ? "library" : tab;
-  const activeTab: TabId = tabIds.includes(normalizedTab as TabId) ? (normalizedTab as TabId) : "step-1";
+  const activeTab = normalizeDashboardTab(tab);
+  const dashboardDataTab = toDashboardQueryTab(activeTab);
   const selectedLibraryView: "library" | "history" | "reviewed" | "needs-review" =
     libraryView === "library" || libraryView === "history" || libraryView === "reviewed" || libraryView === "needs-review"
       ? libraryView
@@ -142,8 +140,8 @@ export default async function HomePage({
   }
 
   const [data, listenData, wishlistData, playedReviewedData, bandcampWishlist] = await Promise.all([
-    getDashboardData({ includeRecommendations: activeTab === "recommendations", tab: activeTab }),
-    activeTab === "step-2" ? getToListenData(undefined, false) : Promise.resolve(null),
+    getDashboardData({ includeRecommendations: activeTab === "discover", tab: dashboardDataTab }),
+    activeTab === "listen" ? getToListenData(undefined, false) : Promise.resolve(null),
     showLibraryItemsSection ? getWishlistData(undefined, false) : Promise.resolve(null),
     showPlayedReviewedSection ? getPlayedReviewedData(undefined, false) : Promise.resolve(null),
     showLibraryItemsSection
@@ -168,10 +166,10 @@ export default async function HomePage({
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
   const hasYoutubeBlockedError = false;
   const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
-  const showWishlistHeaderPill = hasDiscogs && activeTab === "recommendations";
+  const showWishlistHeaderPill = hasDiscogs && activeTab === "discover";
   const hasAnySources = data.labels.length > 0;
 
-  const isLabelsTab = activeTab === "step-1";
+  const isLabelsTab = activeTab === "sources";
   const canProcess = hasDiscogs;
   const useSimpleSourcesView = data.labels.length <= 3 && !normalizedLabelQuery && selectedLabelState === "all" && selectedSourceKind === "all";
   const activeLabels = data.labels.filter((label) => label.active);
@@ -244,7 +242,7 @@ export default async function HomePage({
   const inactiveFilteredCount = queriedLabels.length - activeFilteredCount;
   const filterHref = (nextState: "all" | "active" | "inactive") => {
     const params = new URLSearchParams();
-    params.set("tab", "step-1");
+    params.set("tab", "sources");
     if (listenLabel) params.set("listenLabel", listenLabel);
     if (nextState !== "all") params.set("labelState", nextState);
     if (selectedSourceKind !== "all") params.set("sourceKind", selectedSourceKind);
@@ -253,7 +251,7 @@ export default async function HomePage({
   };
   const clearSearchHref = (() => {
     const params = new URLSearchParams();
-    params.set("tab", "step-1");
+    params.set("tab", "sources");
     if (listenLabel) params.set("listenLabel", listenLabel);
     if (selectedLabelState !== "all") params.set("labelState", selectedLabelState);
     if (selectedSourceKind !== "all") params.set("sourceKind", selectedSourceKind);
@@ -268,9 +266,9 @@ export default async function HomePage({
   };
   const failureCenterNextHref = (() => {
     const params = new URLSearchParams();
-    params.set("tab", "step-2");
     if (listenLabel) params.set("listenLabel", listenLabel);
-    return `/?${params.toString()}`;
+    const query = params.toString();
+    return query ? `/?${query}` : "/";
   })();
   const remediationAffectedCount = Number(remAffected);
   const remediationFailedCount = Number(remFailed);
@@ -278,7 +276,7 @@ export default async function HomePage({
   const remediationHasFailures = Number.isFinite(remediationFailedCount) && remediationFailedCount > 0;
   const remediationHasSources = Number.isFinite(remediationSourceCount) && remediationSourceCount > 0;
   const showRemediationSummary =
-    activeTab === "step-2" &&
+    activeTab === "listen" &&
     Boolean(remAction) &&
     Boolean(remScope) &&
     Number.isFinite(remediationAffectedCount) &&
@@ -452,15 +450,15 @@ export default async function HomePage({
       </div>
     );
   };
-  const tabMeta: Record<TabId, { title: string; subtitle: string; icon: typeof Disc3 }> = {
-    "step-1": {
+  const tabMeta: Record<DashboardTabId, { title: string; subtitle: string; icon: typeof Disc3 }> = {
+    "sources": {
       title: "Sources",
-      subtitle: "Add sources, activate what you want to process, and load releases into your queue.",
+      subtitle: "Add Discogs labels or artists and let scanning feed the listening queue.",
       icon: Disc3,
     },
-    "step-2": {
-      title: "Listening Station",
-      subtitle: "Play tracks, mark reviewed, save standouts, and move through the queue quickly.",
+    "listen": {
+      title: "Listen Desk",
+      subtitle: "Play queue-ready tracks, save standouts, want records, and clear decisions quickly.",
       icon: Inbox,
     },
     library: {
@@ -468,23 +466,23 @@ export default async function HomePage({
       subtitle: "Browse saved tracks, playback history, and reviewed items.",
       icon: Bookmark,
     },
-    recommendations: {
-      title: "Recommendations",
-      subtitle: "Suggested tracks and releases based on your activity.",
+    discover: {
+      title: "Discover",
+      subtitle: "New paths from your saves, wants, listens, labels, and release metadata.",
       icon: Lightbulb,
     },
   };
-  const tabGuide: Record<TabId, { shellClass: string }> = {
-    "step-1": {
+  const tabGuide: Record<DashboardTabId, { shellClass: string }> = {
+    "sources": {
       shellClass: "border-l-4 border-l-cyan-400/70 bg-[linear-gradient(135deg,rgba(34,211,238,0.12),transparent_46%),var(--color-surface2)]",
     },
-    "step-2": {
+    "listen": {
       shellClass: "border-l-4 border-l-emerald-400/70 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),transparent_46%),var(--color-surface2)]",
     },
     library: {
       shellClass: "border-l-4 border-l-amber-400/70 bg-[linear-gradient(135deg,rgba(245,158,11,0.14),transparent_46%),var(--color-surface2)]",
     },
-    recommendations: {
+    discover: {
       shellClass: "border-l-4 border-l-sky-400/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.14),transparent_46%),var(--color-surface2)]",
     },
   };
@@ -544,11 +542,11 @@ export default async function HomePage({
         </section>
       ) : null}
 
-      {activeTab === "step-2" ? (
+      {activeTab === "listen" ? (
       <section className="mb-5 reveal reveal-delay-1">
         <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface2)] px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Current Loaded Sources Stats</p>
-          <p className="text-xs text-[var(--color-muted)]">{activeLabels.length} active loaded sources in scope</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Listening Scope</p>
+          <p className="text-xs text-[var(--color-muted)]">{activeLabels.length} active source{activeLabels.length === 1 ? "" : "s"} feeding the desk</p>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Card>
@@ -628,11 +626,11 @@ export default async function HomePage({
         </section>
       ) : null}
 
-      {activeTab === "step-1" ? (
+      {activeTab === "sources" ? (
       <section className="mb-4 grid grid-cols-1 gap-4 reveal reveal-delay-2">
           <Card>
             <CardHeader>
-              <CardTitle>Source Intake & Status</CardTitle>
+              <CardTitle>Add Sources / Scan Status</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!canProcess ? (
@@ -660,13 +658,13 @@ export default async function HomePage({
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <SectionKicker>Sync</SectionKicker>
+                      <SectionKicker>Scan</SectionKicker>
                       <p className="mt-1 text-xs text-[var(--color-muted)]">
                         {activeStatusCounts.processing > 0
-                          ? "Sync is active."
+                          ? "Scanning is active."
                           : activeStatusCounts.queued > 0
-                            ? "Sync is queued and will start shortly."
-                          : "Sync is idle."}
+                            ? "Scanning is queued and will start shortly."
+                          : "Scanning is idle."}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -712,7 +710,7 @@ export default async function HomePage({
                   ) : null}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
-                  <span>Source sync only.</span>
+                  <span>Source scanning only.</span>
                   {hasDiscogs ? <WishlistSyncStatus initialStatus={wantsSyncStatus} compact /> : null}
                 </div>
                 {nextQueuedSource && activeStatusCounts.processing === 0 ? (
@@ -749,7 +747,7 @@ export default async function HomePage({
                       <Badge>Artist sources {artistSources.length}</Badge>
                     </ActionRow>
                     <form method="GET" className="mt-2 flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="tab" value="step-1" />
+                      <input type="hidden" name="tab" value="sources" />
                       {listenLabel ? <input type="hidden" name="listenLabel" value={listenLabel} /> : null}
                       {selectedLabelState !== "all" ? <input type="hidden" name="labelState" value={selectedLabelState} /> : null}
                       {selectedSourceKind !== "all" ? <input type="hidden" name="sourceKind" value={selectedSourceKind} /> : null}
@@ -812,19 +810,19 @@ export default async function HomePage({
       </section>
       ) : null}
 
-      {activeTab === "step-2" ? (
+      {activeTab === "listen" ? (
       <section className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-12 reveal reveal-delay-2">
           <Card className="xl:col-span-12">
             <CardHeader>
-              <CardTitle>Queue Workbench</CardTitle>
+              <CardTitle>Play Queue</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
                 <Badge className={data.metrics.labelsErrored > 0 ? "border-rose-500/50 bg-rose-500/15 text-rose-200" : "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"}>
-                  Errors {data.metrics.labelsErrored}
+                  Needs Attention {data.metrics.labelsErrored}
                 </Badge>
                 <Badge className={data.metrics.releasesLowConfidence > 0 ? "border-amber-500/50 bg-amber-500/15 text-amber-200" : ""}>
-                  Low Conf {data.metrics.releasesLowConfidence}
+                  Needs Match {data.metrics.releasesLowConfidence}
                 </Badge>
                 <Badge>Up Next {data.queueCount}</Badge>
               </div>
@@ -881,7 +879,7 @@ export default async function HomePage({
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--color-muted)]">
                     <p className="inline-flex items-center gap-1">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      Failure Center: {data.erroredLabels.length} active error{data.erroredLabels.length === 1 ? "" : "s"}.
+                      Needs Attention: {data.erroredLabels.length} active error{data.erroredLabels.length === 1 ? "" : "s"}.
                     </p>
                     <SourceRemediationButton
                       action="retry_all_errors"
@@ -1200,7 +1198,7 @@ export default async function HomePage({
           {showLibraryItemsSection ? (
             <Card>
               <CardHeader>
-                <CardTitle>Library Items</CardTitle>
+                <CardTitle>Saved Tracks / Want Records</CardTitle>
                 <p className="text-xs text-[var(--color-muted)]">Use filters to split saved tracks from wishlisted records.</p>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -1326,14 +1324,14 @@ export default async function HomePage({
       </section>
       ) : null}
 
-      {activeTab === "recommendations" ? (
+      {activeTab === "discover" ? (
       <section className="mt-4 grid grid-cols-1 gap-4 reveal reveal-delay-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recommendation Inbox ({data.recommendations.length + data.externalRecommendations.length})</CardTitle>
+            <CardTitle>Discover Inbox ({data.recommendations.length + data.externalRecommendations.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <RecommendationsPanel initialItems={data.recommendations} externalItems={data.externalRecommendations} />
+            <DiscoverPanel initialItems={data.recommendations} externalItems={data.externalRecommendations} />
           </CardContent>
         </Card>
       </section>

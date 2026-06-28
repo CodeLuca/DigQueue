@@ -6,7 +6,7 @@ type NextPathOptions = {
 
 function resolveSafeNextPath(nextPath: string | null | undefined, options?: NextPathOptions) {
   return normalizeNextPath(nextPath, {
-    fallback: options?.fallback ?? "/?tab=step-2",
+    fallback: options?.fallback ?? "/",
     blockAuthEntrypoints: true,
   });
 }

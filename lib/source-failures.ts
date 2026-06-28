@@ -108,7 +108,7 @@ export function getFailureCategoryMeta(category: FailureCategory): FailureCatego
       label: "Auth",
       className: "border-amber-500/50 bg-amber-500/12 text-amber-200",
       hint: "Reconnect Discogs, then clear or retry the blocked sources.",
-      href: buildDiscogsOAuthStartPath("/?tab=step-2"),
+      href: buildDiscogsOAuthStartPath("/"),
       hrefLabel: "Reconnect Discogs",
     };
   }

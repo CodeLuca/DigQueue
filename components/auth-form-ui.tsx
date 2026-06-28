@@ -92,6 +92,7 @@ export function AuthSubmitButton({
 
 type AuthFormField = {
   id?: string;
+  label?: string;
   name: string;
   type: string;
   required?: boolean;
@@ -133,6 +134,7 @@ export function AuthActionForm({
         <AuthTextInput
           key={field.id ?? field.name}
           id={field.id}
+          aria-label={field.label ?? field.placeholder ?? field.name}
           name={field.name}
           type={field.type}
           required={field.required}

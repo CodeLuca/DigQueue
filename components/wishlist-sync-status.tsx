@@ -26,7 +26,7 @@ function errorHint(raw?: string) {
   if (text.includes("token")) return "check Discogs token";
   if (text.includes("rate") || text.includes("429")) return "rate-limited, retry shortly";
   if (text.includes("network") || text.includes("fetch")) return "network/API issue";
-  return "open Source Intake for details";
+  return "open Sources for details";
 }
 
 export function WishlistSyncStatus({

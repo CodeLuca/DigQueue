@@ -12,6 +12,7 @@
     "check": "yarn test:regression && yarn exec tsc --noEmit && yarn lint",
     "release:verify": "yarn check && yarn build",
     "release:verify:live": "node --import tsx ./scripts/release-verify-live.ts",
+    "backfill:release-metadata": "node --import tsx ./scripts/backfill-release-metadata.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "supabase db push --dns-resolver https",
     "db:studio": "drizzle-kit studio",

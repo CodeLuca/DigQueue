@@ -93,7 +93,7 @@ export default async function SettingsPage({
             items={[
               "Click Connect Discogs below or open the guided page.",
               "Authorize in Discogs and return here automatically.",
-              "Go to Listening Station and run Retry wishlist sync now once.",
+              "Open Library and run wishlist sync once to import recent wants.",
             ]}
           />
         </SupportPanel>

@@ -20,7 +20,7 @@ export default async function LoginPage({
     !next.startsWith("/login") &&
     !next.startsWith("/register")
       ? next
-      : "/?tab=step-2";
+      : "/";
   const sessionEmail = typeof email === "string" && email.includes("@") ? email : "";
   const startInRegisterMode = mode === "register";
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { normalizeDashboardTab } from "@/lib/app-tabs";
 import {
   syncQueueScopeClient,
 } from "@/lib/client-queue-actions";
@@ -121,7 +122,7 @@ function normalizeElectronicBpm(raw: number) {
 export function MiniPlayer() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab");
-  const isListeningStationTab = activeTab === "step-2" || activeTab === "step-3";
+  const isListeningStationTab = normalizeDashboardTab(activeTab) === "listen";
   const playerRef = useRef<YTPlayer | null>(null);
   const pendingPlayItemRef = useRef<PlaybackQueueItem | null>(null);
   const currentRef = useRef<PlaybackQueueItem | null>(null);
@@ -174,6 +175,7 @@ export function MiniPlayer() {
   const [liveBpmStatus, setLiveBpmStatus] = useState<"off" | "starting" | "detecting" | "running" | "error">("off");
   const [liveBpmError, setLiveBpmError] = useState<string | null>(null);
   const [liveBpmInputSource, setLiveBpmInputSource] = useState<"tab" | "mic" | null>(null);
+  const [playerSetupFailed, setPlayerSetupFailed] = useState(false);
 
   useEffect(() => {
     liveBpmStatusRef.current = liveBpmStatus;
@@ -592,80 +594,103 @@ export function MiniPlayer() {
   }, [isListeningStationTab, listeningScope, refreshQueueIfOpen, syncQueueToListeningScope]);
 
   useEffect(() => {
-    const initPlayer = () => {
-      if (!window.YT?.Player || playerRef.current) return;
-      const singleton = window.__digqueueSingletonPlayer;
-      if (singleton) {
-        try {
-          singleton.stopVideo?.();
-          singleton.pauseVideo();
-          singleton.destroy?.();
-        } catch {
-          // Ignore stale singleton teardown errors.
-        }
-        window.__digqueueSingletonPlayer = null;
-      }
-      playerRef.current = new window.YT.Player("digqueue-youtube-player", {
-        playerVars: { autoplay: 1, rel: 0, modestbranding: 1 },
-        events: {
-          onReady: () => {
-            setReady(true);
-            const pendingItem = pendingPlayItemRef.current;
-            if (pendingItem) {
-              pendingPlayItemRef.current = null;
-              setCurrent(pendingItem);
-              if (!ensurePlaybackOwnership()) return;
-              playerRef.current?.loadVideoById(pendingItem.youtubeVideoId);
-              setPlaying(true);
-              return;
-            }
-            void loadNextRef.current?.();
-          },
-          onStateChange: (event: { data: number }) => {
-            if (event.data === window.YT.PlayerState.ENDED) {
-              const finishedId = currentRef.current?.id;
-              if (!finishedId || handlingEndedForIdRef.current === finishedId) return;
-              if (manualSeekOverrideForIdRef.current === finishedId) return;
-              handlingEndedForIdRef.current = finishedId;
-              void loadNextRef.current?.("played", finishedId);
-            }
-            if (event.data === window.YT.PlayerState.PLAYING) {
-              if (!ensurePlaybackOwnership(false)) {
-                playerRef.current?.pauseVideo();
-                return;
-              }
-              wasPlayingBeforeHiddenRef.current = false;
-              setPlaying(true);
-            }
-            if (event.data === window.YT.PlayerState.PAUSED) {
-              setPlaying(false);
-              if (typeof document !== "undefined" && document.hidden) {
-                wasPlayingBeforeHiddenRef.current = true;
-                return;
-              }
-              clearPlaybackOwnerIfOwned();
-            }
-          },
-        },
-      });
-      window.__digqueueSingletonPlayer = playerRef.current;
+    const handlePlayerSetupFailure = (error: unknown) => {
+      console.error("[MiniPlayer] Failed to initialize YouTube player.", error);
+      setPlayerSetupFailed(true);
+      setReady(false);
+      setPlaying(false);
+      setActionNotice("Mini player unavailable. Reload the page to retry.");
     };
 
-    if (window.YT?.Player) {
-      initPlayer();
-    } else {
-      const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
-      if (!existingScript) {
-        const script = document.createElement("script");
-        script.src = "https://www.youtube.com/iframe_api";
-        document.body.appendChild(script);
+    const initPlayer = () => {
+      try {
+        if (!window.YT?.Player || playerRef.current) return;
+        const singleton = window.__digqueueSingletonPlayer;
+        if (singleton) {
+          try {
+            singleton.stopVideo?.();
+            singleton.pauseVideo();
+            singleton.destroy?.();
+          } catch {
+            // Ignore stale singleton teardown errors.
+          }
+          window.__digqueueSingletonPlayer = null;
+        }
+        playerRef.current = new window.YT.Player("digqueue-youtube-player", {
+          playerVars: { autoplay: 1, rel: 0, modestbranding: 1 },
+          events: {
+            onReady: () => {
+              setPlayerSetupFailed(false);
+              setReady(true);
+              const pendingItem = pendingPlayItemRef.current;
+              if (pendingItem) {
+                pendingPlayItemRef.current = null;
+                setCurrent(pendingItem);
+                if (!ensurePlaybackOwnership()) return;
+                playerRef.current?.loadVideoById(pendingItem.youtubeVideoId);
+                setPlaying(true);
+                return;
+              }
+              void loadNextRef.current?.();
+            },
+            onStateChange: (event: { data: number }) => {
+              if (event.data === window.YT.PlayerState.ENDED) {
+                const finishedId = currentRef.current?.id;
+                if (!finishedId || handlingEndedForIdRef.current === finishedId) return;
+                if (manualSeekOverrideForIdRef.current === finishedId) return;
+                handlingEndedForIdRef.current = finishedId;
+                void loadNextRef.current?.("played", finishedId);
+              }
+              if (event.data === window.YT.PlayerState.PLAYING) {
+                if (!ensurePlaybackOwnership(false)) {
+                  playerRef.current?.pauseVideo();
+                  return;
+                }
+                wasPlayingBeforeHiddenRef.current = false;
+                setPlaying(true);
+              }
+              if (event.data === window.YT.PlayerState.PAUSED) {
+                setPlaying(false);
+                if (typeof document !== "undefined" && document.hidden) {
+                  wasPlayingBeforeHiddenRef.current = true;
+                  return;
+                }
+                clearPlaybackOwnerIfOwned();
+              }
+            },
+            onError: () => {
+              setActionNotice("YouTube player reported an error. Skip to another track or reload to retry.");
+            },
+          },
+        });
+        window.__digqueueSingletonPlayer = playerRef.current;
+      } catch (error) {
+        handlePlayerSetupFailure(error);
       }
+    };
 
-      const previousReady = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        previousReady?.();
+    try {
+      if (window.YT?.Player) {
         initPlayer();
-      };
+      } else {
+        const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+        if (!existingScript) {
+          const script = document.createElement("script");
+          script.src = "https://www.youtube.com/iframe_api";
+          script.addEventListener("error", () => {
+            handlePlayerSetupFailure(new Error("YouTube iframe API failed to load."));
+          }, { once: true });
+          document.body.appendChild(script);
+        }
+
+        const previousReady = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+          previousReady?.();
+          initPlayer();
+        };
+      }
+    } catch (error) {
+      handlePlayerSetupFailure(error);
     }
 
     return () => {
@@ -1026,6 +1051,26 @@ export function MiniPlayer() {
   const tooltipClass = getHoverTooltipClassName({ size: "compact" });
   const currentTrackSaved = Boolean(current?.track?.saved);
   const currentReleaseWishlisted = Boolean(current?.release?.wishlist);
+
+  if (playerSetupFailed) {
+    return (
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-surface)_92%,black_8%)] px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:px-4">
+        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--color-text)]">Player unavailable</p>
+            <p className="text-xs text-[var(--color-muted)]">YouTube playback did not initialise. Your queue and saved items are still available.</p>
+          </div>
+          <button
+            type="button"
+            className="h-9 rounded-full border border-[var(--color-border)] px-4 text-xs font-semibold text-[var(--color-text)] hover:bg-[var(--color-surface2)]"
+            onClick={() => window.location.reload()}
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-surface)_90%,black_10%)] px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur md:px-4">

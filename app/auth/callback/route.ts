@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const appOrigin = resolveRequestAppOrigin(request);
   const code = requestUrl.searchParams.get("code");
   const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), {
-    fallback: "/?tab=step-2",
+    fallback: "/",
     blockAuthEntrypoints: true,
   });
 

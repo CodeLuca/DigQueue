@@ -15,17 +15,17 @@
   --space-8: 2rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.125rem;
-  --color-bg: #111210;
-  --color-surface: #1a1c19;
-  --color-surface2: #21231f;
-  --color-text: #f5f2e8;
-  --color-muted: #a6a394;
-  --color-accent: #d8a960;
-  --color-accentSoft: #6f5837;
-  --color-border: #34382f;
-  --color-border-soft: #2a2d26;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
+  --color-bg: #0f1111;
+  --color-surface: #171a19;
+  --color-surface2: #20231f;
+  --color-text: #f4f1e8;
+  --color-muted: #c2baaa;
+  --color-accent: #d6a352;
+  --color-accentSoft: #6c5634;
+  --color-border: #353932;
+  --color-border-soft: #272b27;
   --shadow-low: 0 8px 24px rgba(0, 0, 0, 0.25);
   --shadow-high: 0 16px 36px rgba(0, 0, 0, 0.45);
 }
@@ -36,10 +36,8 @@
 
 body {
   font-family: var(--font-space), sans-serif;
-  background:
-    radial-gradient(circle at 8% -10%, rgba(216, 169, 96, 0.14), transparent 36%),
-    radial-gradient(circle at 82% 88%, rgba(111, 88, 55, 0.16), transparent 40%),
-    var(--color-bg);
+  background: linear-gradient(180deg, #121411 0%, var(--color-bg) 34rem);
+  color: var(--color-text);
   text-rendering: optimizeLegibility;
 }
 
@@ -53,24 +51,13 @@ body {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  border-radius: 1.25rem;
+  border-radius: 0.5rem;
   background:
-    linear-gradient(135deg, rgba(216, 169, 96, 0.12), transparent 52%),
-    linear-gradient(210deg, rgba(111, 88, 55, 0.22), transparent 58%),
+    linear-gradient(135deg, rgba(214, 163, 82, 0.12), transparent 52%),
+    linear-gradient(210deg, rgba(61, 92, 83, 0.18), transparent 58%),
     var(--color-surface);
   padding: clamp(1.25rem, 3.2vw, 3rem);
   box-shadow: var(--shadow-low);
-}
-
-.marketing-hero::after {
-  content: "";
-  position: absolute;
-  inset: auto -8% -36% auto;
-  width: min(44vw, 540px);
-  height: min(44vw, 540px);
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(216, 169, 96, 0.1), transparent 66%);
-  pointer-events: none;
 }
 
 @keyframes revealUp {
@@ -107,6 +94,35 @@ code,
 
 a {
   color: inherit;
+}
+
+main,
+section,
+article,
+header,
+nav,
+div {
+  min-width: 0;
+}
+
+.grid > *,
+.flex > * {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3,
+p,
+span,
+a,
+button {
+  overflow-wrap: anywhere;
+}
+
+.rounded-xl,
+.rounded-2xl {
+  border-radius: 0.5rem;
 }
 
 button,

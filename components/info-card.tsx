@@ -22,22 +22,22 @@ export function InfoCard({
   return (
     <article
       className={cn(
-        "rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4",
+        "min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4",
         className,
       )}
     >
       {variant === "stacked" ? (
         <>
           {Icon ? <Icon className="mb-3 h-4 w-4 text-[var(--color-accent)]" /> : null}
-          <h2 className={cn("text-base font-medium", titleClassName)}>{title}</h2>
+          <h2 className={cn("text-base font-medium break-words", titleClassName)}>{title}</h2>
         </>
       ) : (
-        <p className={cn("inline-flex items-center gap-2 text-sm font-medium", titleClassName)}>
+        <p className={cn("inline-flex min-w-0 items-center gap-2 text-sm font-medium", titleClassName)}>
           {Icon ? <Icon className="h-4 w-4 text-[var(--color-accent)]" /> : null}
           {title}
         </p>
       )}
-      <p className={cn("mt-2 text-sm text-[var(--color-muted)]", descriptionClassName)}>{description}</p>
+      <p className={cn("mt-2 text-sm text-[var(--color-muted)] break-words", descriptionClassName)}>{description}</p>
     </article>
   );
 }

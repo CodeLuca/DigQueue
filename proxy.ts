@@ -9,6 +9,7 @@ const PUBLIC_PATHS = new Set([
   "/login",
   "/register",
   "/connect-discogs",
+  "/how-to-use",
   "/auth/callback",
   "/auth/confirm",
   "/auth/google/start",

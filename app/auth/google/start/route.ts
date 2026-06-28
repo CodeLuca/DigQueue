@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const appOrigin = resolveRequestAppOrigin(request);
   const nextPath = normalizeNextPath(requestUrl.searchParams.get("next"), {
-    fallback: "/?tab=step-2",
+    fallback: "/",
     blockAuthEntrypoints: true,
   });
   const redirectTo = new URL("/auth/callback", appOrigin);

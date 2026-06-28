@@ -29,7 +29,7 @@ function normalizeEmail(value: string) {
 
 export function resolveEmailAuthNextPath(value: unknown) {
   return normalizeNextPath(value, {
-    fallback: "/?tab=step-2",
+    fallback: "/",
     blockAuthEntrypoints: true,
   });
 }

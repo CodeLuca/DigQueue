@@ -20,6 +20,7 @@ export function ResetPasswordForm() {
       className="space-y-2"
       fields={[
         {
+          label: "New credential",
           name: "password",
           type: "password",
           required: true,
@@ -27,6 +28,7 @@ export function ResetPasswordForm() {
           placeholder: "New password (min 6 characters)",
         },
         {
+          label: "Confirm credential",
           name: "confirmPassword",
           type: "password",
           required: true,

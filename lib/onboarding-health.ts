@@ -49,7 +49,7 @@ export function buildOnboardingHealth(input: {
       title: "Add your first sources",
       summary: "Discogs is connected, but there are no label or artist sources yet. Start with 1-3 focused sources.",
       nextSteps: [
-        { href: "/?tab=step-1", label: "Open Sources" },
+        { href: "/?tab=sources", label: "Open Sources" },
         { href: "/welcome", label: "Review quick start" },
       ],
       optionalStep,
@@ -63,8 +63,8 @@ export function buildOnboardingHealth(input: {
       title: "All sources are paused",
       summary: "Sources exist, but none are active, so no new queue items will be generated until you resume one.",
       nextSteps: [
-        { href: "/?tab=step-1", label: "Resume a source" },
-        { href: "/?tab=step-2", label: "Open sync status" },
+        { href: "/?tab=sources", label: "Resume a source" },
+        { href: "/", label: "Open Listen Desk" },
       ],
       optionalStep,
     };
@@ -77,8 +77,8 @@ export function buildOnboardingHealth(input: {
       title: `${input.erroredSourceCount} source${input.erroredSourceCount === 1 ? " needs" : "s need"} attention`,
       summary: "Your pipeline is live, but at least one active source is failing. Clear or pause the broken source before errors pile up.",
       nextSteps: [
-        { href: "/?tab=step-2", label: "Open Failure Center" },
-        { href: "/?tab=step-1", label: "Review sources" },
+        { href: "/", label: "Open Needs Attention" },
+        { href: "/?tab=sources", label: "Review sources" },
       ],
       optionalStep,
     };
@@ -88,11 +88,11 @@ export function buildOnboardingHealth(input: {
     return {
       tone: "attention",
       label: "Next step",
-      title: "Run sync to fill the queue",
+      title: "Run scanning to fill the queue",
       summary: "Your sources are connected and active, but there are no queue-ready items right now.",
       nextSteps: [
-        { href: "/?tab=step-2", label: "Open Listening Station" },
-        { href: "/?tab=step-1", label: "Check source progress" },
+        { href: "/", label: "Open Listen Desk" },
+        { href: "/?tab=sources", label: "Check source progress" },
       ],
       optionalStep,
     };
@@ -104,7 +104,7 @@ export function buildOnboardingHealth(input: {
     title: "System ready to dig",
     summary: "Discogs is connected, active sources are healthy, and the queue has playable items. Keep reviewing tracks and trim weak sources as needed.",
     nextSteps: [
-      { href: "/?tab=step-2", label: "Open Listening Station" },
+      { href: "/", label: "Open Listen Desk" },
       { href: "/?tab=library", label: "Review Library" },
     ],
     optionalStep,

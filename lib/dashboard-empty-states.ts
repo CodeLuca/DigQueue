@@ -20,8 +20,8 @@ export function getListeningEmptyState(input: {
   if (input.activeSourceCount === 0) {
     return {
       title: "Add or resume an active source",
-      detail: "Listening Station is empty because no active sources are feeding the queue right now.",
-      actionHref: "/?tab=step-1",
+      detail: "Listen Desk is empty because no active sources are feeding the queue right now.",
+      actionHref: "/?tab=sources",
       actionLabel: "Open Sources",
       secondaryActionHref: "/how-to-use",
       secondaryActionLabel: "Review setup guide",
@@ -30,12 +30,12 @@ export function getListeningEmptyState(input: {
 
   if (input.listeningRowCount === 0) {
     return {
-      title: "Run sync to load tracks",
-      detail: "Your sources exist, but no playable tracks are loaded yet. Start or resume sync, then come back here.",
-      actionHref: "/?tab=step-1",
-      actionLabel: "Check source sync",
-      secondaryActionHref: "/?tab=step-2",
-      secondaryActionLabel: "Open sync status",
+      title: "Run scanning to load tracks",
+      detail: "Your sources exist, but no playable tracks are loaded yet. Start or resume scanning, then come back here.",
+      actionHref: "/?tab=sources",
+      actionLabel: "Check source scanning",
+      secondaryActionHref: "/",
+      secondaryActionLabel: "Open Listen Desk",
     };
   }
 
@@ -62,8 +62,8 @@ export function getLibraryItemsEmptyState(input: {
     return {
       title: "Library is empty for now",
       detail: "Save tracks while listening or import recent Discogs wants to give Library something to work with.",
-      actionHref: "/?tab=step-2",
-      actionLabel: "Open Listening Station",
+      actionHref: "/",
+      actionLabel: "Open Listen Desk",
       secondaryActionHref: "/?tab=library",
       secondaryActionLabel: "Stay in Library",
     };
@@ -79,7 +79,7 @@ export function getReviewedEmptyState(input: {
     return {
       title: "No reviewed tracks yet",
       detail: "Use the single-check or double-check actions while listening, and reviewed items will land here.",
-      actionHref: "/?tab=step-2",
+      actionHref: "/",
       actionLabel: "Start reviewing",
       secondaryActionHref: "/how-to-use",
       secondaryActionLabel: "Review the controls",
@@ -90,8 +90,8 @@ export function getReviewedEmptyState(input: {
     return {
       title: "Nothing needs review right now",
       detail: "You have cleared the current backlog. Keep listening and come back when more played tracks need a decision.",
-      actionHref: "/?tab=step-2",
-      actionLabel: "Open Listening Station",
+      actionHref: "/",
+      actionLabel: "Open Listen Desk",
       secondaryActionHref: "/?tab=library&libraryView=history",
       secondaryActionLabel: "Open history",
     };
@@ -99,8 +99,8 @@ export function getReviewedEmptyState(input: {
 
   return {
     title: "No history yet",
-    detail: "Play a few tracks from Listening Station and your play history will show up here.",
-    actionHref: "/?tab=step-2",
+    detail: "Play a few tracks from Listen Desk and your play history will show up here.",
+    actionHref: "/",
     actionLabel: "Start listening",
     secondaryActionHref: "/welcome",
     secondaryActionLabel: "Open quick start",

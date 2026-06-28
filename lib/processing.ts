@@ -11,6 +11,7 @@ import { ensureTrackForUser } from "@/lib/library-upsert";
 import { updateReleaseWishlistForUser } from "@/lib/release-wishlist-state";
 import { captureReleaseSignals } from "@/lib/release-signals";
 import { applyTrackListenedMutationsForUser, applyTrackSavedMutationsForUser } from "@/lib/release-listened-state";
+import { deriveReleaseMetadataFromDiscogs } from "@/lib/release-metadata";
 import { enqueuePendingReleaseForUser } from "@/lib/release-queue-enqueue";
 import { persistReleaseUnderSourceForUser } from "@/lib/source-release-materialization";
 import { toSourceKind } from "@/lib/source-kind";
@@ -374,8 +375,12 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
       message: `Processing release: ${nextRelease.title}`,
     });
     const releaseDetails = await fetchDiscogsRelease(nextRelease.id);
+    const metadataPatch = deriveReleaseMetadataFromDiscogs(releaseDetails, {
+      artist: nextRelease.artist,
+      title: nextRelease.title,
+    });
     try {
-    await captureReleaseSignals(releaseDetails, nextRelease.artist, nextRelease.year, userId);
+      await captureReleaseSignals(releaseDetails, metadataPatch.artist ?? nextRelease.artist, metadataPatch.year ?? nextRelease.year, userId);
     } catch (error) {
       const message = safeErrorMessage(error);
       // Signal capture improves recommendations but should never block ingestion.
@@ -396,7 +401,15 @@ export async function processSingleReleaseForSource(sourceId: number, userId: st
       });
     }
 
-    await db.update(releases).set({ detailsFetched: true, fetchedAt: new Date(), processingError: null }).where(and(eq(releases.id, nextRelease.id), scope.releases));
+    await db
+      .update(releases)
+      .set({
+        ...metadataPatch,
+        detailsFetched: true,
+        fetchedAt: new Date(),
+        processingError: null,
+      })
+      .where(and(eq(releases.id, nextRelease.id), scope.releases));
 
     const releaseTracks = await db.query.tracks.findMany({ where: and(eq(tracks.releaseId, nextRelease.id), scope.tracks), orderBy: [asc(tracks.id)] });
     const discogsTrackMatches = getDiscogsTrackVideos(

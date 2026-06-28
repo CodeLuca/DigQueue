@@ -40,9 +40,6 @@ export function AccountSurface({
           sectionClassName,
         )}
       >
-        {accent ? (
-          <div className="pointer-events-none absolute right-[-110px] top-[-90px] h-[220px] w-[220px] rounded-full bg-[radial-gradient(circle,_rgba(216,169,96,0.2),_transparent_66%)]" />
-        ) : null}
         <h1 className={cn("text-2xl font-semibold tracking-tight sm:text-3xl", accent ? "mt-3 md:text-4xl" : "")}>{title}</h1>
         {description ? (
           <p className={cn("mt-3 max-w-2xl text-sm text-[var(--color-muted)]", accent ? "md:text-base" : "", descriptionClassName)}>

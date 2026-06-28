@@ -27,6 +27,7 @@ export function RegisterPasswordForm({
       fields={[
         {
           id: "register-email",
+          label: "Registration email address",
           name: "email",
           type: "email",
           required: true,
@@ -34,6 +35,7 @@ export function RegisterPasswordForm({
           placeholder: "Email address",
         },
         {
+          label: "Create account password",
           name: "password",
           type: "password",
           required: true,
@@ -41,6 +43,7 @@ export function RegisterPasswordForm({
           placeholder: "Password (min 6 characters)",
         },
         {
+          label: "Repeat account password",
           name: "confirmPassword",
           type: "password",
           required: true,

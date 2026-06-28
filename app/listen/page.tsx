@@ -23,12 +23,12 @@ export default async function ListenPage({
       <AppPageHeader
         actions={
           <ActionRow className="text-sm">
-            <ButtonLink href="/" size="sm" variant="outline">Dashboard</ButtonLink>
+            <ButtonLink href="/" size="sm" variant="outline">Listen Desk</ButtonLink>
             <ButtonLink href="/settings" size="sm" variant="outline">Settings</ButtonLink>
           </ActionRow>
         }
         description="A focused lane for everything you still need to hear and decide on."
-        title="To Listen Inbox"
+        title="Listen Desk Focus"
         tone="compact"
       />
 
@@ -58,7 +58,7 @@ export default async function ListenPage({
       </Card>
 
       <Card>
-        <SectionCardHeader title={`Unlistened Tracks (${data.rows.length})`} />
+        <SectionCardHeader title={`Tracks To Decide (${data.rows.length})`} />
         <CardContent>
           <ListenInboxClient initialRows={data.rows} />
         </CardContent>

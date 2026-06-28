@@ -21,7 +21,7 @@ const highlights = [
   },
   {
     title: "Keep your preferences",
-    description: "Wishlist and listening actions stay organized so recommendations improve over time.",
+    description: "Wishlist and listening actions stay organized so Discover improves over time.",
     icon: Sparkles,
   },
 ];
@@ -37,8 +37,8 @@ export default async function WelcomePage() {
         actions={
           isLoggedIn ? (
             <>
-              <ButtonLink mobileFullWidth href="/?tab=step-1">Open Sources</ButtonLink>
-              <ButtonLink mobileFullWidth href="/?tab=step-2" variant="outline">Open Listening Station</ButtonLink>
+              <ButtonLink mobileFullWidth href="/?tab=sources">Open Sources</ButtonLink>
+              <ButtonLink mobileFullWidth href="/" variant="outline">Open Listen Desk</ButtonLink>
               <ButtonLink mobileFullWidth href="/?tab=library" variant="outline">Open Library</ButtonLink>
               <ButtonLink mobileFullWidth href="/how-to-use" variant="ghost">Full How-To</ButtonLink>
             </>
@@ -46,13 +46,14 @@ export default async function WelcomePage() {
             <>
               <ButtonLink mobileFullWidth href="/login">Login</ButtonLink>
               <ButtonLink mobileFullWidth href="/login?mode=register" variant="outline">Register</ButtonLink>
+              <ButtonLink mobileFullWidth href="/how-to-use" variant="ghost">How it works</ButtonLink>
             </>
           )
         }
         description={
           <>
             <p className="mt-2 max-w-2xl">
-              This is your starting page. Use it as a quick guide, then jump into Sources, Listening Station, and Library.
+              This is your starting page. Use it as a quick guide, then jump into Sources, Listen Desk, and Library.
             </p>
             <p className="mt-2 max-w-2xl">
               Labels give catalog-driven digging. Artist sources let you follow one artist across labels, projects, and aliases.
@@ -94,7 +95,7 @@ export default async function WelcomePage() {
             items={[
               "Start with 1-3 label or artist sources.",
               "Keep active only the sources you want in your queue.",
-              "Run sync in Queue Workbench and resolve source errors quickly.",
+              "Run scanning in Sources and resolve source errors quickly.",
             ]}
           />
         </GuideCard>
@@ -105,7 +106,7 @@ export default async function WelcomePage() {
           <p>Use play controls to keep momentum.</p>
           <p><span className="font-medium">Single check:</span> review track.</p>
           <p><span className="font-medium">Double check:</span> review full release.</p>
-          <p><span className="font-medium">Save track:</span> keep tracks you want to revisit in Library and recommendations.</p>
+          <p><span className="font-medium">Save track:</span> keep tracks you want to revisit in Library and Discover.</p>
         </GuideCard>
         <GuideCard
           title="Library Views"
@@ -128,7 +129,7 @@ export default async function WelcomePage() {
                 items={[
                   "Check your current setup state above.",
                   "Add or resume sources in Sources.",
-                  "Run or monitor sync in Listening Station.",
+                  "Run or monitor scanning in Sources.",
                   "Clear leftovers in Library -> Needs Review.",
                 ]}
               />

@@ -1,6 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { apiCache } from "@/db/schema";
-import { requireCurrentAppUserId } from "@/lib/app-user";
+import { getCurrentAppUserId } from "@/lib/app-user";
 import { getApiKeys } from "@/lib/api-keys";
 import { db } from "@/lib/db";
 import { parseDiscogsStoredAuth } from "@/lib/discogs-auth";
@@ -58,7 +58,7 @@ async function setCache(key: string, data: unknown, ttlSeconds: number, userId: 
     });
 }
 
-async function getDiscogsAuth() {
+async function getCurrentUserDiscogsAuth() {
   const keys = await getApiKeys();
   const stored = parseDiscogsStoredAuth(keys.discogsToken);
   if (stored) return stored;
@@ -66,8 +66,14 @@ async function getDiscogsAuth() {
   throw new Error("Discogs is not connected.");
 }
 
+async function getReadOnlyDiscogsAuth(userId: string | null) {
+  if (userId) return getCurrentUserDiscogsAuth();
+  if (env.DISCOGS_TOKEN) return { kind: "personal" as const, token: env.DISCOGS_TOKEN };
+  throw new Error("Discogs is not connected.");
+}
+
 function getDiscogsAuthHeaders(
-  auth: Awaited<ReturnType<typeof getDiscogsAuth>>,
+  auth: Awaited<ReturnType<typeof getCurrentUserDiscogsAuth>>,
   method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
 ) {
@@ -89,14 +95,14 @@ function getDiscogsAuthHeaders(
 }
 
 export async function discogsRequest<T>(path: string, cacheTtl = 60 * 60 * 24): Promise<T> {
-  const userId = await requireCurrentAppUserId();
-  const key = `discogs:${userId}:${path}`;
-  if (cacheTtl > 0) {
+  const userId = await getCurrentAppUserId();
+  const key = userId ? `discogs:${userId}:${path}` : null;
+  if (cacheTtl > 0 && key && userId) {
     const cached = await fromCache<T>(key, userId);
     if (cached) return cached;
   }
 
-  const discogsAuth = await getDiscogsAuth();
+  const discogsAuth = await getReadOnlyDiscogsAuth(userId);
 
   let attempt = 0;
   while (attempt < DISCOGS_MAX_RETRIES) {
@@ -109,7 +115,7 @@ export async function discogsRequest<T>(path: string, cacheTtl = 60 * 60 * 24): 
 
     if (response.ok) {
       const json = (await response.json()) as T;
-      if (cacheTtl > 0) {
+      if (cacheTtl > 0 && key && userId) {
         await setCache(key, json, cacheTtl, userId);
       }
       return json;
@@ -136,7 +142,7 @@ export async function fetchDiscogsIdentity() {
 
 export async function setDiscogsReleaseWishlist(releaseId: number, enabled: boolean) {
   const externalReleaseId = toExternalDiscogsId(releaseId);
-  const discogsAuth = await getDiscogsAuth();
+  const discogsAuth = await getCurrentUserDiscogsAuth();
   const identity = await fetchDiscogsIdentity();
   const method = enabled ? "PUT" : "DELETE";
   let attempt = 0;

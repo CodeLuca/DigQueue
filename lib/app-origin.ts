@@ -24,8 +24,7 @@ function readConfiguredOrigin() {
     toOrigin(process.env.APP_URL) ||
     toOrigin(process.env.RAILWAY_PUBLIC_DOMAIN) ||
     toOrigin(process.env.RAILWAY_STATIC_URL) ||
-    toOrigin(process.env.RAILWAY_SERVICE_DIGQUEUE_URL) ||
-    (process.env.NODE_ENV === "production" ? HARDCODED_PROD_FALLBACK_ORIGIN : null);
+    toOrigin(process.env.RAILWAY_SERVICE_DIGQUEUE_URL);
   if (explicit) return explicit;
   return null;
 }
@@ -44,13 +43,12 @@ export function resolveRequestAppOrigin(request: Request) {
   if (configuredOrigin) return configuredOrigin;
 
   const fromHeaders = getOriginFromHeaders(request.headers);
-  if (fromHeaders && !isLocalHost(fromHeaders)) return fromHeaders;
+  if (fromHeaders) return fromHeaders;
 
   const requestUrl = new URL(request.url);
   if (!isLocalHost(requestUrl.origin)) return requestUrl.origin;
 
-  if (fromHeaders) return fromHeaders;
-  return requestUrl.origin;
+  return requestUrl.origin || HARDCODED_PROD_FALLBACK_ORIGIN;
 }
 
 export async function resolveHeaderAppOrigin() {
@@ -60,5 +58,5 @@ export async function resolveHeaderAppOrigin() {
   const headersStore = await headers();
   const fromHeaders = getOriginFromHeaders(headersStore);
   if (fromHeaders) return fromHeaders;
-  return "http://127.0.0.1:3000";
+  return process.env.NODE_ENV === "production" ? HARDCODED_PROD_FALLBACK_ORIGIN : "http://127.0.0.1:3000";
 }

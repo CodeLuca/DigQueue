@@ -27,6 +27,7 @@ export function LoginPasswordForm({
       fields={[
         {
           id: "login-email",
+          label: "Login email address",
           name: "email",
           type: "email",
           required: true,
@@ -34,6 +35,7 @@ export function LoginPasswordForm({
           placeholder: "Email address",
         },
         {
+          label: "Login password",
           name: "password",
           type: "password",
           required: true,

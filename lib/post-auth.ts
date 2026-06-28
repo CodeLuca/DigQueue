@@ -1,7 +1,7 @@
 import { buildDiscogsConnectPath } from "@/lib/auth-provider-paths";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 
-const DEFAULT_LISTENING_PATH = "/?tab=step-2";
+const DEFAULT_LISTENING_PATH = "/";
 const DEFAULT_CONNECT_DISCOGS_PATH = buildDiscogsConnectPath(DEFAULT_LISTENING_PATH);
 
 function isGuidedOnboardingCandidate(nextPath: string) {

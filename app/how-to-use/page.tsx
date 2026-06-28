@@ -47,11 +47,19 @@ export default async function HowToUsePage() {
     <main className="mx-auto max-w-[1400px] px-3 py-5 sm:px-4 md:px-8 md:py-8">
       <OrientationHero
         actions={
-          <>
-            <ButtonLink mobileFullWidth href="/?tab=step-1" size="sm" variant="outline">Open Sources</ButtonLink>
-            <ButtonLink mobileFullWidth href="/?tab=step-2" size="sm" variant="outline">Open Listening Station</ButtonLink>
-            <ButtonLink mobileFullWidth href="/?tab=library" size="sm" variant="outline">Open Library</ButtonLink>
-          </>
+          isLoggedIn ? (
+            <>
+              <ButtonLink mobileFullWidth href="/?tab=sources" size="sm" variant="outline">Open Sources</ButtonLink>
+              <ButtonLink mobileFullWidth href="/" size="sm" variant="outline">Open Listen Desk</ButtonLink>
+              <ButtonLink mobileFullWidth href="/?tab=library" size="sm" variant="outline">Open Library</ButtonLink>
+            </>
+          ) : (
+            <>
+              <ButtonLink mobileFullWidth href="/login" size="sm" variant="outline">Login</ButtonLink>
+              <ButtonLink mobileFullWidth href="/login?mode=register" size="sm" variant="outline">Register</ButtonLink>
+              <ButtonLink mobileFullWidth href="/welcome" size="sm" variant="ghost">Welcome</ButtonLink>
+            </>
+          )
         }
         badgeRow={
           <>
@@ -101,7 +109,7 @@ export default async function HowToUsePage() {
             <div className="flex flex-col gap-2 sm:flex-row">
               <NativeTooltip text="Sources accept both Discogs labels and artists. Use URL, numeric ID, or name.">
                 <span className="w-full sm:flex-1">
-                  <Input placeholder="Paste Discogs source URL, ID, or name" disabled readOnly />
+                  <Input aria-label="Sample Discogs source input" placeholder="Paste Discogs source URL, ID, or name" disabled readOnly />
                 </span>
               </NativeTooltip>
               <NativeTooltip text="Adds and queues a source for ingestion (works for both label and artist sources).">
@@ -124,7 +132,7 @@ export default async function HowToUsePage() {
             </div>
             <InsetPanel tone="muted" className="text-sm">
               <p className="font-medium">What to do first</p>
-              <p className="text-[var(--color-muted)]">Add 1-3 sources (labels or artists), activate them, then go to Listening Station.</p>
+              <p className="text-[var(--color-muted)]">Add 1-3 sources (labels or artists), activate them, then go to Listen Desk.</p>
               <p className="mt-1 text-[var(--color-muted)]">
                 Label sources focus on a label catalog. Artist sources follow one artist across multiple labels and projects.
               </p>
@@ -132,7 +140,7 @@ export default async function HowToUsePage() {
         </GuideCard>
 
         <GuideCard
-          title="Listening Station: Work Queue"
+          title="Listen Desk: Work Queue"
           titleIcon={<Inbox className="h-4 w-4 text-[var(--color-accent)]" />}
           contentClassName="space-y-3"
         >
@@ -152,12 +160,12 @@ export default async function HowToUsePage() {
                 </NativeTooltip>
                 <NativeTooltip text="Single check icon: mark current track reviewed and advance.">
                   <span>
-                    <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" disabled><CheckCircle2 className="h-4 w-4" /></Button>
+                    <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" aria-label="Review track example" disabled><CheckCircle2 className="h-4 w-4" /></Button>
                   </span>
                 </NativeTooltip>
                 <NativeTooltip text="Double check icon: mark entire release reviewed.">
                   <span>
-                    <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" disabled><CheckCheck className="h-4 w-4" /></Button>
+                    <Button type="button" size="sm" variant="secondary" className="h-9 w-9 rounded-full p-0" aria-label="Review release example" disabled><CheckCheck className="h-4 w-4" /></Button>
                   </span>
                 </NativeTooltip>
                 <NativeTooltip text="Save track locally; does not add to Discogs wantlist.">
@@ -211,7 +219,7 @@ export default async function HowToUsePage() {
             <InstructionList
               className="text-sm"
               items={[
-                "Open a track or release you like in Listening Station or Library.",
+                "Open a track or release you like in Listen Desk or Library.",
                 <>Use the release action to <span className="font-medium text-[var(--color-text)]">Add + activate source</span>.</>,
                 "Go to Sources and run ingestion on that new source.",
               ]}
@@ -267,7 +275,7 @@ export default async function HowToUsePage() {
                 items={[
                   "Check the setup state above.",
                   "Follow the next-step buttons that match your current state.",
-                  "Once the queue is live, use Listening Station to review tracks.",
+                  "Once the queue is live, use Listen Desk to review tracks.",
                   "Clear leftovers in Library -> Needs Review.",
                   "Return to Sources and keep only the sources worth rotating.",
                 ]}
@@ -277,7 +285,7 @@ export default async function HowToUsePage() {
                 className="text-sm"
                 items={[
                   "Add sources and activate a few.",
-                  "Open Listening Station and press Play Now on a track.",
+                  "Open Listen Desk and press Play Now on a track.",
                   "Use review buttons while listening.",
                   "Check Library -> Needs Review and clear leftovers.",
                   "Return to Sources and add one more source.",
@@ -285,17 +293,30 @@ export default async function HowToUsePage() {
               />
             )}
             <div className="flex flex-wrap gap-2">
-              <ButtonLink href="/settings" size="sm" variant="outline">
-                <Settings className="mr-1 h-3.5 w-3.5" />
-                Settings
-              </ButtonLink>
-              <ButtonLink href="/?tab=step-2" size="sm">
-                Start Listening
-              </ButtonLink>
-              <ButtonLink href="/?tab=step-1" size="sm" variant="outline">
-                <ExternalLink className="mr-1 h-3.5 w-3.5" />
-                Open Sources
-              </ButtonLink>
+              {isLoggedIn ? (
+                <>
+                  <ButtonLink href="/settings" size="sm" variant="outline">
+                    <Settings className="mr-1 h-3.5 w-3.5" />
+                    Settings
+                  </ButtonLink>
+                  <ButtonLink href="/" size="sm">
+                    Start Listening
+                  </ButtonLink>
+                  <ButtonLink href="/?tab=sources" size="sm" variant="outline">
+                    <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                    Open Sources
+                  </ButtonLink>
+                </>
+              ) : (
+                <>
+                  <ButtonLink href="/login?mode=register" size="sm">
+                    Create Account
+                  </ButtonLink>
+                  <ButtonLink href="/login" size="sm" variant="outline">
+                    Login
+                  </ButtonLink>
+                </>
+              )}
             </div>
         </GuideCard>
       </section>
