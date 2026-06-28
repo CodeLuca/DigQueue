@@ -32,7 +32,7 @@ export function AppNav() {
           <Link href="/login" className="text-lg font-semibold tracking-tight">DigQueue</Link>
           <nav className="flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:justify-end">
             <Link href="/login" className={itemClass(pathname === "/login" && authMode !== "register")} title="Sign in to your account"><LogIn className="h-3.5 w-3.5" />Login</Link>
-            <Link href="/login?mode=register" className={itemClass(pathname === "/login" && authMode === "register")} title="Create a new account"><UserPlus className="h-3.5 w-3.5" />Register</Link>
+            <Link href="/register" className={itemClass(pathname === "/register" || (pathname === "/login" && authMode === "register"))} title="Create a new account"><UserPlus className="h-3.5 w-3.5" />Register</Link>
           </nav>
         </div>
       </div>

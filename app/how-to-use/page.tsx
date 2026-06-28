@@ -56,7 +56,7 @@ export default async function HowToUsePage() {
           ) : (
             <>
               <ButtonLink mobileFullWidth href="/login" size="sm" variant="outline">Login</ButtonLink>
-              <ButtonLink mobileFullWidth href="/login?mode=register" size="sm" variant="outline">Register</ButtonLink>
+              <ButtonLink mobileFullWidth href="/register" size="sm" variant="outline">Register</ButtonLink>
               <ButtonLink mobileFullWidth href="/welcome" size="sm" variant="ghost">Welcome</ButtonLink>
             </>
           )
@@ -309,7 +309,7 @@ export default async function HowToUsePage() {
                 </>
               ) : (
                 <>
-                  <ButtonLink href="/login?mode=register" size="sm">
+                  <ButtonLink href="/register" size="sm">
                     Create Account
                   </ButtonLink>
                   <ButtonLink href="/login" size="sm" variant="outline">

@@ -44,6 +44,14 @@ import type {
 import type { ListenInboxEmptyState, ListenRow } from "@/lib/listen-inbox-types";
 import { useListenInboxPlayback } from "@/lib/use-listen-inbox-playback";
 
+const EMPTY_PLAYER_CURRENT = {
+  trackId: null,
+  queueItemId: null,
+  saved: null,
+  listened: null,
+  playing: false,
+};
+
 export function ListenInboxClient({
   initialRows,
   initialSelectedLabelId,
@@ -88,13 +96,7 @@ export function ListenInboxClient({
   const { playbackMode, setPlaybackMode } = usePlaybackModeState();
   const playerCurrent = useClientStoreValue(
     subscribePlayerCurrentState,
-    () => getLatestPlayerCurrentState() ?? {
-      trackId: null,
-      queueItemId: null,
-      saved: null,
-      listened: null,
-      playing: false,
-    },
+    () => getLatestPlayerCurrentState() ?? EMPTY_PLAYER_CURRENT,
   );
   const queuedTrackIds = useClientStoreValue(
     subscribeQueuedTrackIdsClient,

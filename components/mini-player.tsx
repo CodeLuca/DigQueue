@@ -83,6 +83,7 @@ const BPM_WINDOW_SECONDS = 16;
 const BPM_AVG_WINDOW_SIZE = 6;
 const BPM_MIN = 70;
 const BPM_MAX = 200;
+const EMPTY_LISTENING_SCOPE = { enabled: false, trackIds: [] };
 
 type PlaybackOwnerState = {
   tabId: string;
@@ -168,7 +169,7 @@ export function MiniPlayer() {
   const { playbackMode, setPlaybackMode } = usePlaybackModeState();
   const listeningScope = useClientStoreValue(
     subscribeListeningScopeState,
-    () => getLatestListeningScopeState() ?? { enabled: false, trackIds: [] },
+    () => getLatestListeningScopeState() ?? EMPTY_LISTENING_SCOPE,
   );
   const [liveBpm, setLiveBpm] = useState<number | null>(null);
   const [liveBpmConfidence, setLiveBpmConfidence] = useState<"low" | "mid" | "high">("low");
@@ -1096,6 +1097,7 @@ export function MiniPlayer() {
           className="h-14 w-24 overflow-hidden rounded-md border border-[var(--color-border-soft)] sm:h-16 sm:w-28 md:h-20 md:w-36"
         />
         <MiniPlayerNowPlaying
+          currentLoaded={Boolean(current)}
           currentTrackTitle={current?.track?.title}
           currentCatalogNumber={releaseInspector.currentCatalogNumber}
           currentDiscogsUrl={current?.release?.discogsUrl ?? null}

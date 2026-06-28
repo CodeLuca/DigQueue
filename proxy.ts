@@ -84,18 +84,14 @@ export async function proxy(request: NextRequest) {
 
   let hasUser = false;
   let authCheckFailed = false;
-  try {
-    // Fast path: read session from cookies without always triggering a remote auth call.
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    hasUser = Boolean(sessionData.session?.user?.id);
-    authCheckFailed = Boolean(sessionError);
-    if (!hasUser && hasAuthCookie && !authCheckFailed) {
+  if (hasAuthCookie) {
+    try {
       const { data, error } = await supabase.auth.getUser();
       hasUser = Boolean(data.user?.id);
       authCheckFailed = Boolean(error);
+    } catch {
+      authCheckFailed = true;
     }
-  } catch {
-    authCheckFailed = true;
   }
 
   if (authCheckFailed && hasAuthCookie) {

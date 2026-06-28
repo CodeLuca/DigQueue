@@ -45,7 +45,7 @@ export default async function WelcomePage() {
           ) : (
             <>
               <ButtonLink mobileFullWidth href="/login">Login</ButtonLink>
-              <ButtonLink mobileFullWidth href="/login?mode=register" variant="outline">Register</ButtonLink>
+              <ButtonLink mobileFullWidth href="/register" variant="outline">Register</ButtonLink>
               <ButtonLink mobileFullWidth href="/how-to-use" variant="ghost">How it works</ButtonLink>
             </>
           )

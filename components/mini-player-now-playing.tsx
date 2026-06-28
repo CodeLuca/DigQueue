@@ -5,6 +5,7 @@ import { DiscogsLink } from "@/components/discogs-link";
 import { Button } from "@/components/ui/button";
 
 export function MiniPlayerNowPlaying({
+  currentLoaded,
   currentTrackTitle,
   currentCatalogNumber,
   currentDiscogsUrl,
@@ -20,6 +21,7 @@ export function MiniPlayerNowPlaying({
   formatPlaybackTime,
   onSeek,
 }: {
+  currentLoaded: boolean;
   currentTrackTitle?: string | null;
   currentCatalogNumber?: string | null;
   currentDiscogsUrl?: string | null;
@@ -35,6 +37,20 @@ export function MiniPlayerNowPlaying({
   formatPlaybackTime: (seconds: number) => string;
   onSeek: (next: number) => void;
 }) {
+  if (!currentLoaded) {
+    return (
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold text-[var(--color-text)] sm:text-base md:text-lg">
+          Queue ready when you are
+        </div>
+        <div className="truncate text-xs text-[var(--color-muted)]">
+          Add a Discogs source or queue a matched track to start listening.
+        </div>
+        <div className="truncate text-xs text-[var(--color-muted)]">{releaseMeta}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-w-0 flex-1">
       <div className="truncate text-sm font-semibold text-[var(--color-text)] sm:text-base md:text-lg">
