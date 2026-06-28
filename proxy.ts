@@ -9,6 +9,7 @@ const PUBLIC_PATHS = new Set([
   "/login",
   "/register",
   "/connect-discogs",
+  "/directory",
   "/how-to-use",
   "/auth/callback",
   "/auth/confirm",
@@ -52,6 +53,10 @@ export async function proxy(request: NextRequest) {
       callbackUrl.searchParams.set(key, value);
     }
     return withNoStore(NextResponse.redirect(callbackUrl));
+  }
+
+  if (pathname === "/" && request.nextUrl.searchParams.get("tab") === "discover") {
+    return withNoStore(NextResponse.redirect(new URL("/directory", appOrigin)));
   }
 
   if (

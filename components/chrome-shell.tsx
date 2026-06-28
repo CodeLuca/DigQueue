@@ -6,7 +6,7 @@ import { AppNav } from "@/components/app-nav";
 import { ClientErrorBoundary } from "@/components/client-error-boundary";
 import { MiniPlayer } from "@/components/mini-player";
 
-const publicRoutes = new Set(["/welcome", "/login", "/register", "/reset-password", "/connect-discogs", "/how-to-use"]);
+const publicRoutes = new Set(["/welcome", "/login", "/register", "/reset-password", "/connect-discogs", "/directory", "/how-to-use"]);
 
 function navFallback() {
   return (

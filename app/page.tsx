@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Image from "next/image";
 import {
   AlertTriangle,
@@ -30,7 +31,6 @@ import { ManualWishlistSyncButton } from "@/components/manual-wishlist-sync-butt
 import { OnboardingStatusCard } from "@/components/onboarding-status-card";
 import { ExternalLinkRow } from "@/components/external-link-row";
 import { ProcessingToggle } from "@/components/processing-toggle";
-import { RecommendationsPanel as DiscoverPanel } from "@/components/recommendations-panel";
 import { ResponsiveLabel } from "@/components/responsive-label";
 import { SegmentedControlLink } from "@/components/segmented-control-button";
 import { SourceRemediationButton } from "@/components/source-remediation-button";
@@ -110,6 +110,9 @@ export default async function HomePage({
   } = await searchParams;
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
   const activeTab = normalizeDashboardTab(tab);
+  if (activeTab === "discover") {
+    redirect("/directory");
+  }
   const dashboardDataTab = toDashboardQueryTab(activeTab);
   const selectedLibraryView: "library" | "history" | "reviewed" | "needs-review" =
     libraryView === "library" || libraryView === "history" || libraryView === "reviewed" || libraryView === "needs-review"
@@ -140,7 +143,7 @@ export default async function HomePage({
   }
 
   const [data, listenData, wishlistData, playedReviewedData, bandcampWishlist] = await Promise.all([
-    getDashboardData({ includeRecommendations: activeTab === "discover", tab: dashboardDataTab }),
+    getDashboardData({ includeRecommendations: false, tab: dashboardDataTab }),
     activeTab === "listen" ? getToListenData(undefined, false) : Promise.resolve(null),
     showLibraryItemsSection ? getWishlistData(undefined, false) : Promise.resolve(null),
     showPlayedReviewedSection ? getPlayedReviewedData(undefined, false) : Promise.resolve(null),
@@ -166,7 +169,7 @@ export default async function HomePage({
   const hasYoutubeKey = Boolean(keys.youtubeApiKey);
   const hasYoutubeBlockedError = false;
   const showIntegrationAlerts = !hasDiscogs || hasYoutubeBlockedError || !hasYoutubeKey;
-  const showWishlistHeaderPill = hasDiscogs && activeTab === "discover";
+  const showWishlistHeaderPill = false;
   const hasAnySources = data.labels.length > 0;
 
   const isLabelsTab = activeTab === "sources";
@@ -1321,19 +1324,6 @@ export default async function HomePage({
             </CardContent>
             </Card>
           ) : null}
-      </section>
-      ) : null}
-
-      {activeTab === "discover" ? (
-      <section className="mt-4 grid grid-cols-1 gap-4 reveal reveal-delay-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Discover Inbox ({data.recommendations.length + data.externalRecommendations.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DiscoverPanel initialItems={data.recommendations} externalItems={data.externalRecommendations} />
-          </CardContent>
-        </Card>
       </section>
       ) : null}
     </main>
