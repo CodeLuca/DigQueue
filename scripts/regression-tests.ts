@@ -41,7 +41,7 @@ import { getOAuthErrorQueryKey, getOAuthProviderLoginNextPath, getOAuthTempCooki
 import { parseDiscogsOAuthCallbackQuery, parseYoutubeOAuthCallbackQuery } from "../lib/oauth-callback-query";
 import { buildOAuthTempCookieOptions } from "../lib/oauth-cookie-options";
 import { normalizeNextPath } from "../lib/next-path";
-import { dashboardTabHref, normalizeDashboardTab, toDashboardQueryTab } from "../lib/app-tabs";
+import { dashboardTabHref, isLegacyDiscoverTab, normalizeDashboardTab, toDashboardQueryTab } from "../lib/app-tabs";
 import { buildOnboardingHealth } from "../lib/onboarding-health";
 import { appendQueryParam, buildOAuthConnectedRedirectPath, buildOAuthErrorRedirectPath } from "../lib/oauth-redirects";
 import { resolveRecommendationReleaseTargets, resolveRecommendationReleaseTargetsForIdentity } from "../lib/recommendation-feedback";
@@ -131,12 +131,15 @@ async function run() {
   assert.equal(normalizeDashboardTab(null), "listen");
   assert.equal(normalizeDashboardTab("step-2"), "listen");
   assert.equal(normalizeDashboardTab("step-1"), "sources");
-  assert.equal(normalizeDashboardTab("recommendations"), "discover");
+  assert.equal(normalizeDashboardTab("recommendations"), "listen");
+  assert.equal(isLegacyDiscoverTab("discover"), true);
+  assert.equal(isLegacyDiscoverTab("recommendations"), true);
+  assert.equal(isLegacyDiscoverTab("library"), false);
   assert.equal(normalizeDashboardTab("played-reviewed"), "listen");
   assert.equal(dashboardTabHref("listen"), "/");
   assert.equal(dashboardTabHref("sources"), "/?tab=sources");
   assert.equal(toDashboardQueryTab("listen"), "step-2");
-  assert.equal(toDashboardQueryTab("discover"), "recommendations");
+  assert.equal(toDashboardQueryTab("library"), "library");
 
   // Auth redirect safety coverage.
   assert.equal(

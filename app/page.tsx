@@ -12,7 +12,6 @@ import {
   Heart,
   History,
   Inbox,
-  Lightbulb,
   PlayCircle,
   RefreshCcw,
 } from "lucide-react";
@@ -48,7 +47,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { requireCurrentAppUserId } from "@/lib/app-user";
-import { normalizeDashboardTab, toDashboardQueryTab, type DashboardTabId } from "@/lib/app-tabs";
+import { isLegacyDiscoverTab, normalizeDashboardTab, toDashboardQueryTab, type DashboardTabId } from "@/lib/app-tabs";
 import { getEffectiveApiKeys } from "@/lib/api-keys";
 import { getBandcampWishlistData } from "@/lib/bandcamp-wishlist";
 import {
@@ -109,10 +108,10 @@ export default async function HomePage({
     remSourcePreview,
   } = await searchParams;
   const legacyLibraryView = tab === "wishlist" ? "library" : tab === "played-reviewed" || tab === "played-done" ? "history" : null;
-  const activeTab = normalizeDashboardTab(tab);
-  if (activeTab === "discover") {
+  if (isLegacyDiscoverTab(tab)) {
     redirect("/directory");
   }
+  const activeTab = normalizeDashboardTab(tab);
   const dashboardDataTab = toDashboardQueryTab(activeTab);
   const selectedLibraryView: "library" | "history" | "reviewed" | "needs-review" =
     libraryView === "library" || libraryView === "history" || libraryView === "reviewed" || libraryView === "needs-review"
@@ -469,11 +468,6 @@ export default async function HomePage({
       subtitle: "Browse saved tracks, playback history, and reviewed items.",
       icon: Bookmark,
     },
-    discover: {
-      title: "Discover",
-      subtitle: "New paths from your saves, wants, listens, labels, and release metadata.",
-      icon: Lightbulb,
-    },
   };
   const tabGuide: Record<DashboardTabId, { shellClass: string }> = {
     "sources": {
@@ -484,9 +478,6 @@ export default async function HomePage({
     },
     library: {
       shellClass: "border-l-4 border-l-amber-400/70 bg-[linear-gradient(135deg,rgba(245,158,11,0.14),transparent_46%),var(--color-surface2)]",
-    },
-    discover: {
-      shellClass: "border-l-4 border-l-sky-400/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.14),transparent_46%),var(--color-surface2)]",
     },
   };
   const activeMeta = tabMeta[activeTab];

@@ -17,6 +17,25 @@ function formatDate(value: Date) {
   }).format(value);
 }
 
+function safeExternalHref(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function sourceStatusLabel(active: boolean, status: string) {
+  if (!active) return "inactive";
+  return status === "complete" ? "scanned" : status;
+}
+
+function sentence(parts: Array<string | number | null | undefined>) {
+  return parts.filter((part) => part !== null && part !== undefined && String(part).trim().length > 0).join(" • ");
+}
+
 function imageSlot(url: string | null | undefined, alt: string) {
   if (!url) {
     return (
@@ -31,6 +50,7 @@ function imageSlot(url: string | null | undefined, alt: string) {
       alt={alt}
       width={64}
       height={64}
+      sizes="64px"
       className="h-16 w-16 shrink-0 rounded-md border border-[var(--color-border)] object-cover"
     />
   );
@@ -49,20 +69,22 @@ function DirectoryItem({
   href?: string | null;
   badge?: string;
 }) {
+  const safeHref = safeExternalHref(href);
   return (
     <div className="flex gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface2)] p-2">
       {imageSlot(artworkUrl, `${title} artwork`)}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="line-clamp-2 text-sm font-semibold text-[var(--color-text)]">{title}</p>
-          {badge ? <Badge>{badge}</Badge> : null}
+          <p className="line-clamp-2 min-w-0 break-words text-sm font-semibold text-[var(--color-text)]">{title}</p>
+          {badge ? <Badge className="shrink-0 capitalize">{badge}</Badge> : null}
         </div>
-        <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">{meta}</p>
-        {href ? (
+        <p className="mt-1 line-clamp-2 break-words text-xs text-[var(--color-muted)]">{meta}</p>
+        {safeHref ? (
           <a
-            href={href}
+            href={safeHref}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
+            aria-label={`Open ${title}`}
             className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline"
           >
             Open
@@ -126,7 +148,7 @@ export default async function DirectoryPage() {
                 key={`source-${source.id}`}
                 artworkUrl={source.imageUrl}
                 title={source.name}
-                meta={`${source.entityKind} • ${source.active ? "active" : source.status} • added ${formatDate(source.addedAt)}`}
+                meta={sentence([source.entityKind, sourceStatusLabel(source.active, source.status), `added ${formatDate(source.addedAt)}`])}
                 href={source.discogsUrl}
                 badge={source.entityKind}
               />
@@ -145,7 +167,7 @@ export default async function DirectoryPage() {
                 key={`queue-${item.id}`}
                 artworkUrl={item.releaseThumbUrl}
                 title={item.trackTitle}
-                meta={`${item.trackArtists || item.releaseArtist} • ${item.releaseTitle} • ${item.labelName} • ${formatDate(item.addedAt)}`}
+                meta={sentence([item.trackArtists || item.releaseArtist, item.releaseTitle, item.labelName, formatDate(item.addedAt)])}
                 href={item.youtubeVideoId ? `https://www.youtube.com/watch?v=${item.youtubeVideoId}` : item.releaseDiscogsUrl}
                 badge={item.status}
               />
@@ -164,7 +186,7 @@ export default async function DirectoryPage() {
                 key={`release-${release.id}`}
                 artworkUrl={release.thumbUrl}
                 title={release.title}
-                meta={`${release.artist} • ${release.labelName}${release.year ? ` • ${release.year}` : ""}${release.catno ? ` • ${release.catno}` : ""}`}
+                meta={sentence([release.artist, release.labelName, release.year, release.catno])}
                 href={release.discogsUrl}
               />
             ))}
@@ -182,7 +204,7 @@ export default async function DirectoryPage() {
                 key={`saved-${track.id}`}
                 artworkUrl={track.releaseThumbUrl}
                 title={track.title}
-                meta={`${track.artistsText || track.releaseArtist} • ${track.releaseTitle} • ${track.labelName}`}
+                meta={sentence([track.artistsText || track.releaseArtist, track.releaseTitle, track.labelName])}
                 href={track.releaseDiscogsUrl}
                 badge="saved"
               />
@@ -202,7 +224,7 @@ export default async function DirectoryPage() {
                   key={`want-${release.id}`}
                   artworkUrl={release.thumbUrl}
                   title={release.title}
-                  meta={`${release.artist} • ${release.labelName}${release.year ? ` • ${release.year}` : ""}${release.catno ? ` • ${release.catno}` : ""}`}
+                  meta={sentence([release.artist, release.labelName, release.year, release.catno])}
                   href={release.discogsUrl}
                   badge="want"
                 />

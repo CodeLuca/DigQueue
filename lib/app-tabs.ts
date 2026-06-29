@@ -1,4 +1,4 @@
-export const dashboardTabIds = ["listen", "sources", "library", "discover"] as const;
+export const dashboardTabIds = ["listen", "sources", "library"] as const;
 
 export type DashboardTabId = (typeof dashboardTabIds)[number];
 
@@ -14,8 +14,11 @@ export function normalizeDashboardTab(raw: string | null | undefined): Dashboard
   }
   if (raw === "sources" || raw === "step-1") return "sources";
   if (raw === "library" || raw === "wishlist") return "library";
-  if (raw === "discover" || raw === "recommendations") return "discover";
   return "listen";
+}
+
+export function isLegacyDiscoverTab(raw: string | null | undefined) {
+  return raw === "discover" || raw === "recommendations";
 }
 
 export function dashboardTabHref(tab: DashboardTabId) {
@@ -25,6 +28,5 @@ export function dashboardTabHref(tab: DashboardTabId) {
 export function toDashboardQueryTab(tab: DashboardTabId) {
   if (tab === "listen") return "step-2";
   if (tab === "sources") return "step-1";
-  if (tab === "discover") return "recommendations";
   return "library";
 }

@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Bookmark, CircleHelp, Disc3, Inbox, LogIn, Radio, Settings, UserPlus } from "lucide-react";
 import { ResponsiveLabel } from "@/components/responsive-label";
 import { dashboardTabHref, normalizeDashboardTab } from "@/lib/app-tabs";
+import { isPublicPagePath } from "@/lib/public-routes";
 
 function itemClass(active: boolean) {
   return active
@@ -17,24 +18,18 @@ export function AppNav() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authMode = searchParams.get("mode");
-  const isMarketingRoute =
-    pathname === "/welcome" ||
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/connect-discogs" ||
-    pathname === "/directory" ||
-    pathname === "/how-to-use" ||
-    pathname === "/reset-password";
+  const isMarketingRoute = isPublicPagePath(pathname);
 
   if (isMarketingRoute) {
     return (
       <div className="sticky top-0 z-40 border-b border-[var(--color-border-soft)] bg-[color-mix(in_oklab,var(--color-bg)_88%,black_12%)]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-4 py-2 md:flex-row md:items-center md:justify-between md:gap-4 md:px-8">
-          <Link href="/login" className="text-lg font-semibold tracking-tight">DigQueue</Link>
+          <Link href="/welcome" className="text-lg font-semibold tracking-tight">DigQueue</Link>
           <nav className="flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap md:justify-end">
             <Link href="/login" className={itemClass(pathname === "/login" && authMode !== "register")} title="Sign in to your account"><LogIn className="h-3.5 w-3.5" />Login</Link>
             <Link href="/register" className={itemClass(pathname === "/register" || (pathname === "/login" && authMode === "register"))} title="Create a new account"><UserPlus className="h-3.5 w-3.5" />Register</Link>
             <Link href="/directory" className={itemClass(pathname === "/directory")} title="Browse public DigQueue activity"><Radio className="h-3.5 w-3.5" />Directory</Link>
+            <Link href="/how-to-use" className={itemClass(pathname === "/how-to-use")} title="Read a full first-time user guide"><CircleHelp className="h-3.5 w-3.5" />Guide</Link>
           </nav>
         </div>
       </div>

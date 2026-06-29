@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNotNull } from "drizzle-orm";
+import { and, count, countDistinct, desc, eq, isNotNull } from "drizzle-orm";
 import { labels, queueItems, releases, tracks } from "@/db/schema";
 import { db } from "@/lib/db";
 
@@ -28,7 +28,7 @@ export async function getPublicDirectoryData() {
     savedTracks,
     wantedReleases,
   ] = await Promise.all([
-    db.select({ value: count() }).from(labels).where(isNotNull(labels.userId)).groupBy(labels.userId),
+    db.select({ value: countDistinct(labels.userId) }).from(labels).where(isNotNull(labels.userId)),
     db.select({ value: count() }).from(labels).where(isNotNull(labels.userId)),
     db.select({ value: count() }).from(releases).where(isNotNull(releases.userId)),
     db.select({ value: count() }).from(queueItems).where(isNotNull(queueItems.userId)),
@@ -126,7 +126,7 @@ export async function getPublicDirectoryData() {
 
   return {
     stats: {
-      activeUsers: activeUserRows.length,
+      activeUsers: toCount(activeUserRows[0]?.value),
       sources: toCount(sourceRows[0]?.value),
       releases: toCount(releaseRows[0]?.value),
       queuedItems: toCount(queuedRows[0]?.value),
@@ -135,28 +135,50 @@ export async function getPublicDirectoryData() {
     },
     latestSources: latestSources.map((item) => ({
       ...item,
+      name: item.name.trim(),
+      discogsUrl: compactText(item.discogsUrl),
       imageUrl: compactText(item.imageUrl),
       entityKind: item.entityKind === "artist" ? "artist" : "label",
+      status: compactText(item.status) || "queued",
     })),
     recentQueue: recentQueue.map((item) => ({
       ...item,
+      status: compactText(item.status) || "pending",
+      trackTitle: item.trackTitle.trim(),
       trackArtists: compactText(item.trackArtists),
+      releaseTitle: item.releaseTitle.trim(),
+      releaseArtist: item.releaseArtist.trim(),
+      releaseDiscogsUrl: compactText(item.releaseDiscogsUrl),
       releaseThumbUrl: compactText(item.releaseThumbUrl),
+      labelName: item.labelName.trim(),
     })),
     recentReleases: recentReleases.map((item) => ({
       ...item,
+      title: item.title.trim(),
+      artist: item.artist.trim(),
       catno: compactText(item.catno),
+      discogsUrl: compactText(item.discogsUrl),
       thumbUrl: compactText(item.thumbUrl),
+      labelName: item.labelName.trim(),
     })),
     savedTracks: savedTracks.map((item) => ({
       ...item,
+      title: item.title.trim(),
       artistsText: compactText(item.artistsText),
+      releaseTitle: item.releaseTitle.trim(),
+      releaseArtist: item.releaseArtist.trim(),
+      releaseDiscogsUrl: compactText(item.releaseDiscogsUrl),
       releaseThumbUrl: compactText(item.releaseThumbUrl),
+      labelName: item.labelName.trim(),
     })),
     wantedReleases: wantedReleases.map((item) => ({
       ...item,
+      title: item.title.trim(),
+      artist: item.artist.trim(),
       catno: compactText(item.catno),
+      discogsUrl: compactText(item.discogsUrl),
       thumbUrl: compactText(item.thumbUrl),
+      labelName: item.labelName.trim(),
     })),
   };
 }

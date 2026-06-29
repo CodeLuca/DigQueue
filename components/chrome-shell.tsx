@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { AppNav } from "@/components/app-nav";
 import { ClientErrorBoundary } from "@/components/client-error-boundary";
 import { MiniPlayer } from "@/components/mini-player";
-
-const publicRoutes = new Set(["/welcome", "/login", "/register", "/reset-password", "/connect-discogs", "/directory", "/how-to-use"]);
+import { isPublicPagePath } from "@/lib/public-routes";
 
 function navFallback() {
   return (
@@ -26,7 +25,7 @@ function navFallback() {
 
 export function ChromeShell() {
   const pathname = usePathname();
-  const isPublicRoute = publicRoutes.has(pathname);
+  const isPublicRoute = isPublicPagePath(pathname);
 
   return (
     <>

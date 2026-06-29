@@ -2,33 +2,15 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { resolveRequestAppOrigin } from "@/lib/app-origin";
+import { isLegacyDiscoverTab } from "@/lib/app-tabs";
+import { isPublicPagePath } from "@/lib/public-routes";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
-const PUBLIC_PATHS = new Set([
-  "/welcome",
-  "/login",
-  "/register",
-  "/connect-discogs",
-  "/directory",
-  "/how-to-use",
-  "/auth/callback",
-  "/auth/confirm",
-  "/auth/google/start",
-  "/reset-password",
-]);
 const PUBLIC_API_PREFIXES = [
   "/api/auth",
   "/api/discogs/oauth",
   "/api/youtube/oauth",
 ] as const;
-
-function isPublicPath(pathname: string) {
-  if (PUBLIC_PATHS.has(pathname)) return true;
-  for (const value of PUBLIC_PATHS) {
-    if (pathname.startsWith(`${value}/`)) return true;
-  }
-  return false;
-}
 
 function isPublicApiPath(pathname: string) {
   return PUBLIC_API_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -55,7 +37,7 @@ export async function proxy(request: NextRequest) {
     return withNoStore(NextResponse.redirect(callbackUrl));
   }
 
-  if (pathname === "/" && request.nextUrl.searchParams.get("tab") === "discover") {
+  if (pathname === "/" && isLegacyDiscoverTab(request.nextUrl.searchParams.get("tab"))) {
     return withNoStore(NextResponse.redirect(new URL("/directory", appOrigin)));
   }
 
@@ -112,7 +94,7 @@ export async function proxy(request: NextRequest) {
     return withNoStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
   }
 
-  if (isPublicPath(pathname)) return withNoStore(NextResponse.next());
+  if (isPublicPagePath(pathname)) return withNoStore(NextResponse.next());
 
   if (pathname === "/") {
     return withNoStore(NextResponse.redirect(new URL("/welcome", appOrigin)));

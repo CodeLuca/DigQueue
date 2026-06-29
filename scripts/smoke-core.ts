@@ -47,6 +47,26 @@ async function probeOAuthStart(provider: "discogs" | "youtube"): Promise<ProbeRe
   return { name: `${provider} oauth start`, ok: true, detail: `redirect target ok (${location})` };
 }
 
+async function probePublicHtmlPage(name: string, path: string, expectedText: string): Promise<ProbeResult> {
+  const response = await request(path);
+  assert(response.ok, `expected 200, got ${response.status}`);
+  const contentType = response.headers.get("content-type") || "";
+  assert(contentType.includes("text/html"), `expected HTML response, got ${contentType || "none"}`);
+  const body = await response.text();
+  assert(body.includes(expectedText), `expected page body to include "${expectedText}"`);
+  assert(!body.includes("Application error"), "page rendered application error text");
+  assert(!body.includes("client-side exception"), "page rendered client-side exception text");
+  return { name, ok: true, detail: `public page rendered ${response.status}` };
+}
+
+async function probePublicRedirect(name: string, path: string, expectedPath: string): Promise<ProbeResult> {
+  const response = await request(path);
+  const location = response.headers.get("location") || "";
+  assert(response.status >= 300 && response.status < 400, `expected redirect, got ${response.status}`);
+  assert(location.endsWith(expectedPath) || location.includes(expectedPath), `expected redirect to ${expectedPath}, got ${location || "none"}`);
+  return { name, ok: true, detail: `redirects to ${location}` };
+}
+
 async function probeSourcesNext(): Promise<ProbeResult> {
   const response = await request("/api/sources/next");
   if (!cookieHeader) {
@@ -191,6 +211,12 @@ async function main() {
   for (const provider of ["discogs", "youtube"] as const) {
     results.push(await probeOAuthStart(provider));
   }
+
+  results.push(await probePublicHtmlPage("welcome page", "/welcome", "Welcome to DigQueue"));
+  results.push(await probePublicHtmlPage("directory page", "/directory", "Public Directory"));
+  results.push(await probePublicHtmlPage("how-to-use page", "/how-to-use", "Learn The Interface Once"));
+  results.push(await probePublicRedirect("legacy discover redirect", "/?tab=discover", "/directory"));
+  results.push(await probePublicRedirect("legacy recommendations redirect", "/?tab=recommendations", "/directory"));
 
   results.push(await probeSourcesNext());
   results.push(await probeQueueNextGet());
